@@ -1,23 +1,20 @@
 <template>
-    <div style="margin: 20px 40px;">
-        <div v-for="location in locations" :key="location.value" class="location-item">
-            {{ location.value }}: {{ location.label }}
-            <el-icon :size="14" @click.stop="$emit('delete-location', location.value)" class="location-icon">
-                <Close />
-            </el-icon>
+    <div class="course-card-container">
+        <div class="course-content-title">Location</div>
+        <div v-for="(location, idx) in locations" :key="location.id" class="location-item">
+            {{ idx+1 }}: {{ location.name }}
+            <el-button type="primary" icon="Edit" circle class="location-icon" @click="clickModify(location)"/>
+            <el-button type="danger" icon="Delete" circle @click.stop="$emit('delete-location', location.id)" class="location-icon"/>
         </div>
+        <el-button type="primary" @click="clickCreate" icon="AddLocation" style="margin: 0px 20px 20px 20px;">Create New</el-button>
 
         <div class="form-container">
-            <h1 style="margin-bottom: 10px;">Create new Location</h1>
-            <el-form ref="locationForm" :model="locationForm" label-width="80px">
+            <h1 style="margin-bottom: 10px;">{{modifiedId?'Modify Location':'Create new Location'}}</h1>
+            <el-form ref="locationForm" :model="locationForm">
                 <el-form-item label="Name">
-                    <el-input placeholder="Enter a name of the location" v-model="locationForm.name"></el-input>
+                    <el-input placeholder="Enter a name of the location" v-model="locationForm.name" style="width: 200px;"></el-input>
                 </el-form-item>
-                <!-- <el-form-item>
-                    <el-button type="primary" @click="submitLocation">Submit Location</el-button>
-                    <p style="font-size: small; color: darkgrey;">( Your current location will be used )</p>
-                </el-form-item> -->
-                <div id="map" style="height: 400px; width: 150%"></div>
+                <div id="map" class="map-container"></div>
             </el-form>
         </div>
 
@@ -26,19 +23,18 @@
   
 <script>
 export default {
-    emits: ['create-location', 'delete-location'],
+    emits: ['create-event', 'edit-event', 'delete-event', 'create-location', 'update-location', 'delete-location', 'new-enrolls', 'update-enrollment', 'delete-enrollment'],
     props: {
-        locations: Array,
-        currentLocationData:{
-            type: Object,
-            default: () => ({})
-        }
+      attendanceEvents: Object,
+      locations: Array,
+      enrollments: Object, 
+      currentRole: String
     },
     name: 'GoogleMapComponent',
 
     async mounted() {
         await this.loadGoogleMapsApi();
-        this.initMap();
+        await this.getCurrentLocation();
     },
 
     data() {
@@ -48,7 +44,8 @@ export default {
                 latitude: '',
                 longitude: ''
             },
-            locationData: {}
+            currentLocationData: {},
+            modifiedId: null
         }
     },
     watch: {
@@ -65,11 +62,33 @@ export default {
                 });
             }
         },
-
-        initMap() {
-            // Assuming google.maps has been loaded in the global scope
-            // You might need to handle loading the Google Maps script if it's not already loaded
-            const myLatlng = { lat: this.currentLocationData.latitude, lng: this.currentLocationData.longitude };
+        async getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    this.currentLocationData = {
+                        latitude: latitude,
+                        longitude: longitude
+                    };
+                    this.locationForm = { ...this.currentLocationData };
+                    
+                    // Initialize the map here to ensure it's done after obtaining the location
+                    await this.initMap();
+                }, (error) => {
+                    console.error('Error getting location', error);
+                });
+            } else {
+                console.error('Geolocation is not supported by this browser.');
+            }
+        },
+        async initMap() {
+            if(!this.locationForm.latitude) {
+                this.locationForm = {
+                    latitude: 24.793701145,
+                    longitude: 120.9957896
+                }
+            }
+            const myLatlng = { lat: this.locationForm.latitude, lng: this.locationForm.longitude };
             const map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 16,
                 center: myLatlng,
@@ -102,9 +121,6 @@ export default {
                     position: mapsMouseEvent.latLng,
                     content: contentString,
                 });
-                // infoWindow.setContent(
-                //     JSON.stringify(mapsMouseEvent.latLng.toJSON(), null, 2),
-                // );
                 infoWindow.addListener('domready', () => {
                     document.getElementById("saveLocationBtn").addEventListener("click", () => {
                         this.saveLocation(latLng);
@@ -119,28 +135,57 @@ export default {
                 latitude: latLng.lat,
                 longitude: latLng.lng
             };
-            this.$emit('create-location', locationData);
-            // Optionally reset the form or infoWindow here
+            if (this.modifiedId) {
+                this.$emit('update-location', this.modifiedId, locationData);
+            }
+            else {
+                this.$emit('create-location', locationData);
+            }
+            this.locationForm = {}
         },
+        clickCreate() {
+            this.modifiedId = null
+            this.locationForm = this.currentLocationData
+            this.initMap()
+        },
+        clickModify(location) {
+            this.modifiedId = location.id
+            this.locationForm = location
+            this.initMap()
+        }
     }
 }
 </script>
 <style scoped>
+.course-card-container {
+    text-align: left;
+}
 .form-container {
-    width: 400px;
+    width: 100%;
     margin: 30px 20px;
 }
 
 .location-item {
     display: flex;
     align-items: center;
-    /* Ensures vertical alignment in case icon and text have different heights */
+    margin: 20px;
 }
 
 .location-icon {
     cursor: pointer;
-    /* Changes the cursor to a pointer when hovering over the icon */
     margin-left: 5px;
-    /* Optional: Adds a small space between the text and the icon */
+}
+.map-container {
+    width: 90%;
+    height: 500px;
+}
+@media (max-width: 640px) {
+    .map-container {
+        width: 100%;
+        height: 300px;
+    }
+    .form-container {
+        margin: 0;
+    }
 }
 </style>

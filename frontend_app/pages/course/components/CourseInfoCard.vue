@@ -3,17 +3,16 @@
     <template #header>
       <div class="card-header">
         <span>Course Information</span>
-        <template v-if="currentRole">
-          <template v-if="currentRole != 'student'">
-            <el-button type="warning" @click="$emit('show-modify-dialog')" text style="font-weight: 700;">Modify
-              Course</el-button>
-          </template>
-        </template>
       </div>
     </template>
     <div>
       <p>Start Time: {{ getLocalDateString(course.start_at) || 'N/A' }}</p>
       <p>End Time: {{ getLocalDateString(course.end_at) || 'N/A' }}</p>
+      <template v-if="currentRole">
+        <div v-if="currentRole != 'student'" style="text-align: center">
+          <el-button type="warning" @click="$emit('show-modify-dialog')" text style="font-weight: 700;">Modify Course</el-button>
+        </div>
+      </template>
     </div>
   </el-card>
 </template>

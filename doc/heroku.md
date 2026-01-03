@@ -22,12 +22,17 @@ heroku create [app-name]  # Optional: specify an app name
 - Deploy your application to Heroku by pushing your master/main branch to Heroku:
 
 ```
+bundle config set frozen false
+bundle install
+npm run prod
+git add .
+git commit -m "your comment"
 
 git push heroku master
 
-# or if you are using a different branch
+# or if you are using a different branch (recommendation)
 
-git push heroku local_branch_name: master
+git push heroku local_branch_name:master -f
 
 ```
 

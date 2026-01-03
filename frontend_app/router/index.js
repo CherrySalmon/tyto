@@ -7,16 +7,14 @@ import SingleCourse from '../pages/course/SingleCourse.vue'
 import ManageCourse from '../pages/ManageCourse.vue';
 import PageNotFound from '../pages/404.vue'
 import AttendanceTrack from '../pages/course/AttendanceTrack.vue'
-import privacy from '../pages/privacy.vue';
+import AttendanceEventCard from '../pages/course/components/AttendanceEventCard.vue';
+import LocationCard from '../pages/course/components/LocationCard.vue';
+import ManagePeopleCard from '../pages/course/components/ManagePeopleCard.vue';
 
 const routes = [
   {
     path: "/",
     component: AllCourses,
-  },
-  {
-    path: "/privacy",
-    component: privacy
   },
   {
     path: '/login',
@@ -36,13 +34,30 @@ const routes = [
       {
         path: ':id',
         name: 'SingleCourse',
-        component: SingleCourse
+        component: SingleCourse,
+        children: [
+          {
+            path: 'attendance',
+            name: 'AttendanceEventCard',
+            component: AttendanceEventCard
+          },
+          {
+            path: 'location',
+            name: 'LocationCard',
+            component: LocationCard
+          },
+          {
+            path: 'people',
+            name: 'ManagePeopleCard',
+            component: ManagePeopleCard
+          }
+        ]
       },
-      {
-        path: ':id/attendance',
-        name: 'AttendanceTrack',
-        component: AttendanceTrack
-      },
+      // {
+      //   path: ':id/attendance',
+      //   name: 'AttendanceTrack',
+      //   component: AttendanceTrack
+      // },
     ]
   },
   {

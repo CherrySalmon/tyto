@@ -34,10 +34,9 @@ module Todo
     end
 
     # Updates an existing location, if authorized
-    def self.update(requestor, location_id, location_data)
-      course_id = location_data['course_id']
-      verify_policy(requestor, :update, course_id)
+    def self.update(requestor, course_id, location_id, location_data)
       location = Location.first(id: location_id) || raise(LocationNotFoundError, "Location with ID #{location_id} not found.")
+      verify_policy(requestor, :update, course_id)
       location.update(location_data) || raise("Failed to update location with ID #{location_id}.")
     end
 
@@ -45,7 +44,12 @@ module Todo
     def self.remove(requestor, target_id, course_id)
       verify_policy(requestor, :delete, course_id)
       location = Location.first(id: target_id) || raise(LocationNotFoundError, "Laction with ID #{target_id} not found.")
-      location.destroy
+      # Check if the location is associated with any events
+      if location.events.any?
+        raise("Location with ID #{target_id} cannot be deleted because it is associated with one or more events.")
+      else
+        location.destroy
+      end
     end
 
     private

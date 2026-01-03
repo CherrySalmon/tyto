@@ -2,7 +2,7 @@
   <div>
     <div style="margin: 40px">
       <h2>Welcome Back, {{account.name}}!</h2>
-      <p>We're thrilled to have you back! As {{ account.roles.join(' & ') }}, you have access to features including {{ getFeatures(account.roles) }}.</p>
+      <p>You have access to {{ getFeatures(account.roles) }}!</p>
     </div>
     <div v-if="events.length > 0">
       <div class="page-title">Events</div>
@@ -30,21 +30,21 @@
       <el-button v-if="account.roles.includes('creator')" @click="showCreateCourseDialog = true" color="#824533"
         :dark="true">Start a New Course</el-button>
     </template>
-    <el-dialog title="Create Course" v-model="showCreateCourseDialog">
-      <el-form ref="createCourseForm" :model="createCourseForm" label-width="120px" :rules="rules" :status-icon="true">
+    <el-dialog title="Create Course" v-model="showCreateCourseDialog" width="100%" style="max-width: 600px;">
+      <el-form ref="createCourseForm" :model="createCourseForm" label-width="auto" :rules="rules" :status-icon="true">
         <el-form-item label="Name" prop="name">
-          <el-input v-model="createCourseForm.name"></el-input>
+          <el-input v-model="createCourseForm.name" style="width:100%;"></el-input>
         </el-form-item>
         <el-form-item label="Start Time">
           <el-date-picker v-model="createCourseForm.start_at" type="datetime"
-            placeholder="Select start time" time-format="HH:mm"></el-date-picker>
+            placeholder="Select start time" time-format="HH:mm" style="width:100%;"></el-date-picker>
         </el-form-item>
         <el-form-item label="End Time">
           <el-date-picker v-model="createCourseForm.end_at" type="datetime"
-            placeholder="Select end time" time-format="HH:mm"></el-date-picker>
+            placeholder="Select end time" time-format="HH:mm" style="width:100%;"></el-date-picker>
         </el-form-item>
         <el-form-item label="Logo">
-          <el-input v-model="createCourseForm.logo"></el-input>
+          <el-input v-model="createCourseForm.logo" style="width:100%;"></el-input>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
@@ -56,15 +56,20 @@
     <div class="course-container">
       <template v-for="course in courses" :key="course.id">
         <el-card class="course-item" shadow="hover">
-          <div @click="changeRoute('/course/' + course.id)">
+          <div @click="changeRoute('/course/' + course.id + '/attendance')">
             <img :src="course.icon" class="image" />
             <div style="padding: 14px">
               <h3>{{ course.name }}</h3>
             </div>
           </div>
-          <div v-if="account.roles.includes('creator')" class="course-option-container" @click="deleteCourse(course.id)">
-            <el-icon><Delete /></el-icon>
-          </div>
+          <el-popconfirm v-if="account.roles.includes('creator')" title="Are you sure to delete this?" @confirm="deleteCourse(course.id)">
+            <template #reference>
+              <div class="course-option-container">
+                <el-icon><Delete /></el-icon>
+              </div><el-button>Delete</el-button>
+            </template>
+          </el-popconfirm>
+          
         </el-card>
       </template>
     </div>
@@ -365,7 +370,7 @@ export default {
         },
       }).then(() => {
         this.showCreateCourseDialog = false;
-        this.fetchCourses(); // Refresh the list after adding
+        this.fetchCourses();
       }).catch(error => {
         console.error('Error creating course:', error);
       });
@@ -373,11 +378,11 @@ export default {
   },
 };
 </script>
-  
+
+
 <style scoped>
 p {
   margin-top: 12px;
-  word-break: break-all;
 }
 
 .course-item {

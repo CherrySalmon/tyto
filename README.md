@@ -70,6 +70,7 @@ When you're finished working:
 
 ```shell
 puma config.ru
+#or puma -e development config.ru
 ```
 - You can access through `http://0.0.0.0:9292` for the frontend app and backend API.
 

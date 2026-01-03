@@ -14,6 +14,7 @@ gem 'google-id-token'
 gem 'dry-validation', '~>1.10'
 gem 'rack-ssl-enforcer'
 gem 'rbnacl'
+gem 'rack-ssl-enforcer'
 
 group :production do
   gem 'pg', '~>1.0'

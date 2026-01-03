@@ -3,27 +3,29 @@
     <el-container>
       <template v-if="account">
         <template v-if="account.roles.includes('admin')">
-          <el-aside class="aside-container" :width="isCollapse?'60px':'300px'"></el-aside>
-          <el-aside class="aside-container" :width="isCollapse?'60px':'300px'" style="position: fixed;">
-            <el-menu
-              default-active="/course"
-              class="el-menu-vertical"
-              :collapse="isCollapse"
-              @select="handleSelect"
-              background-color="#545c64"
-              text-color="#fff"
-              active-text-color="#ffd04b"
-            >
-              <el-menu-item @click="isCollapse = !isCollapse">
-                <el-icon><component :is="isCollapse?'Expand':'Fold'" /></el-icon>
-                <template #title>{{ isCollapse?'Expand Menu':'Collapse Menu' }}</template>
-              </el-menu-item>
-              <el-menu-item v-for="item in menuItems" :key="item.index" :index="item.index">
-                <el-icon><component :is="item.icon" /></el-icon>
-                <template #title>{{ item.title }}</template>
-              </el-menu-item>
-            </el-menu>
-          </el-aside>
+          <div class="app-meun-bar">
+            <el-aside class="aside-container" :width="isCollapse?'60px':'300px'">
+              <el-menu
+                default-active="/course"
+                class="el-menu-vertical"
+                :collapse="isCollapse"
+                @select="handleSelect"
+                background-color="#545c64"
+                text-color="#fff"
+                active-text-color="#ffd04b"
+                style="position: fixed;"
+              >
+                <el-menu-item @click="isCollapse = !isCollapse">
+                  <el-icon><component :is="isCollapse?'Expand':'Fold'" /></el-icon>
+                  <template #title>{{ isCollapse?'Expand Menu':'Collapse Menu' }}</template>
+                </el-menu-item>
+                <el-menu-item v-for="item in menuItems" :key="item.index" :index="item.index">
+                  <el-icon><component :is="item.icon" /></el-icon>
+                  <template #title>{{ item.title }}</template>
+                </el-menu-item>
+              </el-menu>
+            </el-aside>
+          </div>
         </template>
       </template>
       
@@ -44,7 +46,10 @@
                 </template>
                 <template #default>
                   <span class="avatar-mobile-name" v-if="!account.img == ''">{{ account.name }} <br> {{ account.roles.join(", ") }}</span>
-                  <el-button class="logout-btn" @click="logout()" text>Logout</el-button>
+                  <template v-if="account.roles.includes('admin')">
+                    <div v-for="item in menuItems" :key="item.index" :index="item.index" @click="changeRoute(item.index)" class="menu-mobile-btn">{{ item.title }}</div>
+                  </template>
+                  <div class="logout-btn" @click="logout()">Logout</div>
                 </template>
               </el-popover>
             </template>
@@ -79,10 +84,8 @@ const debounce = (callback, delay) => {
   };
 };
 
-// Saving the original ResizeObserver
 const OriginalResizeObserver = window.ResizeObserver;
 
-// Modifying ResizeObserver to use debounced callback
 window.ResizeObserver = class ResizeObserver extends OriginalResizeObserver {
   constructor(callback) {
     super(debounce(callback, 20));
@@ -107,7 +110,7 @@ export default {
     },
     created() {
       this.account = cookieManager.getAccount()
-      if(!this.account && window.location.pathname!='/privacy') {
+      if(!this.account) {
         this.logout()
         if (window.location.pathname!='/login') {
           this.$router.push({ path: '/login', query: { redirect: window.location.pathname } })
@@ -140,8 +143,10 @@ export default {
 
 <style lang="css">
 @import url('https://fonts.googleapis.com/css2?family=Asap:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+* {
+  font-family: Inter, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+}
 #app {
-  font-family: "Asap", 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
@@ -157,14 +162,16 @@ export default {
   opacity: 0;
 }
 
+.app-meun-bar {
+  display: block;
+}
 .el-menu-vertical {
   height: 100vh;
+  width: 300px;
 }
-
 .el-table--fit  {
   border-radius: 6px; -moz-border-radius: 6px; -webkit-border-radius: 6px;
 }
-
 
 .app-container {
   min-height: 100vh;
@@ -177,6 +184,16 @@ export default {
   display: flex;
   flex-wrap: wrap;
 }
+
+.logout-btn, .menu-mobile-btn {
+  width: 100%;
+  font-weight: 800 !important;
+  font-size: 1rem;
+  text-align: center;
+  padding: 10px 0;
+  border-top: 1px solid #e3e3e3;
+  border-bottom: 1px solid #e3e3e3;
+}
 @media screen and (max-width: 640px) {
   .icon-container {
     justify-content: space-between;
@@ -184,20 +201,31 @@ export default {
   .avatar-name {
     display: none;
   }
+  .menu-mobile-btn {
+    word-break: break-word;
+    display: block;
+  }
   .avatar-mobile-name {
+    word-break: break-word;
     display: block;
     text-align: center;
     color: #afafaf !important;
+  }
+  .app-meun-bar {
+    display: none;
   }
 }
 @media screen and (min-width: 640px) {
   .avatar-mobile-name {
     display: none;
   }
+  .menu-mobile-btn {
+    display: none;
+  }
 }
 
 .icon-text {
-  font-family: "Noto Sans", sans-serif;
+  font-family: Inter, 'Helvetica Neue', Helvetica, 'PingFang SC','Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
   font-size: 2.5rem;
   font-weight: 900;
   line-height: 80px;
@@ -228,10 +256,6 @@ export default {
 .avatar-btn:hover {
   -webkit-filter: drop-shadow(3px 3px 5px #ffcb47);
   filter: drop-shadow(3px 3px 5px #b8a671fa);
-}
-.logout-btn {
-  width: 100%;
-  font-weight: 800 !important;
 }
 .avatar-name {
   color: #fff;

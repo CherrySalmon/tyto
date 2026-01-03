@@ -1,18 +1,19 @@
 <template>
-  <div class="people-card-container">
+  <div class="course-card-container">
+    <div class="course-content-title">People</div>
     <h1 class="people-title">Add new student</h1>
     <div class="input-email-container">
-      <div style="height: 100px">
-        <el-steps direction="vertical" :active="enrollStep">
+      <div style="width:100%;">
+        <el-steps :active="enrollStep">
           <el-step title="Step 1" />
           <el-step title="Step 2" />
         </el-steps>
       </div>
       <div v-if="enrollStep == 1" class="input-email-item">
         <el-input v-model="newEnrollmentEmails" placeholder="Enter email addresses (space-separated)"
-          style="width: 70%; height: 40px;" @keyup.enter="handleEmailCreate()">
+          style="width: 100%;height: 40px;margin: 10px 0;" @keyup.enter="handleEmailCreate()">
         </el-input>
-        <el-button @click="handleEmailCreate()" text type="primary">Add Accounts</el-button>
+        <el-button @click="handleEmailCreate()" type="primary">Next step</el-button>
       </div>
       <div v-if="enrollStep == 2" class="input-email-item">
         <div>New enroll:</div>
@@ -45,13 +46,13 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog title="Edit Account" v-model="editDialogVisible" center>
-      <el-form :model="selectedAccount" label-width="80px">
+    <el-dialog title="Edit Account" v-model="editDialogVisible" class="people-dialog-container" :modalAppendToBody="false">
+      <el-form :model="selectedAccount" label-width="auto">
           <el-form-item label="Email">
-              <el-input class="editor-input-box" v-model="selectedAccount.account.email" autocomplete="off"></el-input>
+              <el-input class="editor-input-box" v-model="selectedAccount.account.email" autocomplete="off" style="width:95%;"></el-input>
           </el-form-item>
           <el-form-item label="Roles">
-            <el-select v-model="selectedAccount.enroll_identity" placeholder="Select role" multiple>
+            <el-select v-model="selectedAccount.enroll_identity" placeholder="Select role" multiple style="width:95%;">
               <el-option v-for="role in peopleRoleList" :key="role" :label="role" :value="role" :disabled="checkIsModifable(role)"></el-option>
             </el-select>
           </el-form-item>
@@ -62,19 +63,17 @@
       </template>
     </el-dialog>
   </div>
+
 </template>
   
 <script>
 export default {
-  emits: ['dialog-closed', 'new-enrolls', 'update-enrollment', 'delete-enrollment'],
+  emits: ['create-event', 'edit-event', 'delete-event', 'create-location', 'update-location', 'delete-location', 'new-enrolls', 'update-enrollment', 'delete-enrollment'],
   props: {
-    enrollments: {
-      type: Object,
-      default: () => ({})
-    },
-    currentRole: {
-      type: String
-    }
+    attendanceEvents: Object,
+    locations: Array,
+    enrollments: Object, 
+    currentRole: String
   },
   data() {
     return {
@@ -148,33 +147,44 @@ export default {
 </script>
 
 <style>
-.people-card-container {
-  margin: 20px 40px;
-}
 
 .input-email-container {
   text-align: left;
   padding: 10px 40px 30px 40px;
   display: flex;
   justify-content: left;
-
   flex-wrap: wrap;
 }
 
 .input-email-item {
-  margin: 0px 40px;
-  width: 80%;
+  margin: 0px;
+  width: 100%;
 }
 
 .new-email-box {
   background-color: #fff;
   overflow: scroll;
-  width: 70%;
+  width: 100%;
   height: 100px;
   margin: 10px 0;
+  padding: 10px;
+  border-radius: 8px;
 }
 
 .people-title {
-  margin: 30px 0 20px 0;
-}</style>
+  margin: 30px 0 20px 20px;
+  text-align: left;
+}
+.people-dialog-container {
+  width: 600px;
+}
+@media (max-width: 768px) {
+  .people-dialog-container {
+      width: 100% !important;
+  }
+  .input-email-container {
+    padding: 10px;
+  }
+}
+</style>
   

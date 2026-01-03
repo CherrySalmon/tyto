@@ -17,7 +17,7 @@ namespace :db do
 
     # Run the migrations
     Dir.glob("#{migration_path}/*.rb").each { |file| require file }
-    Sequel::Migrator.run(BackendApp::Api.db, migration_path)
+    Sequel::Migrator.run(Todo::Api.db, migration_path)
   end
 
   desc 'Seed the database with default data'

@@ -18,7 +18,7 @@
                 </template>
             </el-table-column>
         </el-table>
-        <el-dialog title="Edit Account" v-model="editDialogVisible">
+        <el-dialog title="Edit Account" v-model="editDialogVisible" width="100%" style="max-width: 600px;">
             <el-form :model="selectedAccount" label-width="80px">
                 <el-form-item label="Email">
                     <el-input class="editor-input-box" v-model="selectedAccount.email" autocomplete="off"></el-input>

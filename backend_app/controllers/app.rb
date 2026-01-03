@@ -6,6 +6,7 @@ require_relative '../models/account'
 require_relative '../controllers/routes/account'
 require_relative '../controllers/routes/authentication'
 require_relative '../controllers/routes/course'
+require 'rack/ssl-enforcer'
 
 module Todo
   class Api < Roda # rubocop:disable Style/Documentation
@@ -14,6 +15,10 @@ module Todo
     plugin :all_verbs
     plugin :halt
     plugin :multi_route
+
+    if ENV['RACK_ENV'] == 'production'
+      use Rack::SslEnforcer, hsts: true
+    end    
 
     # Register the error_handler plugin
     plugin :error_handler do |e|
@@ -56,12 +61,12 @@ module Todo
           { success: true, message: 'Welcome to the Todo API' }.to_json
         end
       end
-
+  
       r.root do
         File.read(File.join('dist', 'index.html'))
       end
 
-      r.get [String, true], [String, true], [true] do |_parsed_request|
+      r.get [String, true], [String, true], [String, true], [true] do |_parsed_request|
         File.read(File.join('dist', 'index.html'))
       end
     end

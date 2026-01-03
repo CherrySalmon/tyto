@@ -54,7 +54,7 @@ export default {
       }
     },
     setUserInfoCookies(user_info) {
-      const expDay = 7;
+      const expDay = 180;
       Cookies.set('account_id', user_info.id, { expires: expDay });
       Cookies.set('account_roles', user_info.roles.join(','), { expires: expDay });
       Cookies.set('account_credential', user_info.credential, { expires: expDay });
@@ -68,7 +68,6 @@ export default {
 <style scoped>
 p {
   margin-top: 12px;
-  word-break: break-all;
 }
 
 .login-container {

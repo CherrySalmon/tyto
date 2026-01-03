@@ -2,17 +2,19 @@
     <el-dialog
       title="Modify Course"
       v-model="showModifyCourseDialog"
-      width="50%"
-      @close="onDialogClose">
-      <el-form :model="localCourseForm" ref="courseForm" label-width="120px">
+      @close="onDialogClose"
+      width="100%" :modalAppendToBody="false"
+      >
+      <el-form :model="localCourseForm" ref="courseForm" label-width="auto">
         <el-form-item label="Name">
-          <el-input v-model="localCourseForm.name"></el-input>
+          <el-input v-model="localCourseForm.name" style="width:95%;"></el-input>
         </el-form-item>
         <el-form-item label="Start Time">
           <el-date-picker
             v-model="localCourseForm.start_at"
             type="datetime"
             placeholder="Select start time"
+            style="width:95%;"
             time-format="HH:mm">
           </el-date-picker>
         </el-form-item>
@@ -21,6 +23,7 @@
             v-model="localCourseForm.end_at"
             type="datetime"
             placeholder="Select start time"
+            style="width:95%;"
             time-format="HH:mm">
           </el-date-picker>
         </el-form-item>
