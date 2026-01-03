@@ -14,6 +14,7 @@ module Todo
     plugin :public, root: 'dist'
     plugin :all_verbs
     plugin :halt
+    plugin :multi_route
 
     if ENV['RACK_ENV'] == 'production'
       use Rack::SslEnforcer, hsts: true

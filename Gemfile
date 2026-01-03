@@ -4,6 +4,7 @@ source 'https://rubygems.org'
 
 gem 'figaro', '~>1.2'
 gem 'foreman', '~>0.0'
+gem 'json_schemer'
 gem 'puma', '~>6.0'
 gem 'rake', '~>13.0'
 gem 'roda', '~>3.0'
@@ -20,7 +21,9 @@ group :production do
 end
 
 group :development, :test do
+  gem 'minitest'
   gem 'pry'
+  gem 'rack-test'
   gem 'sqlite3', '~> 1.0'
 end
 

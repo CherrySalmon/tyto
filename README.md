@@ -144,3 +144,6 @@ Rakefile
 config.ru
 require_app.rb
 ```
+
+## To-dos
+- [] Add rack spec, style

@@ -31,7 +31,7 @@ namespace :db do
 
   desc 'Delete dev or test database file'
   task drop: [:config] do
-    @app = Todo::Api
+    @app = BackendApp::Api
     if @app.environment == :production
       puts 'Cannot wipe production database!'
       return

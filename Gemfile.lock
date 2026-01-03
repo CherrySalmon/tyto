@@ -2,7 +2,8 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.2)
-    bigdecimal (3.1.4)
+    base64 (0.2.0)
+    bigdecimal (3.1.7)
     coderay (1.1.3)
     concurrent-ruby (1.2.3)
     dry-configurable (1.1.0)
@@ -44,73 +45,89 @@ GEM
     foreman (0.87.2)
     google-id-token (1.4.2)
       jwt (>= 1)
-    json (2.6.3)
-    jwt (2.7.1)
+    hana (1.3.7)
+    json (2.7.1)
+    json_schemer (2.2.1)
+      base64
+      bigdecimal
+      hana (~> 1.3)
+      regexp_parser (~> 2.0)
+      simpleidn (~> 0.2)
+    jwt (2.8.1)
+      base64
     language_server-protocol (3.17.0.3)
     method_source (1.0.0)
-    nio4r (2.5.9)
-    parallel (1.23.0)
-    parser (3.2.2.4)
+    mini_portile2 (2.8.9)
+    minitest (5.22.3)
+    nio4r (2.7.0)
+    parallel (1.24.0)
+    parser (3.3.0.5)
       ast (~> 2.4.1)
       racc
-    pg (1.5.4)
+    pg (1.5.6)
     pry (0.14.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
-    puma (6.4.0)
+    puma (6.4.2)
       nio4r (~> 2.0)
     racc (1.7.3)
-    rack (3.0.8)
+    rack (3.0.9.1)
     rack-ssl-enforcer (0.2.9)
+    rack-test (2.1.0)
+      rack (>= 1.3)
     rainbow (3.1.1)
     rake (13.1.0)
     rbnacl (7.1.1)
       ffi
-    regexp_parser (2.8.2)
+    regexp_parser (2.9.0)
     rexml (3.2.6)
-    roda (3.73.0)
+    roda (3.78.0)
       rack
-    rubocop (1.57.2)
+    rubocop (1.62.1)
       json (~> 2.3)
       language_server-protocol (>= 3.17.0)
       parallel (~> 1.10)
-      parser (>= 3.2.2.4)
+      parser (>= 3.3.0.2)
       rainbow (>= 2.2.2, < 4.0)
       regexp_parser (>= 1.8, < 3.0)
       rexml (>= 3.2.5, < 4.0)
-      rubocop-ast (>= 1.28.1, < 2.0)
+      rubocop-ast (>= 1.31.1, < 2.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 2.4.0, < 3.0)
-    rubocop-ast (1.30.0)
-      parser (>= 3.2.1.0)
+    rubocop-ast (1.31.2)
+      parser (>= 3.3.0.4)
     ruby-progressbar (1.13.0)
-    sequel (5.74.0)
+    sequel (5.78.0)
       bigdecimal
-    sqlite3 (1.6.8-aarch64-linux)
-    sqlite3 (1.6.8-arm64-darwin)
-    sqlite3 (1.6.8-x86_64-darwin)
-    sqlite3 (1.6.8-x86_64-linux)
-    thor (1.3.0)
+    simpleidn (0.2.1)
+      unf (~> 0.1.4)
+    sqlite3 (1.7.3)
+      mini_portile2 (~> 2.8.0)
+    sqlite3 (1.7.3-arm64-darwin)
+    thor (1.3.1)
     tilt (2.3.0)
+    unf (0.1.4)
+      unf_ext
+    unf_ext (0.0.9.1)
     unicode-display_width (2.5.0)
     zeitwerk (2.6.13)
 
 PLATFORMS
   aarch64-linux
-  arm64-darwin-22
   arm64-darwin-23
-  x86_64-darwin-22
-  x86_64-linux
 
 DEPENDENCIES
   dry-validation (~> 1.10)
   figaro (~> 1.2)
   foreman (~> 0.0)
   google-id-token
+  json_schemer
+  minitest
   pg (~> 1.0)
   pry
   puma (~> 6.0)
   rack-ssl-enforcer
+  rack-test
   rake (~> 13.0)
   rbnacl
   roda (~> 3.0)
@@ -120,4 +137,4 @@ DEPENDENCIES
   tilt
 
 BUNDLED WITH
-   2.4.12
+   2.7.2
