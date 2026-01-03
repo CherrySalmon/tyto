@@ -117,3 +117,7 @@ Production serves frontend from `dist/` via Roda's `r.public` plugin.
 ### Vue/JavaScript
 - Vue Single File Components (.vue)
 - Element Plus components auto-imported via unplugin-vue-components
+
+### Git Commits
+- Never use "Generated with Claude" line in commit messages
+- User is primary committer; use `Co-Authored-By: Claude <noreply@anthropic.com>`
