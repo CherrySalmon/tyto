@@ -39,7 +39,7 @@ Single command to bootstrap the project:
 
 **Updated files:**
 - `backend_app/config/secrets_example.yml` - Added `ADMIN_EMAIL`, clearer docs
-- `.ruby-version` - Updated to `3.4.4`
+- `.ruby-version` - Updated to `3.4.0` (matches devcontainer image)
 - `package.json` - Added `engines.node: ">=20.0.0"`
 
 ### 5. DevContainer Improvements
@@ -79,7 +79,7 @@ These require user-specific values and can't be automated:
 
 ## Technical Decisions
 
-- **Ruby 3.4.4**: Latest stable; devcontainer uses 3.4 image (patch may vary)
+- **Ruby 3.4.0**: Matches devcontainer image `ruby:1-3.4-bookworm`
 - **Node.js 22**: Current LTS, pinned in devcontainer and `.nvmrc`
 - **JWT_KEY auto-generation**: Uses `Todo::JWTCredential.generate_key` during setup
 - **Claude Code in devcontainer**: Official Anthropic feature for consistent AI assistance
