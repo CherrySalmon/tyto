@@ -45,7 +45,9 @@ task :setup do
   puts '       Copy the output into backend_app/config/secrets.yml'
   puts '    2. Set ADMIN_EMAIL in backend_app/config/secrets.yml (your Google email)'
   puts '    3. Set VUE_APP_GOOGLE_CLIENT_ID in frontend_app/.env.local (see doc/google.md)'
-  puts '    4. Setup database: bundle exec rake db:setup'
+  puts '    4. Setup databases:'
+  puts '       bundle exec rake db:setup              # Development'
+  puts '       RACK_ENV=test bundle exec rake db:setup # Test'
 end
 
 namespace :db do

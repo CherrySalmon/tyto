@@ -25,10 +25,11 @@ The DevContainer provides a pre-configured Ruby 3.4 + Node.js 22 environment wit
    - Set `JWT_KEY` in `backend_app/config/secrets.yml` (paste the generated key)
    - Set `ADMIN_EMAIL` in `backend_app/config/secrets.yml` (your Google account email)
    - Set `VUE_APP_GOOGLE_CLIENT_ID` in `frontend_app/.env.local` (see [doc/google.md](doc/google.md))
-5. Setup the database:
+5. Setup databases:
 
    ```shell
-   bundle exec rake db:setup
+   bundle exec rake db:setup                 # Development
+   RACK_ENV=test bundle exec rake db:setup   # Test
    ```
 
 ### Exiting the DevContainer
@@ -45,7 +46,8 @@ rake setup                         # Install dependencies, copy config files
 bundle exec rake generate:jwt_key  # Generate JWT_KEY, copy output to secrets.yml
 # Edit backend_app/config/secrets.yml - set JWT_KEY and ADMIN_EMAIL
 # Edit frontend_app/.env.local - set VUE_APP_GOOGLE_CLIENT_ID (see doc/google.md)
-bundle exec rake db:setup          # Setup database
+bundle exec rake db:setup                 # Development database
+RACK_ENV=test bundle exec rake db:setup   # Test database
 ```
 
 ## Running the Application

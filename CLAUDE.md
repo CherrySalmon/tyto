@@ -18,7 +18,8 @@ rake setup                     # Install deps, copy config files
 bundle exec rake generate:jwt_key  # Generate JWT_KEY, copy output to secrets.yml
 # Edit backend_app/config/secrets.yml - set JWT_KEY and ADMIN_EMAIL
 # Edit frontend_app/.env.local - set VUE_APP_GOOGLE_CLIENT_ID (see doc/google.md)
-bundle exec rake db:setup      # Migrate and seed database
+bundle exec rake db:setup                 # Development database
+RACK_ENV=test bundle exec rake db:setup   # Test database
 ```
 
 ### Frontend

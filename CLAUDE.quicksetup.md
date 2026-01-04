@@ -78,7 +78,9 @@ Added to `CLAUDE.md`:
 3. Generate JWT_KEY: `bundle exec rake generate:jwt_key`
 4. Edit `backend_app/config/secrets.yml` - set `JWT_KEY` and `ADMIN_EMAIL`
 5. Edit `frontend_app/.env.local` - set `VUE_APP_GOOGLE_CLIENT_ID` (see `doc/google.md`)
-6. Run `bundle exec rake db:setup`
+6. Setup databases:
+   - `bundle exec rake db:setup` (development)
+   - `RACK_ENV=test bundle exec rake db:setup` (test)
 
 ### Manual Setup
 ```bash
@@ -86,7 +88,8 @@ rake setup
 bundle exec rake generate:jwt_key  # Copy output to secrets.yml
 # Edit secrets.yml - set JWT_KEY and ADMIN_EMAIL
 # Edit .env.local - set VUE_APP_GOOGLE_CLIENT_ID
-bundle exec rake db:setup
+bundle exec rake db:setup                 # Development database
+RACK_ENV=test bundle exec rake db:setup   # Test database
 ```
 
 ## Remaining Manual Steps
