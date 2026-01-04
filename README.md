@@ -5,7 +5,7 @@ Running the application allows you to add/delete a todos the todo list.
 
 ## Quick Start with DevContainer (Recommended)
 
-The DevContainer provides a pre-configured Ruby 3.2 + Node.js environment with all required tools.
+The DevContainer provides a pre-configured Ruby 3.4 + Node.js 22 environment with all required tools.
 
 ### Prerequisites
 
@@ -17,8 +17,12 @@ The DevContainer provides a pre-configured Ruby 3.2 + Node.js environment with a
 
 1. Clone the repository and open in VS Code
 2. Click "Reopen in Container" when prompted (or use Command Palette: `Dev Containers: Reopen in Container`)
-3. Wait for container to build - `rake setup` runs automatically, installing dependencies and generating config files
-4. Configure your environment:
+3. Wait for container to build - `rake setup` runs automatically, installing dependencies and copying config files
+4. Generate and configure credentials:
+   ```shell
+   bundle exec rake generate:jwt_key  # Copy this output
+   ```
+   - Set `JWT_KEY` in `backend_app/config/secrets.yml` (paste the generated key)
    - Set `ADMIN_EMAIL` in `backend_app/config/secrets.yml` (your Google account email)
    - Set `VUE_APP_GOOGLE_CLIENT_ID` in `frontend_app/.env.local` (see [doc/google.md](doc/google.md))
 5. Setup the database:
@@ -34,13 +38,14 @@ The DevContainer provides a pre-configured Ruby 3.2 + Node.js environment with a
 
 ## Manual Setup (Without DevContainer)
 
-If not using DevContainer, ensure you have Ruby 3.2+ and Node.js installed, then:
+If not using DevContainer, ensure you have Ruby 3.4+ and Node.js 20+ installed, then:
 
 ```shell
-rake setup                     # Install dependencies, generate secrets
-# Edit backend_app/config/secrets.yml - set ADMIN_EMAIL
+rake setup                         # Install dependencies, copy config files
+bundle exec rake generate:jwt_key  # Generate JWT_KEY, copy output to secrets.yml
+# Edit backend_app/config/secrets.yml - set JWT_KEY and ADMIN_EMAIL
 # Edit frontend_app/.env.local - set VUE_APP_GOOGLE_CLIENT_ID (see doc/google.md)
-bundle exec rake db:setup      # Setup database
+bundle exec rake db:setup          # Setup database
 ```
 
 ## Running the Application

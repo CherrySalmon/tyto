@@ -14,8 +14,9 @@ TYTO is a full-stack course management and attendance tracking application with:
 
 ### First-Time Setup
 ```bash
-rake setup                     # Install deps, generate JWT_KEY, copy config files
-# Edit backend_app/config/secrets.yml - set ADMIN_EMAIL
+rake setup                     # Install deps, copy config files
+bundle exec rake generate:jwt_key  # Generate JWT_KEY, copy output to secrets.yml
+# Edit backend_app/config/secrets.yml - set JWT_KEY and ADMIN_EMAIL
 # Edit frontend_app/.env.local - set VUE_APP_GOOGLE_CLIENT_ID (see doc/google.md)
 bundle exec rake db:setup      # Migrate and seed database
 ```
@@ -38,7 +39,7 @@ bundle exec rake db:seed       # Seed database
 bundle exec rake db:setup      # Migrate + seed
 bundle exec rake db:drop       # Delete dev/test database
 bundle exec rake db:reset      # Drop + migrate + seed
-bundle exec rake generate:msg_key  # Generate JWT_KEY for secrets.yml
+bundle exec rake generate:jwt_key  # Generate JWT_KEY for secrets.yml
 ```
 
 ### Testing
@@ -79,9 +80,9 @@ Policies check roles (admin, creator, instructor, staff, owner) and course enrol
 
 ## Configuration
 
-### Required Setup Files (auto-created by `rake setup`)
+### Required Setup Files (copied by `rake setup`)
 - `backend_app/config/secrets.yml` - Backend secrets:
-  - `JWT_KEY`: Auto-generated during setup
+  - `JWT_KEY`: Generate with `rake generate:jwt_key`
   - `ADMIN_EMAIL`: Your Google account email for admin access
   - `DATABASE_URL`: PostgreSQL URL (production only)
 - `frontend_app/.env.local` - Frontend config:
@@ -94,7 +95,7 @@ Policies check roles (admin, creator, instructor, staff, owner) and course enrol
 ## Development
 
 ### DevContainer
-Open in VS Code and use "Reopen in Container" for a pre-configured Ruby 3.2 + Node.js environment. The container automatically runs `rake setup` on creation, installing dependencies and generating config files.
+Open in VS Code and use "Reopen in Container" for a pre-configured Ruby 3.4 + Node.js 22 environment. The container automatically runs `rake setup` on creation, installing dependencies and generating config files.
 
 ### Running Both Servers
 ```bash

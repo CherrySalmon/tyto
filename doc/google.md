@@ -8,6 +8,8 @@
 - credentials > create credentials > OAuth client ID
 ![](images/google_oauth_credentials.png)
 - Choose **web application** as the type of project/application's credential
-- Add localhost to Authorized JavaScript origins
+- Add these URLs to **Authorized JavaScript origins**:
+  - `http://localhost:8080` (frontend dev server)
+  - `http://localhost:9292` (backend server)
 ![](images/google_authorized_javascript_origins.png)
-5. Copy the client id into your `frontend_app/.env.local`
+5. Copy the **Client ID** into your `frontend_app/.env.local` as `VUE_APP_GOOGLE_CLIENT_ID`

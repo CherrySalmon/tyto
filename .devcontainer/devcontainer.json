@@ -4,6 +4,12 @@
 	"name": "TYTO Dev",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/ruby:1-3.4-bookworm",
+
+	// Use host system timezone
+	"containerEnv": {
+		"TZ": "${localEnv:TZ}"
+	},
+
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": {
 			"version": "22"
@@ -31,5 +37,5 @@
 	"forwardPorts": [8080, 9292],
 
 	// Run project setup after container is created (install libsodium first for rbnacl)
-	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y libsodium23 libsodium-dev && bundle config set --local without production && bundle install && bundle exec rake setup"
+	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y libsodium23 && bundle config set --local without production && bundle install && bundle exec rake setup"
 }
