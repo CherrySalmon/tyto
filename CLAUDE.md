@@ -100,14 +100,14 @@ Open in VS Code and use "Reopen in Container" for a pre-configured Ruby 3.4 + No
 
 ### Running Both Servers
 ```bash
-# Terminal 1: Frontend
+# Terminal 1: Frontend (webpack dev server with hot reload)
 npm run dev
 
 # Terminal 2: Backend
 puma config.ru -t 1:5 -p 9292
 ```
 
-Production serves frontend from `dist/` via Roda's `r.public` plugin.
+**IMPORTANT**: Open http://localhost:9292 in your browser (the backend), NOT port 8080. The backend serves both the API and frontend files from `dist/`. The webpack dev server (8080) only handles compilation with hot reload and writes to `dist/`.
 
 ## Code Conventions
 
