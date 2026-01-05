@@ -39,23 +39,18 @@ git push heroku local_branch_name:master -f
 - Heroku will detect your Ruby application, install dependencies, run your build scripts, and start your application using the command in the `Procfile`.
 - Please note that you should change the environment to the production mode in the `Procfile`. For example, `web: bundle exec puma config.ru -t 1:5 -p ${PORT:-9292} -e ${RACK_ENV:-production}` to run Puma in production mode.
 
-6. Run Database Migrations
+6. Setup Database (migrate and seed)
 ```
-heroku run rake db:migrate
-```
-
-7. Run Database Seeds
-```
-heroku run rake db:seed
+heroku run rake db:setup
 ```
 
-8. Wipe the postgres database
+7. Wipe the postgres database (if needed)
   ```
   heroku pg:reset DATABASE
   ```
   - You could get more detailed information on the [Heroku Postgres](https://devcenter.heroku.com/articles/managing-heroku-postgres-using-cli)
 
-9. Open Your App
+8. Open Your App
 Once deployed, you can open your app in a browser:
 ```
 heroku open

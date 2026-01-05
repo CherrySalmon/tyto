@@ -3,76 +3,73 @@
 This is a small project to demonstrate how to combine Roda and Vue.js with webpack.
 Running the application allows you to add/delete a todos the todo list.
 
-# Setting Up and Running the Project in a Devcontainer
+## Quick Start with DevContainer (Recommended)
 
-## Prerequisites
-Before you begin, ensure you have the following installed:
+The DevContainer provides a pre-configured Ruby 3.4 + Node.js 22 environment with all required tools.
+
+### Prerequisites
 
 - [Visual Studio Code](https://code.visualstudio.com/)
 - [Docker](https://www.docker.com/products/docker-desktop)
-- [Remote - Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) for Visual Studio Code
-- [Git](https://git-scm.com/downloads) (optional, for cloning the repository)
+- [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 
-## Getting Started
+### Getting Started
 
-1. Clone the repository, and open the project in visual studio code
-2. Reopen in Container
-- After opening the project, a popup may appear in the lower right corner asking if you want to reopen the folder in a container. Click "Reopen in Container".
-- If the popup does not appear, press `F1` or `Ctrl+Shift+P` to open the command palette, type "Remote-Containers: Reopen in Container", and select it.
-3. Wait for the Container to Build
-- Visual Studio Code will use the `.devcontainer.json` file to build the container. This process can take some time, especially on the first run.
+1. Clone the repository and open in VS Code
+2. Click "Reopen in Container" when prompted (or use Command Palette: `Dev Containers: Reopen in Container`)
+3. Wait for container to build - `rake setup` runs automatically, installing dependencies and copying config files
+4. Generate and configure credentials:
+   ```shell
+   bundle exec rake generate:jwt_key  # Copy this output
+   ```
+   - Set `JWT_KEY` in `backend_app/config/secrets.yml` (paste the generated key)
+   - Set `ADMIN_EMAIL` in `backend_app/config/secrets.yml` (your Google account email)
+   - Set `VUE_APP_GOOGLE_CLIENT_ID` in `frontend_app/.env.local` (see [doc/google.md](doc/google.md))
+5. Setup databases:
 
-### Working Inside the Dev Container
-- Terminal Access: Use the integrated terminal in VS Code to access the container's shell.
-- Install Additional Extensions: If needed, you can install additional VS Code extensions specifically for use in the container.
-- Source Control: Continue to use Git, GitGraph or any other version control system as you normally would.
+   ```shell
+   bundle exec rake db:setup                 # Development
+   RACK_ENV=test bundle exec rake db:setup   # Test
+   ```
 
-### Exiting the Dev Container
-When you're finished working:
-- Simply close Visual Studio Code to stop the container.
-- To switch back to local development, use the command palette (F1 or Ctrl+Shift+P) and select "Remote-Containers: Reopen Folder Locally".
+### Exiting the DevContainer
 
-## Setting Up the Frontend
+- Close VS Code to stop the container
+- Use Command Palette: `Dev Containers: Reopen Folder Locally` to switch back
 
-1. set up the frontend module
+## Manual Setup (Without DevContainer)
 
-  ```shell
-  npm i
-  ```
-
-2. run the frontend server
-
-  ```shell
-  npm run dev
-  ```
-
-3. set the backend
-
-  ```shell
-  bundle config set --local without 'production'
-  bundle install
-  ```
-
-4. set the envirnment
-
-- Copy the `./backend_app/config/secrets_example.yml` to `./backend_app/config/secrets.yml`
-- Copy the `./backend_app/db/account_seeds_example.rb` to `./backend_app/db/account_seeds.rb` and add admin account information.
-
-1. set the db
-
-  ```shell
-  bundle exec rake db:drop
-  bundle exec rake db:migrate
-  bundle exec rake db:seed
-  ```
-
-## Run the Web App
+If not using DevContainer, ensure you have Ruby 3.4+ and Node.js 20+ installed, then:
 
 ```shell
+rake setup                         # Install dependencies, copy config files
+bundle exec rake generate:jwt_key  # Generate JWT_KEY, copy output to secrets.yml
+# Edit backend_app/config/secrets.yml - set JWT_KEY and ADMIN_EMAIL
+# Edit frontend_app/.env.local - set VUE_APP_GOOGLE_CLIENT_ID (see doc/google.md)
+bundle exec rake db:setup                 # Development database
+RACK_ENV=test bundle exec rake db:setup   # Test database
+```
+
+## Running the Application
+
+Start both frontend and backend servers:
+
+```shell
+# Terminal 1: Frontend dev server (http://localhost:8080)
+npm run dev
+
+# Terminal 2: Backend server (http://localhost:9292)
 puma config.ru
 #or puma -e development config.ru
 ```
-- You can access through `http://0.0.0.0:9292` for the frontend app and backend API.
+
+In production, access `http://0.0.0.0:9292` for the combined frontend and backend.
+
+## Testing
+
+```shell
+bundle exec rake spec
+```
 
 ## Deployment
 - Deploy your project to heroku. [Check out](doc/heroku.md)
@@ -146,4 +143,4 @@ require_app.rb
 ```
 
 ## To-dos
-- [] Add rack spec, style
+- [ ] Add more test coverage

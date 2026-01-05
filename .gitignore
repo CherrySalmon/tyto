@@ -1,7 +1,15 @@
+# package management
 .bundle/
 node_modules/
-**/config/secrets.yml
+
+# test/dev infrastructure
 *.db
 
-# local env files
+# local env files (secrets) for back/front-end development
+**/secrets.yml
 **/.env*.local
+
+# AI tooling
+CLAUDE.local.md
+.claude/*
+!.claude/settings.json
