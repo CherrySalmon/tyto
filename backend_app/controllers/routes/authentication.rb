@@ -36,6 +36,8 @@ module Todo
             response.status = 400
             { error: 'Invalid JSON', details: e.message }.to_json
           rescue StandardError => e
+            puts "AUTH ERROR: #{e.class}: #{e.message}"
+            puts e.backtrace.first(5).join("\n")
             response.status = 500
             { error: 'Internal Server Error', details: e.message }.to_json
           end
