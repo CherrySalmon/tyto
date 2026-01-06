@@ -123,3 +123,7 @@ puma config.ru -t 1:5 -p 9292
 ### Git Commits
 - Never use "Generated with Claude" line in commit messages
 - User is primary committer; use `Co-Authored-By: Claude <noreply@anthropic.com>`
+
+## Project Planning
+
+- **Future work**: See `doc/future-work.md` for planned improvements (CI/CD, testing, etc.)
