@@ -14,6 +14,8 @@ module.exports = merge(common, {
         static: './dist',
         historyApiFallback: true,
         hot: true,
+        host: '0.0.0.0',
+        allowedHosts: 'all',
         devMiddleware: {
             writeToDisk: true,
             

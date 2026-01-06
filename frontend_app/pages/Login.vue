@@ -35,9 +35,11 @@ export default {
         } 
       } catch (error) {
         console.error('Error:', error.response || error);
+        const errorData = error.response?.data;
+        const errorMessage = errorData?.details || errorData?.error || error.message || 'Login failed';
         ElNotification({
           title: 'Error',
-          message: 'Account not found, please contact your teaching staff.',
+          message: errorMessage,
           type: 'error',
         })
       }

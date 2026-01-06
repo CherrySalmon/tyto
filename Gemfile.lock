@@ -60,6 +60,7 @@ GEM
     mini_portile2 (2.8.9)
     minitest (5.22.3)
     nio4r (2.7.0)
+    openssl (3.3.2)
     parallel (1.24.0)
     parser (3.3.0.5)
       ast (~> 2.4.1)
@@ -115,6 +116,7 @@ GEM
 PLATFORMS
   aarch64-linux
   arm64-darwin-23
+  arm64-darwin-24
 
 DEPENDENCIES
   dry-validation (~> 1.10)
@@ -123,6 +125,7 @@ DEPENDENCIES
   google-id-token
   json_schemer
   minitest
+  openssl (~> 3.3)
   pg (~> 1.0)
   pry
   puma (~> 6.0)
