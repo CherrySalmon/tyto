@@ -69,3 +69,24 @@ heroku open
 ```
 
 More info: [Getting Started with Ruby on Heroku](https://devcenter.heroku.com/articles/getting-started-with-ruby)
+
+## Rebuilding After Config Changes
+
+Frontend environment variables (like `VUE_APP_GOOGLE_CLIENT_ID` and `VUE_APP_GOOGLE_MAP_KEY`) are baked into the JavaScript bundle at build time. Changing a config var alone does **not** update the bundle - you must trigger a rebuild.
+
+**Option 1: Push a commit**
+```bash
+git commit --allow-empty -m "Trigger rebuild"
+git push heroku main
+```
+
+**Option 2: Use heroku-builds plugin** (recommended)
+```bash
+# Install plugin (one-time)
+heroku plugins:install heroku-builds
+
+# Trigger rebuild without a new commit
+heroku builds:create
+```
+
+After rebuilding, do a hard refresh in your browser (`Cmd+Shift+R` or `Ctrl+Shift+R`) to clear cached JavaScript.
