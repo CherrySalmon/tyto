@@ -13,7 +13,11 @@ const __src = path.resolve(__base, 'frontend_app');
 const webpack = require('webpack');
 const dotenv = require('dotenv');
 
-dotenv.config({ path: path.resolve(__base, 'frontend_app', '.env.local') });
+// On Heroku, env vars are set directly via config vars
+// Locally, load from .env.local file if env vars aren't already set
+if (!process.env.VUE_APP_GOOGLE_CLIENT_ID) {
+    dotenv.config({ path: path.resolve(__base, 'frontend_app', '.env.local') });
+}
 
 module.exports = {
     //Entry: main file that init our application
