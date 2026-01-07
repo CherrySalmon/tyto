@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 source 'https://rubygems.org'
+ruby File.read('.ruby-version').strip
 
 gem 'figaro', '~>1.2'
 gem 'foreman', '~>0.0'
