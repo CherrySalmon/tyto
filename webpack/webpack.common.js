@@ -13,6 +13,8 @@ const __src = path.resolve(__base, 'frontend_app');
 const webpack = require('webpack');
 const dotenv = require('dotenv');
 
+// Load env vars from .env.local (for local dev)
+// dotenv does NOT override existing env vars, so on Heroku the config vars take precedence
 dotenv.config({ path: path.resolve(__base, 'frontend_app', '.env.local') });
 
 module.exports = {

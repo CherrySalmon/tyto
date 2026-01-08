@@ -1,4 +1,6 @@
-# Google OAuth Login
+# Google API Setup
+
+## OAuth Login
 
 1. Go to the [Google API Console](https://console.cloud.google.com/apis/credentials).
 2. Create a new project or select an existing one.
@@ -13,3 +15,25 @@
   - `http://localhost:9292` (backend server)
 ![](images/google_authorized_javascript_origins.png)
 5. Copy the **Client ID** into your `frontend_app/.env.local` as `VUE_APP_GOOGLE_CLIENT_ID`
+
+## Maps API
+
+The attendance map feature requires a Google Maps JavaScript API key.
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/apis/library).
+2. Select your project (or create one).
+3. Search for **Maps JavaScript API** and enable it.
+4. Go to [Credentials](https://console.cloud.google.com/apis/credentials) and create an **API key**.
+5. (Recommended) Restrict the key:
+   - Under **Application restrictions**, select **HTTP referrers**
+   - Add your allowed domains:
+     - `localhost:*` (local development)
+     - `your-app.herokuapp.com/*` (production)
+6. Copy the API key into your `frontend_app/.env.local` as `VUE_APP_GOOGLE_MAP_KEY`
+7. For production, set on Heroku:
+
+   ```bash
+   heroku config:set VUE_APP_GOOGLE_MAP_KEY=<your-maps-api-key>
+   ```
+
+**Note**: Ensure billing is enabled on your Google Cloud project, as the Maps API requires it after the free tier quota.

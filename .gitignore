@@ -2,6 +2,9 @@
 .bundle/
 node_modules/
 
+# build output (built on Heroku deploy)
+dist/
+
 # test/dev infrastructure
 *.db
 
