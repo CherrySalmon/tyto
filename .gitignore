@@ -1,3 +1,6 @@
+# OS files
+.DS_Store
+
 # package management
 .bundle/
 node_modules/
