@@ -64,11 +64,11 @@ module Todo
       {
         id: id,
         name: name,
-        created_at: created_at,
-        updated_at: updated_at,
+        created_at: created_at&.utc&.iso8601,
+        updated_at: updated_at&.utc&.iso8601,
         logo: logo,
-        start_at: start_at,
-        end_at: end_at,
+        start_at: start_at&.utc&.iso8601,
+        end_at: end_at&.utc&.iso8601,
         enroll_identity: account_id ? get_enroll_identity(account_id) : {}
       }
     end

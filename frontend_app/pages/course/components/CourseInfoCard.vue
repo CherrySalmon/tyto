@@ -26,19 +26,16 @@ export default {
   },
   methods: {
     getLocalDateString(utcStr=null) {
-      if (typeof utcStr !== 'string') {
-        return false;
-      }
-      // Manually parsing the date string to components
-      const parts = utcStr.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) \+0000/);
-      if (!parts) {
-        console.error('Invalid date format:', utcStr);
+      if (!utcStr) {
         return false;
       }
 
-      // Creating a Date object using the parsed components
-      // Note: Months are 0-indexed in JavaScript Date, hence the -1 on month part
-      const date = new Date(Date.UTC(parts[1], parts[2] - 1, parts[3], parts[4], parts[5], parts[6]));
+      // Backend now returns ISO 8601 (UTC) strings, e.g. "2026-01-20T08:00:00Z"
+      const date = new Date(utcStr);
+      if (Number.isNaN(date.getTime())) {
+        console.error('Invalid date value:', utcStr);
+        return false;
+      }
 
       // Formatting the Date object to a local date string
       return date.getFullYear()

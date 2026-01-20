@@ -25,12 +25,19 @@ module Todo
     end
 
     def self.add_event(course_id, event_details)
+      # Normalize incoming times to UTC Time objects
+      start_time = event_details['start_at']
+      end_time = event_details['end_at']
+
+      start_time = Time.parse(start_time.to_s) unless start_time.is_a?(Time)
+      end_time = Time.parse(end_time.to_s) unless end_time.is_a?(Time)
+
       event = Event.find_or_create(
         course_id: course_id,
         name: event_details['name'],
         location_id: event_details['location_id'],
-        start_at: event_details['start_at'],
-        end_at: event_details['end_at'],
+        start_at: start_time.utc,
+        end_at: end_time.utc,
       )
 
       # Return the created event record details
@@ -51,8 +58,8 @@ module Todo
         course_id:,
         location_id:,
         name:,
-        start_at:,
-        end_at:,
+        start_at: start_at&.utc&.iso8601,
+        end_at: end_at&.utc&.iso8601,
         longitude: location.longitude,
         latitude: location.latitude,
       }

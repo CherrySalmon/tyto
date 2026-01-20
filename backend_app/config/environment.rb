@@ -17,6 +17,11 @@ module Todo
     # Make the environment variables accessible to other classes
     def self.config = Figaro.env
     db_url = ENV['DATABASE_URL']
+
+    # Ensure all times are handled in UTC at the DB layer
+    Sequel.default_timezone = :utc
+    Sequel.application_timezone = :utc
+
     @db = Sequel.connect(db_url, logger: Logger.new($stderr))
     def self.db = @db # rubocop:disable Style/TrivialAccessors
   end
