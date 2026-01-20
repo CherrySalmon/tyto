@@ -417,7 +417,8 @@ describe 'Course Routes' do
   describe 'DELETE /api/course/:id' do
     it 'deletes course as owner'
     it 'deletes course as admin'
-    it 'returns forbidden as instructor'
+    it 'returns forbidden when requester is not the course owner (e.g., instructor or student)'
+    
   end
 
   describe 'POST /api/course/:id/enroll' do
@@ -477,6 +478,16 @@ describe 'Location Routes' do
     it 'creates location as instructor'
   end
 
+  describe 'GET /api/course/:id/location' do
+    it 'lists locations for enrolled users'
+    it 'returns forbidden for non-enrolled users'
+  end
+
+  describe 'PUT /api/course/:id/location/:location_id' do
+    it 'updates location as instructor'
+    it 'returns forbidden as student'
+  end
+
   describe 'DELETE /api/course/:id/location/:location_id' do
     it 'fails when location has associated events'  # Important business rule
     it 'succeeds when location has no events'
@@ -498,6 +509,16 @@ describe 'Attendance Routes' do
 
   describe 'GET /api/course/:id/attendance/list_all' do
     it 'returns all attendance for instructor'
+    it 'returns forbidden for student'
+  end
+
+  describe 'PUT /api/course/:id/attendance/:attendance_id' do
+    it 'allows instructor to update attendance record'
+    it 'returns forbidden for student'
+  end
+
+  describe 'DELETE /api/course/:id/attendance/:attendance_id' do
+    it 'allows instructor to delete an attendance record'
     it 'returns forbidden for student'
   end
 end
