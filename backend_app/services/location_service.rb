@@ -18,10 +18,10 @@ module Todo
     end
 
     # Lists one locations based on the id, if authorized
-    def self.get(requestor,location_id)
-      verify_policy(requestor, :view)
-      location = Location.first(id: location_id)
-      location.attributes || raise(ForbiddenError, 'You have no access to list locations.')
+    def self.get(requestor, location_id)
+      location = Location.first(id: location_id) || raise(LocationNotFoundError, "Location with ID #{location_id} not found")
+      verify_policy(requestor, :view, location.course_id)
+      location.attributes
     end
 
 
@@ -46,7 +46,7 @@ module Todo
       location = Location.first(id: target_id) || raise(LocationNotFoundError, "Laction with ID #{target_id} not found.")
       # Check if the location is associated with any events
       if location.events.any?
-        raise("Location with ID #{target_id} cannot be deleted because it is associated with one or more events.")
+        raise(LocationNotFoundError, "Location with ID #{target_id} cannot be deleted because it has associated events")
       else
         location.destroy
       end

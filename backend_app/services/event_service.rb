@@ -30,7 +30,7 @@ module Todo
     end
 
     def self.update(requestor, event_id, course_id, event_data)
-      event = Event.first(id: event_id)
+      event = Event.first(id: event_id) || raise(EventNotFoundError, "Event with ID #{event_id} not found")
       verify_policy(requestor, :update, course_id)
       event.update(event_data) || raise("Failed to update event with ID #{event_id}.")
     end

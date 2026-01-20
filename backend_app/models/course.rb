@@ -87,13 +87,17 @@ module Todo
 
       account = account_course.account
 
-      account_email_exist = Account.first(email: enrolled_data['email'])
+      # Only update email if provided
+      if enrolled_data['email']
+        account_email_exist = Account.first(email: enrolled_data['email'])
 
-      if (account_email_exist != account) && account_email_exist && account_email_exist.id != account_id
-        raise "Email already exists with a different account. Operation aborted."
-      else
-        account.update(email: enrolled_data['email'])
+        if (account_email_exist != account) && account_email_exist && account_email_exist.id != account_id
+          raise "Email already exists with a different account. Operation aborted."
+        else
+          account.update(email: enrolled_data['email'])
+        end
       end
+
       update_course_account_roles(account, enrolled_data['roles'])
     end
 

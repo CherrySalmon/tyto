@@ -17,7 +17,7 @@ module Todo
 
     def validate
       super
-      validates_presence %i[name created_at course_id account_id]
+      validates_presence %i[created_at course_id account_id]
     end
 
     def self.list_attendance(account_id, course_id)
@@ -29,13 +29,14 @@ module Todo
 
     def self.add_attendance(account_id, course_id, attendance_details)
       student_role = Role.first(name: "student").id
+      event = Event.first(id: attendance_details['event_id'])
       # Create the Attendance record
       attendance = Attendance.find_or_create(
         account_id: account_id,
         role_id: student_role,
         course_id: course_id, # Assuming you also directly relate attendances to courses
         event_id: attendance_details['event_id'],
-        name: attendance_details['name'],
+        name: attendance_details['name'] || (event&.name ? "#{event.name} Attendance" : 'Attendance'),
         latitude: attendance_details['latitude'],
         longitude: attendance_details['longitude']
       )

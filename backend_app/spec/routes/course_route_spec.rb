@@ -615,8 +615,8 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 201
         attendance = json_response['attendance_info']
-        _(attendance['latitude']).must_equal '40.713'
-        _(attendance['longitude']).must_equal '-74.0062'
+        _(attendance['latitude']).must_equal(40.713)
+        _(attendance['longitude']).must_equal(-74.0062)
       end
     end
 
