@@ -158,7 +158,7 @@ module Todo
                 # PUT api/course/:course_id/event/:event_id
                 r.put do
                   request_body = JSON.parse(r.body.read)
-                  EventService.update(requestor, event_id, request_body)
+                  EventService.update(requestor, event_id, course_id, request_body)
                   response.status = 200
                   { success: true, message: 'Event updated'}.to_json
                 rescue EventService::EventNotFoundError => e

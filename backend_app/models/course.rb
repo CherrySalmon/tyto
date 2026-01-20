@@ -44,7 +44,7 @@ module Todo
       # Remove duplicate roles and return the values of the aggregated_courses hash
       aggregated_courses.values.each { |course| course[:enroll_identity].uniq! }
 
-      aggregated_courses
+      aggregated_courses.values
     end
 
     def self.create_course(account_id, course_data)
