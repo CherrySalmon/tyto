@@ -144,3 +144,121 @@ require_app.rb
 
 ## To-dos
 - [ ] Add more test coverage
+- [ ] Review and merge `taylor/migrate-to-rspack` branch
+- [ ] Review and merge `jerry/service-security` branch
+- [ ] Review and merge `tiffany/fix-mark-attendance` branch
+- [ ] Review and merge `jerry/feature-assingment-manage` branch
+- [ ] Complete integration testing for merged branches
+
+## Active Development Branches
+
+This section tracks the status, goals, and key changes for active development branches.
+
+### taylor/migrate-to-rspack
+
+**Status:** Not merged  
+**Goal:** Migrate the build system from Webpack to Rspack for improved build performance and faster development experience.
+
+**Key Changes:**
+- Replaced webpack configuration files with rspack equivalents
+- Updated `package.json` dependencies
+- Created new rspack configuration files:
+  - `rspack/rspack.common.js`
+  - `rspack/rspack.dev.js`
+  - `rspack/rspack.prod.js`
+- Updated package-lock.json with rspack dependencies
+
+**Actions:**
+- Review build performance improvements
+- Test development and production builds
+- Verify all webpack features are properly migrated
+- Update documentation if needed
+
+---
+
+### jerry/service-security
+
+**Status:** Not merged  
+**Goal:** Enhance application security by moving SSO (Single Sign-On) authentication logic to the backend and implementing secure cookie handling.
+
+**Key Changes:**
+- Moved Google OAuth login flow from frontend to backend
+- Implemented secure cookie handling for authentication tokens
+- Updated `backend_app/controllers/routes/authentication.rb` with backend OAuth flow
+- Modified `frontend_app/pages/Login.vue` to work with backend authentication
+- Added cookie security tests
+- Created `cookie_secure_text.html` documentation
+
+**Actions:**
+- Review security implementation
+- Test authentication flow end-to-end
+- Verify cookie security settings
+- Ensure refresh token handling works correctly
+- Test cross-browser compatibility
+
+---
+
+### tiffany/fix-mark-attendance
+
+**Status:** Not merged  
+**Goal:** Enable owners, TAs, and instructors to mark attendance for students, improving the attendance management workflow.
+
+**Key Changes:**
+- Added attendance marking functionality for authorized roles (owner/TA/instructor)
+- Updated `backend_app/policies/assignment_policy.rb` with role-based permissions
+- Modified `backend_app/services/attendance_service.rb` to support marking attendance
+- Updated `backend_app/models/attendance.rb` and `backend_app/models/event.rb`
+- Refactored event fetching logic
+- Added account ID to request body for attendance marking
+
+**Actions:**
+- Review role-based permission logic
+- Test attendance marking for different user roles
+- Verify that students cannot mark their own attendance inappropriately
+- Test edge cases (multiple TAs, concurrent marking, etc.)
+
+---
+
+### jerry/feature-assingment-manage
+
+**Status:** Not merged  
+**Goal:** Implement comprehensive assignment management features including creation, submission handling, and role-based access control.
+
+**Key Changes:**
+- Created assignment entity and CRUD operations
+- Implemented submission management system
+- Added `backend_app/models/assignemnt.rb` and `backend_app/models/submission.rb`
+- Created `backend_app/policies/assignment_policy.rb` and `backend_app/policies/submission_policy.rb`
+- Implemented `backend_app/services/assignment_service.rb` and `backend_app/services/submission_service.rb`
+- Added database migrations for assignments and submissions
+- Implemented file upload restrictions (students can only upload one latest file)
+- Added QMD file format support
+- UI improvements for submission blocks
+
+**Actions:**
+- Review assignment and submission CRUD operations
+- Test file upload functionality and restrictions
+- Verify role-based access control (students, TAs, instructors, owners)
+- Test assignment creation, editing, and deletion workflows
+- Verify submission upload and management features
+
+---
+
+### jerry/feature-show-attendance
+
+**Status:** Merged ✓  
+**Goal:** Display attendance records with download capabilities and attendance distribution visualization.
+
+**Key Changes:**
+- Implemented GET `/attendance/:event_id` API endpoint
+- Added attendance record download functionality
+- Created attendance distribution visualization
+- Added list all attendance API endpoint
+- Extended login token expiration time
+- Improved responsive web design (RWD) for forms and dialogs
+- Fixed location deletion restrictions (locations with attendance cannot be deleted)
+
+**Actions:**
+- ✓ Completed - Branch has been merged to develop
+- Monitor for any issues in production
+- Consider additional enhancements based on user feedback

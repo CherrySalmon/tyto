@@ -21,6 +21,223 @@
 
 ---
 
+## Existing Functions Reference
+
+### API Routes (HTTP Endpoints)
+
+#### Account Routes (`/api/account`)
+- `GET /api/account` - List all accounts (admin only)
+- `POST /api/account` - Create new account
+- `PUT /api/account/:id` - Update account
+- `DELETE /api/account/:id` - Delete account
+
+#### Authentication Routes (`/api/auth`)
+- `GET /api/auth/verify_google_token` - Auth API endpoint
+- `POST /api/auth/verify_google_token` - Verify Google OAuth token and login
+
+#### Course Routes (`/api/course`)
+- `GET /api/course` - List courses for authenticated user
+- `GET /api/course/list_all` - List all courses (admin only)
+- `GET /api/course/:id` - Get course details
+- `POST /api/course` - Create new course
+- `PUT /api/course/:id` - Update course
+- `DELETE /api/course/:id` - Delete course
+- `GET /api/course/:id/enroll` - Get enrollments for course
+- `POST /api/course/:id/enroll` - Update or add enrollments (bulk)
+- `POST /api/course/:id/enroll/:account_id` - Update single enrollment
+- `DELETE /api/course/:id/enroll/:account_id` - Remove enrollment
+
+#### Event Routes (`/api/course/:id/event`)
+- `GET /api/course/:id/event` - List events for course
+- `POST /api/course/:id/event` - Create new event
+- `PUT /api/course/:id/event/:event_id` - Update event
+- `DELETE /api/course/:id/event/:event_id` - Delete event
+
+#### Location Routes (`/api/course/:id/location`)
+- `GET /api/course/:id/location` - List locations for course
+- `GET /api/course/:id/location/:location_id` - Get location details
+- `POST /api/course/:id/location` - Create new location
+- `PUT /api/course/:id/location/:location_id` - Update location
+- `DELETE /api/course/:id/location/:location_id` - Delete location
+
+#### Attendance Routes (`/api/course/:id/attendance`)
+- `GET /api/course/:id/attendance` - List own attendance (student)
+- `GET /api/course/:id/attendance/list_all` - List all attendance (instructor/staff)
+- `GET /api/course/:id/attendance/:event_id` - List attendance by event
+- `POST /api/course/:id/attendance` - Create attendance record
+
+#### Current Event Routes (`/api/current_event`)
+- `GET /api/current_event` - Get ongoing events for authenticated user
+
+---
+
+### Service Layer Methods
+
+#### AccountService (`backend_app/services/account_service.rb`)
+- `list_all(requestor)` - List all accounts (admin only)
+- `create(requestor, user_data)` - Create new account
+- `update(requestor, target_id, user_data)` - Update account
+- `remove(requestor, target_id)` - Delete account
+- `verify_policy(requestor, action, target_id)` - Private: Check authorization
+
+#### CourseService (`backend_app/services/course_service.rb`)
+- `list_all(requestor)` - List all courses (admin only)
+- `list(requestor)` - List courses for authenticated user
+- `create(requestor, course_data)` - Create new course
+- `get(requestor, course_id)` - Get course details
+- `update(requestor, course_id, course_data)` - Update course
+- `remove(requestor, course_id)` - Delete course
+- `remove_enroll(requestor, course_id, account_id)` - Remove enrollment
+- `get_enrollments(requestor, course_id)` - Get enrollments for course
+- `update_enrollments(requestor, course_id, enrolled_data)` - Bulk update enrollments
+- `update_enrollment(requestor, course_id, account_id, enrolled_data)` - Update single enrollment
+- `find_course(course_id)` - Private: Find course or raise error
+- `verify_policy(requestor, action, course, course_id)` - Private: Check authorization
+
+#### EventService (`backend_app/services/event_service.rb`)
+- `list(requestor, course_id)` - List events for course
+- `create(requestor, event_data, course_id)` - Create new event
+- `find(requestor, time)` - Find ongoing events at given time
+- `update(requestor, event_id, course_id, event_data)` - Update event
+- `remove_event(requestor, event_id, course_id)` - Delete event
+- `find_course(course_id)` - Private: Find course or raise error
+- `verify_policy(requestor, action, course_id)` - Private: Check authorization
+
+#### LocationService (`backend_app/services/location_service.rb`)
+- `list_all(requestor, course_id)` - List all locations for course
+- `get(requestor, location_id)` - Get location details
+- `create(requestor, location_data, course_id)` - Create new location
+- `update(requestor, course_id, location_id, location_data)` - Update location
+- `remove(requestor, target_id, course_id)` - Delete location (prevents if has events)
+- `verify_policy(requestor, action, course_id)` - Private: Check authorization
+
+#### AttendanceService (`backend_app/services/attendance_service.rb`)
+- `list_all(requestor, course_id)` - List all attendance (instructor/staff)
+- `list_by_event(requestor, course_id, event_id)` - List attendance by event
+- `list(requestor, course_id)` - List own attendance (student)
+- `create(requestor, attendance_data, course_id)` - Create attendance record
+- `find_course(course_id)` - Private: Find course or raise error
+- `verify_policy(requestor, action, course, course_id)` - Private: Check authorization
+
+#### SSOAuth (`backend_app/services/sso_auth.rb`)
+- `fetch_user_info(access_token)` - Fetch user info from Google OAuth API
+
+---
+
+### Model Methods
+
+#### Account (`backend_app/models/account.rb`)
+- `add_account(user_data)` - Class: Create account with roles
+- `update_account(user_data)` - Instance: Update account and roles
+- `attributes` - Instance: Return account attributes with roles
+
+#### Course (`backend_app/models/course.rb`)
+- `listByAccountID(account_id)` - Class: List courses for account
+- `create_course(account_id, course_data)` - Class: Create course and assign owner
+- `attributes(account_id)` - Instance: Return course attributes with enrollment info
+- `add_or_update_enrollments(enrolled_data)` - Instance: Bulk update enrollments
+- `update_single_enrollment(account_id, enrolled_data)` - Instance: Update single enrollment
+- `get_enrollments` - Instance: Get all enrollments for course
+- `get_enroll_identity(account_id)` - Private: Get enrollment roles for account
+- `add_or_find_account(email)` - Private: Find or create account by email
+- `update_course_account_roles(account, roles_string)` - Private: Update roles for account in course
+
+#### Event (`backend_app/models/event.rb`)
+- `list_event(course_id)` - Class: List events for course
+- `add_event(course_id, event_details)` - Class: Create event
+- `find_event(requestor, time)` - Class: Find ongoing events for user
+- `attributes` - Instance: Return event attributes with location coordinates
+
+#### Location (`backend_app/models/location.rb`)
+- `attributes` - Instance: Return location attributes
+
+#### Attendance (`backend_app/models/attendance.rb`)
+- `list_attendance(account_id, course_id)` - Class: List attendance for account/course
+- `add_attendance(account_id, course_id, attendance_details)` - Class: Create attendance record
+- `find_account_course_role_id(account_id, course_id)` - Class: Find account course role ID
+- `attributes` - Instance: Return attendance attributes
+
+#### Role (`backend_app/models/role.rb`)
+- Standard Sequel model (no custom methods documented)
+
+---
+
+### Policy Methods
+
+#### AccountPolicy (`backend_app/policies/account_policy.rb`)
+- `can_view_all?` - Admin can view all accounts
+- `can_create?` - Any authenticated user can create
+- `can_view_single?` - Admin or self can view
+- `can_update?` - Admin or self can update
+- `can_delete?` - Admin or self can delete
+- `summary` - Return permission summary
+- `self_request?` - Private: Check if requestor is account owner
+- `requestor_is_admin?` - Private: Check if requestor is admin
+
+#### CoursePolicy (`backend_app/policies/course_policy.rb`)
+- `can_view_all?` - Admin can view all courses
+- `can_create?` - Creator role can create courses
+- `can_view?` - Enrolled users can view course
+- `can_update?` - Instructor/owner/staff can update
+- `can_delete?` - Admin or owner can delete
+- `summary` - Return permission summary
+- `self_enrolled?` - Private: Check if requestor is enrolled
+- `requestor_is_admin?` - Private: Check if requestor is admin
+- `requestor_is_creator?` - Private: Check if requestor is creator
+- `requestor_is_instructor?` - Private: Check if requestor is instructor
+- `requestor_is_staff?` - Private: Check if requestor is staff
+- `requestor_is_owner?` - Private: Check if requestor is owner
+
+#### EventPolicy (`backend_app/policies/event_policy.rb`)
+- `can_create?` - Owner/instructor/staff can create
+- `can_view?` - Owner/instructor/staff can view
+- `can_update?` - Owner/instructor/staff can update
+- `can_delete?` - Owner/instructor/staff can delete
+- `summary` - Return permission summary
+- `self_enrolled?` - Private: Check if requestor is enrolled
+- `requestor_is_admin?` - Private: Check if requestor is admin
+- `requestor_is_instructor?` - Private: Check if requestor is instructor
+- `requestor_is_staff?` - Private: Check if requestor is staff
+- `requestor_is_owner?` - Private: Check if requestor is owner
+
+#### LocationPolicy (`backend_app/policies/location_policy.rb`)
+- `can_create?` - Owner/instructor/staff can create
+- `can_view?` - Any enrolled user can view
+- `can_update?` - Owner/instructor/staff can update
+- `can_delete?` - Owner/instructor/staff can delete
+- `summary` - Return permission summary
+- `requestor_is_admin?` - Private: Check if requestor is admin
+- `requestor_is_instructor?` - Private: Check if requestor is instructor
+- `requestor_is_staff?` - Private: Check if requestor is staff
+- `requestor_is_owner?` - Private: Check if requestor is owner
+
+#### AttendancePolicy (`backend_app/policies/attendance_policy.rb`)
+- `can_create?` - Enrolled users can create
+- `can_view?` - Enrolled users can view own
+- `can_view_all?` - Instructor/owner/staff can view all
+- `can_update?` - Enrolled users can update own
+- `summary` - Return permission summary
+- `self_enrolled?` - Private: Check if requestor is enrolled
+- `requestor_is_instructor?` - Private: Check if requestor is instructor
+- `requestor_is_staff?` - Private: Check if requestor is staff
+- `requestor_is_owner?` - Private: Check if requestor is owner
+
+#### RolePolicy (`backend_app/policies/role_policy.rb`)
+- ⚠️ **Note**: This policy exists but is not currently used in the codebase
+
+---
+
+### Utility/Library Methods
+
+#### JWTCredential (`backend_app/lib/jwt_credential.rb`)
+- `generate_key` - Class: Generate new encryption key (Base64)
+- `generate_jwt(account_id, roles)` - Class: Generate JWT token
+- `decode_jwt(auth_header)` - Class: Decode JWT token from Authorization header
+- `validate_input(account_id, roles)` - Private: Validate JWT generation inputs
+- `fetch_decoded_key` - Private: Get and decode JWT key from ENV
+
+---
+
 ## Recommended Testing Strategy
 
 ### Phase 1: Backend Foundation (Lowest Friction)
@@ -528,16 +745,16 @@ end
 
 ### Implementation Order (Checklist)
 
-- [ ] **1. Create directory structure**: `mkdir -p backend_app/spec/support backend_app/spec/lib backend_app/spec/routes`
-- [ ] **2. Create spec_helper.rb**: DB setup, transaction wrapping, load helpers
-- [ ] **3. Create test_helpers.rb**: Account creation, JWT helpers
-- [ ] **4. Verify setup**: Run `bundle exec rake spec` (should pass with 0 tests)
-- [ ] **5. First test**: `account_route_spec.rb` with one simple test
-- [ ] **6. Run and verify**: `bundle exec rake spec` passes
-- [ ] **7. JWTCredential unit tests**: `jwt_credential_spec.rb`
-- [ ] **8. Expand account tests**: Full CRUD coverage
-- [ ] **9. Course route tests**: Core business logic
-- [ ] **10. Event/Location/Attendance tests**: Remaining features
+- [x] **1. Create directory structure**: `mkdir -p backend_app/spec/support backend_app/spec/lib backend_app/spec/routes`
+- [x] **2. Create spec_helper.rb**: DB setup, transaction wrapping, load helpers
+- [x] **3. Create test_helpers.rb**: Account creation, JWT helpers
+- [x] **4. Verify setup**: Run `bundle exec rake spec` (should pass with 0 tests)
+- [x] **5. First test**: `account_route_spec.rb` with one simple test
+- [x] **6. Run and verify**: `bundle exec rake spec` passes
+- [x] **7. JWTCredential unit tests**: `jwt_credential_spec.rb`
+- [x] **8. Expand account tests**: Full CRUD coverage
+- [x] **9. Course route tests**: Core business logic
+- [x] **10. Event/Location/Attendance tests**: Remaining features
 
 ---
 
