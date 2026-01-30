@@ -1,264 +1,104 @@
-# Demonstration Todo Web App Combining Roda + Vue.js w/ Webpack
+# ![Tyto](frontend_app/static/favicon.png) Tyto
 
-This is a small project to demonstrate how to combine Roda and Vue.js with webpack.
-Running the application allows you to add/delete a todos the todo list.
+A full-stack course management and attendance tracking application.
 
-## Quick Start with DevContainer (Recommended)
+- **Backend**: Ruby (Roda + Sequel ORM) with Domain-Driven Design architecture
+- **Frontend**: Vue 3 + Vue Router + Element Plus UI
+- **Build**: Webpack
+- **Auth**: Google OAuth with JWT tokens
 
-The DevContainer provides a pre-configured Ruby 3.4 + Node.js 22 environment with all required tools.
+The backend follows a **Domain-Driven Design (DDD)** architecture. For architectural details and patterns, see the `/ddd-refactoring` skill in Claude Code.
 
-### Prerequisites
+## Setup
 
-- [Visual Studio Code](https://code.visualstudio.com/)
-- [Docker](https://www.docker.com/products/docker-desktop)
-- [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+**Requirements:** Ruby 3.4+, Node.js 20+
 
-### Getting Started
+1. Install dependencies and copy config templates:
 
-1. Clone the repository and open in VS Code
-2. Click "Reopen in Container" when prompted (or use Command Palette: `Dev Containers: Reopen in Container`)
-3. Wait for container to build - `rake setup` runs automatically, installing dependencies and copying config files
-4. Generate and configure credentials:
    ```shell
-   bundle exec rake generate:jwt_key  # Copy this output
+   rake setup
    ```
-   - Set `JWT_KEY` in `backend_app/config/secrets.yml` (paste the generated key)
-   - Set `ADMIN_EMAIL` in `backend_app/config/secrets.yml` (your Google account email)
-   - Set `VUE_APP_GOOGLE_CLIENT_ID` in `frontend_app/.env.local` (see [doc/google.md](doc/google.md))
+
+2. Generate JWT key:
+
+   ```shell
+   bundle exec rake generate:jwt_key
+   ```
+
+3. Configure `backend_app/config/secrets.yml`:
+   - `JWT_KEY`: Paste the generated key from step 2
+   - `ADMIN_EMAIL`: Your Google account email (for admin access)
+
+4. Configure `frontend_app/.env.local`:
+   - `VUE_APP_GOOGLE_CLIENT_ID`: Google OAuth client ID (see [doc/google.md](doc/google.md))
+   - `VUE_APP_GOOGLE_MAP_KEY`: Google Maps API key (for location features)
+
 5. Setup databases:
 
    ```shell
-   bundle exec rake db:setup                 # Development
-   RACK_ENV=test bundle exec rake db:setup   # Test
+   bundle exec rake db:setup                 # Development database
+   RACK_ENV=test bundle exec rake db:setup   # Test database
    ```
 
-### Exiting the DevContainer
+### DevContainer (Optional)
 
-- Close VS Code to stop the container
-- Use Command Palette: `Dev Containers: Reopen Folder Locally` to switch back
+A DevContainer configuration is available for VS Code + Docker users. Open the project in VS Code and select "Reopen in Container" when prompted. The container runs `rake setup` automatically, then follow steps 2-5 above.
 
-## Manual Setup (Without DevContainer)
+## Running Locally
 
-If not using DevContainer, ensure you have Ruby 3.4+ and Node.js 20+ installed, then:
-
-```shell
-rake setup                         # Install dependencies, copy config files
-bundle exec rake generate:jwt_key  # Generate JWT_KEY, copy output to secrets.yml
-# Edit backend_app/config/secrets.yml - set JWT_KEY and ADMIN_EMAIL
-# Edit frontend_app/.env.local - set VUE_APP_GOOGLE_CLIENT_ID (see doc/google.md)
-bundle exec rake db:setup                 # Development database
-RACK_ENV=test bundle exec rake db:setup   # Test database
-```
-
-## Running the Application
-
-Start both frontend and backend servers:
+Start both servers in separate terminals:
 
 ```shell
-# Terminal 1: Frontend dev server (http://localhost:8080)
-npm run dev
+# Terminal 1: Frontend (webpack dev server with hot reload)
+rake run:frontend
 
-# Terminal 2: Backend server (http://localhost:9292)
-puma config.ru
-#or puma -e development config.ru
+# Terminal 2: Backend API server
+rake run:api
 ```
 
-In production, access `http://0.0.0.0:9292` for the combined frontend and backend.
+**Important:** Open <http://localhost:9292> in your browser (the backend port), not 8080. The backend serves both the API and the frontend files from `dist/`. The webpack dev server on port 8080 only handles compilation.
 
 ## Testing
 
 ```shell
-bundle exec rake spec
+bundle exec rake spec    # Run all backend tests
+bundle exec rake         # Same (default task)
 ```
 
-## Deployment
-- Deploy your project to heroku. [Check out](doc/heroku.md)
+Ensure the test database is set up first:
 
-## System Architecture
-
-The application is split into files/folders for back-end and front-end. See the relevant files for each part of the application below.
-
-### Frontend
-
-```text
-[dist]
-    ├── favicon.ico
-    ├── index.html
-    ├── main.bundle.js
-    └── main.bundle.js.LICENSE.txt
-
-[frontend_app]
-    ├── App.vue
-    ├── main.js
-    ├── [pages]
-        ├── AboutPage.Vue
-        ├── HomePage copy.vue
-        └── HomePage.vue
-    ├── [router]
-        └── index.js
-    ├── [static]
-        ├── favicon.ico
-        ├── global.css
-        └── images.png
-    └── [templates]
-        └── index.html
-
-[node_modules]
-
-package-lock.json
-package.json
-
-[webpack]
-    ├── webpack.common.js
-    ├── webpack.dev.js
-    └── webpack.prod.js
+```shell
+RACK_ENV=test bundle exec rake db:setup
 ```
 
-### Backend
+## Database Commands
 
-```text
-.ruby-version
-Gemfile
-Gemfile.lock
-Procfile
-Procfile.dev
-Rakefile
-
-[backend_app]
-    ├── [config]
-        ├── envirnoment.rb
-        └── secrets_example.yml
-    ├── [controllers]
-        └── App.rb
-    ├── [db]
-        ├── [migration]
-            └── 001_todos_create.rb
-        └── [store]
-            └── development.db
-    └── [models]
-        └── todo.rb
-    
-config.ru
-require_app.rb
+```shell
+bundle exec rake db:migrate     # Run pending migrations
+bundle exec rake db:seed        # Seed database with sample data
+bundle exec rake db:setup       # Migrate + seed
+bundle exec rake db:reset       # Drop + migrate + seed (destructive)
+bundle exec rake db:drop        # Delete database (destructive)
 ```
 
-## To-dos
-- [ ] Add more test coverage
-- [ ] Review and merge `taylor/migrate-to-rspack` branch
-- [ ] Review and merge `jerry/service-security` branch
-- [ ] Review and merge `tiffany/fix-mark-attendance` branch
-- [ ] Review and merge `jerry/feature-assingment-manage` branch
-- [ ] Complete integration testing for merged branches
+## Documentation
 
-## Active Development Branches
+- [Google OAuth Setup](doc/google.md) — Configure Google Cloud credentials
+- [Heroku Deployment](doc/heroku.md) — Deploy to production
+- [Future Work](doc/future-work.md) — Planned improvements and known issues
 
-This section tracks the status, goals, and key changes for active development branches.
+## Key Dependencies
 
-### taylor/migrate-to-rspack
+**Backend:**
 
-**Status:** Not merged  
-**Goal:** Migrate the build system from Webpack to Rspack for improved build performance and faster development experience.
+- [Roda](https://roda.jeremyevans.net/) — Routing
+- [Sequel](https://sequel.jeremyevans.net/) — Database ORM
+- [dry-struct](https://dry-rb.org/gems/dry-struct/) — Domain entities
+- [dry-operation](https://dry-rb.org/gems/dry-operation/) — Railway-oriented services
+- [Roar](https://github.com/trailblazer/roar) — JSON representers
 
-**Key Changes:**
-- Replaced webpack configuration files with rspack equivalents
-- Updated `package.json` dependencies
-- Created new rspack configuration files:
-  - `rspack/rspack.common.js`
-  - `rspack/rspack.dev.js`
-  - `rspack/rspack.prod.js`
-- Updated package-lock.json with rspack dependencies
+**Frontend:**
 
-**Actions:**
-- Review build performance improvements
-- Test development and production builds
-- Verify all webpack features are properly migrated
-- Update documentation if needed
-
----
-
-### jerry/service-security
-
-**Status:** Not merged  
-**Goal:** Enhance application security by moving SSO (Single Sign-On) authentication logic to the backend and implementing secure cookie handling.
-
-**Key Changes:**
-- Moved Google OAuth login flow from frontend to backend
-- Implemented secure cookie handling for authentication tokens
-- Updated `backend_app/controllers/routes/authentication.rb` with backend OAuth flow
-- Modified `frontend_app/pages/Login.vue` to work with backend authentication
-- Added cookie security tests
-- Created `cookie_secure_text.html` documentation
-
-**Actions:**
-- Review security implementation
-- Test authentication flow end-to-end
-- Verify cookie security settings
-- Ensure refresh token handling works correctly
-- Test cross-browser compatibility
-
----
-
-### tiffany/fix-mark-attendance
-
-**Status:** Not merged  
-**Goal:** Enable owners, TAs, and instructors to mark attendance for students, improving the attendance management workflow.
-
-**Key Changes:**
-- Added attendance marking functionality for authorized roles (owner/TA/instructor)
-- Updated `backend_app/policies/assignment_policy.rb` with role-based permissions
-- Modified `backend_app/services/attendance_service.rb` to support marking attendance
-- Updated `backend_app/models/attendance.rb` and `backend_app/models/event.rb`
-- Refactored event fetching logic
-- Added account ID to request body for attendance marking
-
-**Actions:**
-- Review role-based permission logic
-- Test attendance marking for different user roles
-- Verify that students cannot mark their own attendance inappropriately
-- Test edge cases (multiple TAs, concurrent marking, etc.)
-
----
-
-### jerry/feature-assingment-manage
-
-**Status:** Not merged  
-**Goal:** Implement comprehensive assignment management features including creation, submission handling, and role-based access control.
-
-**Key Changes:**
-- Created assignment entity and CRUD operations
-- Implemented submission management system
-- Added `backend_app/models/assignemnt.rb` and `backend_app/models/submission.rb`
-- Created `backend_app/policies/assignment_policy.rb` and `backend_app/policies/submission_policy.rb`
-- Implemented `backend_app/services/assignment_service.rb` and `backend_app/services/submission_service.rb`
-- Added database migrations for assignments and submissions
-- Implemented file upload restrictions (students can only upload one latest file)
-- Added QMD file format support
-- UI improvements for submission blocks
-
-**Actions:**
-- Review assignment and submission CRUD operations
-- Test file upload functionality and restrictions
-- Verify role-based access control (students, TAs, instructors, owners)
-- Test assignment creation, editing, and deletion workflows
-- Verify submission upload and management features
-
----
-
-### jerry/feature-show-attendance
-
-**Status:** Merged ✓  
-**Goal:** Display attendance records with download capabilities and attendance distribution visualization.
-
-**Key Changes:**
-- Implemented GET `/attendance/:event_id` API endpoint
-- Added attendance record download functionality
-- Created attendance distribution visualization
-- Added list all attendance API endpoint
-- Extended login token expiration time
-- Improved responsive web design (RWD) for forms and dialogs
-- Fixed location deletion restrictions (locations with attendance cannot be deleted)
-
-**Actions:**
-- ✓ Completed - Branch has been merged to develop
-- Monitor for any issues in production
-- Consider additional enhancements based on user feedback
+- [Vue 3](https://vuejs.org/)
+- [Element Plus](https://element-plus.org/) — UI components
+- [vue3-google-login](https://github.com/syuilo/vue3-google-login) — OAuth

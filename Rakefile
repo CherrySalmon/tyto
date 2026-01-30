@@ -101,6 +101,18 @@ task :load_lib do
   require_app('lib')
 end
 
+namespace :run do
+  desc 'Run backend API server for development'
+  task :api do
+    sh 'puma config.ru -t 1:5 -p 9292'
+  end
+
+  desc 'Run frontend webpack dev server'
+  task :frontend do
+    sh 'npm run dev'
+  end
+end
+
 namespace :generate do
   desc 'Generate JWT_KEY for secrets.yml'
   task jwt_key: :load_lib do
