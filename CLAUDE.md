@@ -53,11 +53,29 @@ RACK_ENV=test bundle exec rake db:migrate  # Setup test database first
 ## Architecture
 
 ### Backend Structure (`backend_app/`)
-- **controllers/routes/**: API route handlers (Roda). Routes are under `/api/` namespace
-- **services/**: Business logic + authorization checks (CourseService, AccountService, etc.)
+
+The backend follows **Domain-Driven Design (DDD)** architecture. See `/ddd-refactoring` skill for patterns and guidelines.
+
+**Domain Layer** (`domain/`) - Pure domain, no framework dependencies:
+- **types.rb**: Shared constrained types (dry-types)
+- **\<context\>/entities/**: Aggregate roots and entities (dry-struct)
+- **\<context\>/values/**: Value objects
+
+**Infrastructure Layer** (`infrastructure/`):
+- **database/orm/**: Sequel ORM models (thin, no business logic)
+- **database/repositories/**: Maps ORM ↔ domain entities
+- **auth/**: SSO/OAuth gateway
+
+**Application Layer** (`application/`):
+- **services/**: Use cases, orchestration
 - **policies/**: Authorization rules (role-based access control)
-- **models/**: Sequel ORM models with associations
+- **contracts/**: Input validation (dry-validation, imports domain types)
+
+**Presentation Layer**:
+- **controllers/routes/**: API route handlers (Roda). Routes are under `/api/` namespace
 - **lib/jwt_credential.rb**: JWT generation/validation using RbNaCl SecretBox
+
+**Refactoring status**: See `CLAUDE.refactor-ddd.md` for current progress.
 
 ### Frontend Structure (`frontend_app/`)
 - **pages/**: Full-page Vue components (Login, ManageCourse, course/, etc.)
@@ -90,8 +108,9 @@ Policies check roles (admin, creator, instructor, staff, owner) and course enrol
   - `VUE_APP_GOOGLE_CLIENT_ID`: Google OAuth client ID (see doc/google.md)
 
 ### Database
-- Development: SQLite at `backend_app/db/store/development.db`
+- Development: SQLite at `backend_app/infrastructure/database/store/development.db`
 - Production: PostgreSQL (set in DATABASE_URL)
+- Migrations: `backend_app/infrastructure/database/migrations/`
 
 ## Development
 
