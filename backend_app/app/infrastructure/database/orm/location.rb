@@ -16,15 +16,5 @@ module Tyto
       super
       validates_presence %i[name course_id]
     end
-
-    def attributes
-      {
-        id:,
-        course_id:,
-        name:,
-        longitude:,
-        latitude:,
-      }
-    end
   end
 end

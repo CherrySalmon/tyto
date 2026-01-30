@@ -13,7 +13,7 @@ This document tracks domain logic that has leaked outside of `backend_app/app/do
 | 1 | Policy role checking + service ORM queries | 4 policies, 20+ services | CRITICAL | Complete |
 | 2 | ORM business logic (enrollment, accounts, roles) | `orm/course.rb` | CRITICAL | Complete |
 | 3 | Coordinate validation duplication | `record_attendance.rb`, `create_location.rb` | HIGH | Complete |
-| 4 | Time range logic in ORM | `orm/event.rb` | HIGH | Pending |
+| 4 | Time range logic in ORM | `orm/event.rb` | HIGH | Complete |
 
 ---
 
@@ -75,21 +75,52 @@ This document tracks domain logic that has leaked outside of `backend_app/app/do
 
 ---
 
-## Leak #4: Time Range Logic in ORM — PENDING
+## Leak #4: Time Range Logic in ORM — COMPLETE
 
-**Problem**: Event active check is in ORM query, not domain predicate.
+**Problem**: ORM models contained business logic methods that duplicated domain/repository functionality.
 
-**ORM** (`orm/event.rb`):
+**Analysis**:
 
-```ruby
-events = Event.where{start_at <= time}.where{end_at >= time}
-```
+- Domain `Event#active?(at:)` already existed, delegating to `TimeRange#contains?(time)`
+- Repository `Events#find_active_at(course_ids, time)` properly handles database queries
+- ORM had 3+ dead class methods per model that were never called (replaced by repositories)
 
-**Fix**: Domain `Event` should have `active_at?(time)` predicate using `TimeRange#contains?(time)`.
+**Solution**:
+
+- Removed dead ORM methods across all models (~90 lines total)
+- ORM models now only contain: associations, validations, timestamps
+
+**Completed**: 2026-01-31 | **Tests**: 651 pass | **Coverage**: 97.7%
 
 ---
 
 ## Completed Work Log
+
+### 2026-01-31: Leak #4 Complete
+
+**Analysis findings**:
+
+- Domain `Event#active?(at:)` predicate already existed (delegates to `TimeRange`)
+- `TimeRange#contains?(time)` and `TimeRange#active?(at:)` both implemented with tests
+- `NullTimeRange` properly handles missing dates (returns `false`)
+- Repository `Events#find_active_at` is the correct DDD boundary for database queries
+- ORM methods (`find_event`, `list_event`, `add_event`, `attributes`) were dead code
+
+**ORM cleanup**:
+
+- `orm/event.rb`: Removed `list_event`, `add_event`, `find_event`, `attributes` (~45 lines)
+- `orm/course.rb`: Removed `attributes`, `get_enroll_identity` (~15 lines)
+- `orm/location.rb`: Removed `attributes` (~10 lines)
+- `orm/attendance.rb`: Removed `list_attendance`, `add_attendance`, `attributes`, `find_account_course_role_id` (~45 lines)
+
+**ORM models now contain only**:
+
+- Sequel model declaration
+- Association definitions (`many_to_one`, `one_to_many`, `many_to_many`)
+- Validation rules
+- Timestamps plugin
+
+---
 
 ### 2026-01-30: Leak #3 Complete
 
@@ -133,7 +164,7 @@ events = Event.where{start_at <= time}.where{end_at >= time}
 **ORM cleanup**:
 
 - Removed 7 methods from `orm/course.rb` (~100 lines)
-- Only `attributes` and `get_enroll_identity` remain (for API responses)
+- Remaining `attributes` and `get_enroll_identity` removed in Leak #4
 
 **Tests added**: 10 new tests for repository methods
 
