@@ -20,13 +20,14 @@ module Todo
 
     # Add a new account with the specified data
     def self.add_account(user_data)
+      data = user_data.transform_keys(&:to_sym) # JSON.parse returns string keys
       account = Account.create(
-        name: user_data[:name],
-        email: user_data[:email],
-        access_token: user_data[:access_token],
-        avatar: user_data[:avatar]
+        name: data[:name],
+        email: data[:email],
+        access_token: data[:access_token],
+        avatar: data[:avatar]
       )
-      user_data[:roles].each do |role_name|
+      data[:roles].each do |role_name|
         role = Role.find(name: role_name)
         account.add_role(role) if role
       end

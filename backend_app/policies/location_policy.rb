@@ -13,9 +13,9 @@ module Todo
       requestor_is_owner? || requestor_is_instructor? || requestor_is_staff?
     end
 
-    # Everyone can read a location
+    # Only enrolled users can view locations
     def can_view?
-      true
+      @course_roles.any?
     end
 
     # Only the course's teachers and staff can update a location

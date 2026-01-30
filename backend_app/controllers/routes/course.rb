@@ -72,6 +72,9 @@ module Todo
                 CourseService.update_enrollments(requestor, course_id, enrolled_data)
                 response.status = 200
                 { success: true, message: 'Enrollments updated' }.to_json
+              rescue CourseService::ForbiddenError => e
+                response.status = 403
+                { error: 'Forbidden', details: e.message }.to_json
               rescue JSON::ParserError
                 response.status = 400
                 { error: 'Invalid JSON format' }.to_json
@@ -158,7 +161,7 @@ module Todo
                 # PUT api/course/:course_id/event/:event_id
                 r.put do
                   request_body = JSON.parse(r.body.read)
-                  EventService.update(requestor, event_id, request_body)
+                  EventService.update(requestor, event_id, course_id, request_body)
                   response.status = 200
                   { success: true, message: 'Event updated'}.to_json
                 rescue EventService::EventNotFoundError => e
@@ -212,6 +215,9 @@ module Todo
                     LocationService.remove(requestor, location_id, course_id)
                     response.status = 200
                     { success: true, message: 'Location deleted' }.to_json
+                  rescue LocationService::LocationNotFoundError => e
+                    response.status = 404
+                    { error: 'Location not found', details: e.message }.to_json
                   rescue LocationService::ForbiddenError => e
                     response.status = 403
                     { error: 'Forbidden', details: e.message }.to_json

@@ -44,7 +44,7 @@ module Todo
       # Remove duplicate roles and return the values of the aggregated_courses hash
       aggregated_courses.values.each { |course| course[:enroll_identity].uniq! }
 
-      aggregated_courses
+      aggregated_courses.values
     end
 
     def self.create_course(account_id, course_data)
@@ -64,11 +64,11 @@ module Todo
       {
         id: id,
         name: name,
-        created_at: created_at,
-        updated_at: updated_at,
+        created_at: created_at&.utc&.iso8601,
+        updated_at: updated_at&.utc&.iso8601,
         logo: logo,
-        start_at: start_at,
-        end_at: end_at,
+        start_at: start_at&.utc&.iso8601,
+        end_at: end_at&.utc&.iso8601,
         enroll_identity: account_id ? get_enroll_identity(account_id) : {}
       }
     end
@@ -87,13 +87,17 @@ module Todo
 
       account = account_course.account
 
-      account_email_exist = Account.first(email: enrolled_data['email'])
+      # Only update email if provided
+      if enrolled_data['email']
+        account_email_exist = Account.first(email: enrolled_data['email'])
 
-      if (account_email_exist != account) && account_email_exist && account_email_exist.id != account_id
-        raise "Email already exists with a different account. Operation aborted."
-      else
-        account.update(email: enrolled_data['email'])
+        if (account_email_exist != account) && account_email_exist && account_email_exist.id != account_id
+          raise "Email already exists with a different account. Operation aborted."
+        else
+          account.update(email: enrolled_data['email'])
+        end
       end
+
       update_course_account_roles(account, enrolled_data['roles'])
     end
 
