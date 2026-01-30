@@ -2,7 +2,7 @@
 
 require_relative '../../types'
 
-module Todo
+module Tyto
   module Value
     # Value object representing a time range with start and end times.
     # Immutable - updates create new instances via `new()`.

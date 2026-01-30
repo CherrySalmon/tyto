@@ -7,7 +7,7 @@ module TestHelpers
   # Create a test account and return it
   def create_test_account(name: 'Test User', email: nil, roles: ['creator'])
     email ||= "test-#{SecureRandom.hex(4)}@example.com"
-    Todo::Account.add_account(
+    Tyto::Account.add_account(
       name: name,
       email: email,
       roles: roles,
@@ -18,7 +18,7 @@ module TestHelpers
 
   # Generate auth header for a given account
   def auth_header_for(account)
-    token = Todo::JWTCredential.generate_jwt(
+    token = Tyto::JWTCredential.generate_jwt(
       account.id,
       account.roles.map(&:name)
     )

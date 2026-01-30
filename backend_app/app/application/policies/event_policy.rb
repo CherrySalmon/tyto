@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Todo
+module Tyto
   # Policy to determine if an account can view, edit, or delete a particular course
   class EventPolicy
     def initialize(requestor, course_roles)

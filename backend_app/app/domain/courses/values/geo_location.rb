@@ -2,7 +2,7 @@
 
 require_relative '../../types'
 
-module Todo
+module Tyto
   module Value
     # GeoLocation value object representing longitude/latitude coordinates.
     # Immutable and validated via type constraints.

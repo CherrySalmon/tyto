@@ -2,17 +2,17 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Repository::Locations' do
-  let(:repository) { Todo::Repository::Locations.new }
+describe 'Tyto::Repository::Locations' do
+  let(:repository) { Tyto::Repository::Locations.new }
   let(:now) { Time.now }
 
   # Locations require a course, so create one first
-  let(:course) { Todo::Course.create(name: 'Test Course') }
-  let(:another_course) { Todo::Course.create(name: 'Another Course') }
+  let(:course) { Tyto::Course.create(name: 'Test Course') }
+  let(:another_course) { Tyto::Course.create(name: 'Another Course') }
 
   describe '#create' do
     it 'persists a new location and returns entity with ID' do
-      entity = Todo::Entity::Location.new(
+      entity = Tyto::Entity::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Main Lecture Hall',
@@ -24,7 +24,7 @@ describe 'Todo::Repository::Locations' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Todo::Entity::Location
+      _(result).must_be_instance_of Tyto::Entity::Location
       _(result.id).wont_be_nil
       _(result.name).must_equal 'Main Lecture Hall'
       _(result.course_id).must_equal course.id
@@ -35,7 +35,7 @@ describe 'Todo::Repository::Locations' do
     end
 
     it 'persists location without coordinates' do
-      entity = Todo::Entity::Location.new(
+      entity = Tyto::Entity::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Virtual Room',
@@ -56,7 +56,7 @@ describe 'Todo::Repository::Locations' do
 
   describe '#find_id' do
     it 'returns domain entity for existing location' do
-      orm_location = Todo::Location.create(
+      orm_location = Tyto::Location.create(
         course_id: course.id,
         name: 'Test Location',
         longitude: 121.5654,
@@ -65,7 +65,7 @@ describe 'Todo::Repository::Locations' do
 
       result = repository.find_id(orm_location.id)
 
-      _(result).must_be_instance_of Todo::Entity::Location
+      _(result).must_be_instance_of Tyto::Entity::Location
       _(result.id).must_equal orm_location.id
       _(result.name).must_equal 'Test Location'
       _(result.course_id).must_equal course.id
@@ -87,9 +87,9 @@ describe 'Todo::Repository::Locations' do
 
     it 'returns locations ordered by name' do
       # Create locations out of order
-      Todo::Location.create(course_id: course.id, name: 'Room C')
-      Todo::Location.create(course_id: course.id, name: 'Room A')
-      Todo::Location.create(course_id: course.id, name: 'Room B')
+      Tyto::Location.create(course_id: course.id, name: 'Room C')
+      Tyto::Location.create(course_id: course.id, name: 'Room A')
+      Tyto::Location.create(course_id: course.id, name: 'Room B')
 
       result = repository.find_by_course(course.id)
 
@@ -98,8 +98,8 @@ describe 'Todo::Repository::Locations' do
     end
 
     it 'filters by course_id' do
-      Todo::Location.create(course_id: course.id, name: 'Course 1 Location')
-      Todo::Location.create(course_id: another_course.id, name: 'Course 2 Location')
+      Tyto::Location.create(course_id: course.id, name: 'Course 1 Location')
+      Tyto::Location.create(course_id: another_course.id, name: 'Course 2 Location')
 
       result = repository.find_by_course(course.id)
 
@@ -117,19 +117,19 @@ describe 'Todo::Repository::Locations' do
     end
 
     it 'returns all locations as domain entities' do
-      Todo::Location.create(course_id: course.id, name: 'Location 1')
-      Todo::Location.create(course_id: course.id, name: 'Location 2')
+      Tyto::Location.create(course_id: course.id, name: 'Location 1')
+      Tyto::Location.create(course_id: course.id, name: 'Location 2')
 
       result = repository.find_all
 
       _(result.length).must_equal 2
-      result.each { |loc| _(loc).must_be_instance_of Todo::Entity::Location }
+      result.each { |loc| _(loc).must_be_instance_of Tyto::Entity::Location }
     end
   end
 
   describe '#update' do
     it 'updates existing location and returns updated entity' do
-      orm_location = Todo::Location.create(
+      orm_location = Tyto::Location.create(
         course_id: course.id,
         name: 'Original Name',
         longitude: 121.5654,
@@ -152,7 +152,7 @@ describe 'Todo::Repository::Locations' do
     end
 
     it 'raises error for non-existent location' do
-      entity = Todo::Entity::Location.new(
+      entity = Tyto::Entity::Location.new(
         id: 999_999,
         course_id: course.id,
         name: 'Ghost Location',
@@ -168,7 +168,7 @@ describe 'Todo::Repository::Locations' do
 
   describe '#delete' do
     it 'deletes existing location and returns true' do
-      orm_location = Todo::Location.create(
+      orm_location = Tyto::Location.create(
         course_id: course.id,
         name: 'To Delete'
       )
@@ -188,7 +188,7 @@ describe 'Todo::Repository::Locations' do
 
   describe '#has_events?' do
     it 'returns false for location without events' do
-      orm_location = Todo::Location.create(
+      orm_location = Tyto::Location.create(
         course_id: course.id,
         name: 'Empty Location'
       )
@@ -197,11 +197,11 @@ describe 'Todo::Repository::Locations' do
     end
 
     it 'returns true for location with events' do
-      orm_location = Todo::Location.create(
+      orm_location = Tyto::Location.create(
         course_id: course.id,
         name: 'Busy Location'
       )
-      Todo::Event.create(
+      Tyto::Event.create(
         course_id: course.id,
         location_id: orm_location.id,
         name: 'Test Event'
@@ -218,7 +218,7 @@ describe 'Todo::Repository::Locations' do
   describe 'round-trip' do
     it 'maintains data integrity through create -> find -> update -> find cycle' do
       # Create
-      original = Todo::Entity::Location.new(
+      original = Tyto::Entity::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Full Cycle Test',
@@ -251,7 +251,7 @@ describe 'Todo::Repository::Locations' do
 
   describe 'geo_location integration' do
     it 'entity has functioning geo_location value object' do
-      entity = Todo::Entity::Location.new(
+      entity = Tyto::Entity::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Taipei Office',
@@ -263,12 +263,12 @@ describe 'Todo::Repository::Locations' do
 
       result = repository.create(entity)
 
-      _(result.geo_location).must_be_instance_of Todo::Value::GeoLocation
+      _(result.geo_location).must_be_instance_of Tyto::Value::GeoLocation
       _(result.has_coordinates?).must_equal true
     end
 
     it 'entity without coordinates has NullGeoLocation' do
-      entity = Todo::Entity::Location.new(
+      entity = Tyto::Entity::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Virtual Location',
@@ -280,7 +280,7 @@ describe 'Todo::Repository::Locations' do
 
       result = repository.create(entity)
 
-      _(result.geo_location).must_be_instance_of Todo::Value::NullGeoLocation
+      _(result.geo_location).must_be_instance_of Tyto::Value::NullGeoLocation
       _(result.has_coordinates?).must_equal false
     end
   end

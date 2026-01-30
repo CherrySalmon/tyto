@@ -2,8 +2,8 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Value::NullTimeRange' do
-  let(:null_range) { Todo::Value::NullTimeRange.new }
+describe 'Tyto::Value::NullTimeRange' do
+  let(:null_range) { Tyto::Value::NullTimeRange.new }
 
   describe 'attributes' do
     it 'returns nil for start_at' do
@@ -39,7 +39,7 @@ describe 'Todo::Value::NullTimeRange' do
     end
 
     it 'returns false for overlaps?' do
-      other = Todo::Value::TimeRange.new(start_at: Time.now, end_at: Time.now + 3600)
+      other = Tyto::Value::TimeRange.new(start_at: Time.now, end_at: Time.now + 3600)
       _(null_range.overlaps?(other)).must_equal false
     end
 
@@ -60,19 +60,19 @@ describe 'Todo::Value::NullTimeRange' do
 
   describe 'equality' do
     it 'equals another NullTimeRange' do
-      other = Todo::Value::NullTimeRange.new
+      other = Tyto::Value::NullTimeRange.new
       _(null_range == other).must_equal true
     end
 
     it 'does not equal a real TimeRange' do
-      real = Todo::Value::TimeRange.new(start_at: Time.now, end_at: Time.now + 3600)
+      real = Tyto::Value::TimeRange.new(start_at: Time.now, end_at: Time.now + 3600)
       _(null_range == real).must_equal false
     end
   end
 
   describe 'polymorphism with TimeRange' do
     it 'responds to same interface as TimeRange' do
-      real = Todo::Value::TimeRange.new(start_at: Time.now, end_at: Time.now + 3600)
+      real = Tyto::Value::TimeRange.new(start_at: Time.now, end_at: Time.now + 3600)
 
       # Both should respond to the same methods
       %i[start_at end_at duration duration_days active? upcoming? ended? overlaps? contains? null? present?].each do |method|

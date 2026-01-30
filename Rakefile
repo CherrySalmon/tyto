@@ -65,7 +65,7 @@ namespace :db do
 
     # Run the migrations
     Dir.glob("#{migration_path}/*.rb").each { |file| require file }
-    Sequel::Migrator.run(Todo::Api.db, migration_path)
+    Sequel::Migrator.run(Tyto::Api.db, migration_path)
   end
 
   desc 'Seed the database with default data'
@@ -79,7 +79,7 @@ namespace :db do
 
   desc 'Delete dev or test database file'
   task drop: [:config] do
-    @app = Todo::Api
+    @app = Tyto::Api
     if @app.environment == :production
       puts 'Cannot wipe production database!'
       return
@@ -104,7 +104,7 @@ end
 namespace :generate do
   desc 'Generate JWT_KEY for secrets.yml'
   task jwt_key: :load_lib do
-    puts "JWT_KEY: #{Todo::JWTCredential.generate_key}"
+    puts "JWT_KEY: #{Tyto::JWTCredential.generate_key}"
   end
 
   # Alias for backwards compatibility

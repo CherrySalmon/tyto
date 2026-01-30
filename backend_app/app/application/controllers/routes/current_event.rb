@@ -3,7 +3,7 @@
 require 'json'
 require 'dry/monads'
 
-module Todo
+module Tyto
   module Routes
     class CurrentEvents < Roda
       include Dry::Monads[:result]

@@ -3,7 +3,7 @@
 require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
 
-module Todo
+module Tyto
   module Service
     module Courses
       # Service: Get a single course by ID

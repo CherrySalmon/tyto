@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Todo
+module Tyto
   # Policy to determine if an requestor can view, edit, or delete a particular course
   class LocationPolicy
     def initialize(requestor, course_roles)

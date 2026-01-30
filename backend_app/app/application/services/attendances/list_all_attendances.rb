@@ -3,7 +3,7 @@
 require_relative '../../../infrastructure/database/repositories/attendances'
 require_relative '../application_operation'
 
-module Todo
+module Tyto
   module Service
     module Attendances
       # Service: List all attendances for a course (for instructors/staff/owner)

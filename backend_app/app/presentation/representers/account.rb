@@ -3,7 +3,7 @@
 require 'roar/decorator'
 require 'roar/json'
 
-module Todo
+module Tyto
   module Representer
     # Representer for Account entity to JSON
     class Account < Roar::Decorator

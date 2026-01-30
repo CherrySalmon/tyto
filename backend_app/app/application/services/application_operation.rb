@@ -4,7 +4,7 @@ require 'dry/operation'
 
 require_relative '../responses/api_result'
 
-module Todo
+module Tyto
   module Service
     # Base class for all service operations
     # Provides common response helpers to reduce duplication across services

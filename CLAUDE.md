@@ -139,7 +139,7 @@ puma config.ru -t 1:5 -p 9292
 
 ### Ruby
 - Frozen string literals enabled at file top
-- Module namespacing: `Todo::Api`, `Todo::Routes::*`
+- Module namespacing: `Tyto::Api`, `Tyto::Routes::*`
 - RuboCop for linting
 - **Avoid `nil` as state**: Use Null Object pattern instead of returning `nil` for missing/empty states. This eliminates guard clauses and follows "Tell, Don't Ask" principle. Example: `NullTimeRange` instead of `nil` for courses without dates.
 

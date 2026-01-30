@@ -112,7 +112,7 @@ All services inherit from `Service::ApplicationOperation` which provides respons
 
 ```ruby
 # application/services/application_operation.rb
-module Todo
+module Tyto
   module Service
     class ApplicationOperation < Dry::Operation
       private
@@ -133,7 +133,7 @@ end
 Services inherit from `ApplicationOperation` and use `step` for railway-oriented flow:
 
 ```ruby
-module Todo
+module Tyto
   module Service
     module Events
       class CreateEvent < ApplicationOperation
@@ -248,7 +248,7 @@ end
 Use Roar decorators for JSON serialization:
 
 ```ruby
-module Todo
+module Tyto
   module Representer
     class Event < Roar::Decorator
       include Roar::JSON

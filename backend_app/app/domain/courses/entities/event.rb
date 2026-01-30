@@ -4,7 +4,7 @@ require_relative '../../types'
 require_relative '../../shared/values/time_range'
 require_relative '../../shared/values/null_time_range'
 
-module Todo
+module Tyto
   module Entity
     # Event entity within the Courses bounded context.
     # Events belong to a Course and have a Location.

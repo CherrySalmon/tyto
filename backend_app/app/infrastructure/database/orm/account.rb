@@ -3,7 +3,7 @@
 
 require 'sequel'
 
-module Todo
+module Tyto
   class Account < Sequel::Model
     plugin :validation_helpers
     # many_to_many :roles, join_table: :account_roles

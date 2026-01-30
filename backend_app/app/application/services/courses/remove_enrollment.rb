@@ -2,7 +2,7 @@
 
 require_relative '../application_operation'
 
-module Todo
+module Tyto
   module Service
     module Courses
       # Service: Remove an enrollment from a course

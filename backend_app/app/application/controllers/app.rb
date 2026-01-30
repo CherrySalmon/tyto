@@ -8,7 +8,7 @@ require_relative './routes/authentication'
 require_relative './routes/course'
 require 'rack/ssl-enforcer'
 
-module Todo
+module Tyto
   class Api < Roda # rubocop:disable Style/Documentation
     plugin :render
     plugin :public, root: 'dist'
@@ -34,7 +34,7 @@ module Todo
 
     route do |r|
       r.public
-      # Nesting todos and auth under the 'api' route
+      # API routes
       r.on 'api' do
         # All authentication-related routes are under 'api/auth'
         r.on 'auth' do
@@ -58,7 +58,7 @@ module Todo
 
         r.get do
           response['Content-Type'] = 'application/json'
-          { success: true, message: 'Welcome to the Todo API' }.to_json
+          { success: true, message: 'Welcome to the Tyto API' }.to_json
         end
       end
 

@@ -2,7 +2,7 @@
 
 require_relative '../../types'
 
-module Todo
+module Tyto
   module Entity
     # Enrollment entity - represents an account's participation in a course.
     # A child entity of the Course aggregate.

@@ -4,7 +4,7 @@ require_relative '../../types'
 require_relative '../../courses/values/geo_location'
 require_relative '../../courses/values/null_geo_location'
 
-module Todo
+module Tyto
   module Entity
     # Attendance entity - represents a check-in record for an event.
     # Pure domain object with no infrastructure dependencies.

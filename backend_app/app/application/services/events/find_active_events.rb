@@ -4,7 +4,7 @@ require_relative '../../../infrastructure/database/repositories/events'
 require_relative '../../../infrastructure/database/repositories/locations'
 require_relative '../application_operation'
 
-module Todo
+module Tyto
   module Service
     module Events
       # Service: Find events active at a given time for the user's enrolled courses

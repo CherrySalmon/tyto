@@ -2,9 +2,9 @@
 
 require_relative '../../../spec_helper'
 
-describe Todo::Service::Accounts::CreateAccount do
-  let(:creator_account) { Todo::Account.create(email: 'creator@example.com', name: 'Creator') }
-  let(:creator_role) { Todo::Role.first(name: 'creator') }
+describe Tyto::Service::Accounts::CreateAccount do
+  let(:creator_account) { Tyto::Account.create(email: 'creator@example.com', name: 'Creator') }
+  let(:creator_role) { Tyto::Role.first(name: 'creator') }
 
   before do
     creator_account.add_role(creator_role)
@@ -20,7 +20,7 @@ describe Todo::Service::Accounts::CreateAccount do
         'roles' => ['member']
       }
 
-      result = Todo::Service::Accounts::CreateAccount.new.call(requestor:, account_data:)
+      result = Tyto::Service::Accounts::CreateAccount.new.call(requestor:, account_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Success
       _(result.value!.message.email).must_equal 'newuser@example.com'
@@ -29,17 +29,17 @@ describe Todo::Service::Accounts::CreateAccount do
     it 'returns Failure when email is missing' do
       account_data = { 'name' => 'No Email' }
 
-      result = Todo::Service::Accounts::CreateAccount.new.call(requestor:, account_data:)
+      result = Tyto::Service::Accounts::CreateAccount.new.call(requestor:, account_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Failure
       _(result.failure.status).must_equal :bad_request
     end
 
     it 'returns Failure when email already exists' do
-      Todo::Account.create(email: 'existing@example.com', name: 'Existing')
+      Tyto::Account.create(email: 'existing@example.com', name: 'Existing')
       account_data = { 'name' => 'Duplicate', 'email' => 'existing@example.com' }
 
-      result = Todo::Service::Accounts::CreateAccount.new.call(requestor:, account_data:)
+      result = Tyto::Service::Accounts::CreateAccount.new.call(requestor:, account_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Failure
       _(result.failure.status).must_equal :bad_request

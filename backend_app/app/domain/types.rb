@@ -3,7 +3,7 @@
 require 'dry-types'
 require 'dry-struct'
 
-module Todo
+module Tyto
   # Shared constrained types for domain entities and application contracts.
   # Types live in the domain layer because they express domain vocabulary.
   # Application contracts import these types (dependency flows inward).

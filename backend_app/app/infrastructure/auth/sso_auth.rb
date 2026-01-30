@@ -1,7 +1,7 @@
 require 'net/http'
 require 'json'
 
-module Todo
+module Tyto
   class SSOAuth # rubocop:disable Style/Documentation
     def self.fetch_user_info(access_token) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
       uri = URI('https://www.googleapis.com/oauth2/v3/userinfo')

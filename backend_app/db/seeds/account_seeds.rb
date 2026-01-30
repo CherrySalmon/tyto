@@ -8,7 +8,7 @@ role_descriptions = ['admin', 'creator', 'member', 'owner', 'instructor', 'staff
 
 # Iterate over the descriptions and create roles if they don't exist
 role_descriptions.each do |desc|
-  Todo::Role.find_or_create(name: desc)
+  Tyto::Role.find_or_create(name: desc)
 end
 
 admin_user_data = {
@@ -20,4 +20,4 @@ admin_user_data = {
 }
 
 # Add a new account with the provided data
-Todo::Account.add_account(admin_user_data)
+Tyto::Account.add_account(admin_user_data)

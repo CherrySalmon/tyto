@@ -18,12 +18,12 @@ require 'rack/test'
 require_relative 'support/test_helpers'
 
 # Database setup (run ONCE before all tests)
-DB = Todo::Api.db
+DB = Tyto::Api.db
 DB.tables.each { |table| DB[table].delete }
 
 # Seed roles (same as production)
 %w[admin creator member owner instructor staff student].each do |role_name|
-  Todo::Role.find_or_create(name: role_name)
+  Tyto::Role.find_or_create(name: role_name)
 end
 
 # Transaction wrapping (each test runs in rolled-back transaction)

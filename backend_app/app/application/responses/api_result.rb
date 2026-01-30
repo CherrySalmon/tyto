@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Todo
+module Tyto
   module Response
     # Standardized API response object for service results
     # Used with dry-monads Success/Failure to carry response information

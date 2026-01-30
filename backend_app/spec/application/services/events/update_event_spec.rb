@@ -6,9 +6,9 @@ describe 'Service::Events::UpdateEvent' do
   include TestHelpers
 
   def create_test_course(owner_account, name: 'Test Course')
-    course = Todo::Course.create(name: name)
-    owner_role = Todo::Role.find(name: 'owner')
-    Todo::AccountCourse.create(
+    course = Tyto::Course.create(name: name)
+    owner_role = Tyto::Role.find(name: 'owner')
+    Tyto::AccountCourse.create(
       course_id: course.id,
       account_id: owner_account.id,
       role_id: owner_role.id
@@ -17,7 +17,7 @@ describe 'Service::Events::UpdateEvent' do
   end
 
   def create_test_location(course, name: 'Test Location')
-    Todo::Location.create(
+    Tyto::Location.create(
       course_id: course.id,
       name: name,
       latitude: 40.7128,
@@ -26,7 +26,7 @@ describe 'Service::Events::UpdateEvent' do
   end
 
   def create_test_event(course, location, name: 'Test Event')
-    Todo::Event.create(
+    Tyto::Event.create(
       course_id: course.id,
       location_id: location.id,
       name: name,
@@ -43,7 +43,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -65,7 +65,7 @@ describe 'Service::Events::UpdateEvent' do
       original_start = event.start_at
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -90,7 +90,7 @@ describe 'Service::Events::UpdateEvent' do
       new_end = (Time.now + 14_400).iso8601
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -115,7 +115,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -135,7 +135,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location, name: 'Original')
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -144,7 +144,7 @@ describe 'Service::Events::UpdateEvent' do
 
       _(result.success?).must_equal true
       # Reload from database
-      reloaded = Todo::Event[event.id]
+      reloaded = Tyto::Event[event.id]
       _(reloaded.name).must_equal 'Persisted Update'
     end
 
@@ -156,7 +156,7 @@ describe 'Service::Events::UpdateEvent' do
       other_user = create_test_account(name: 'Other User', roles: ['member'])
 
       requestor = { 'account_id' => other_user.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -176,15 +176,15 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: student.id,
         role_id: student_role.id
       )
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -202,15 +202,15 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
 
       instructor = create_test_account(name: 'Instructor', roles: ['member'])
-      instructor_role = Todo::Role.find(name: 'instructor')
-      Todo::AccountCourse.create(
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: instructor.id,
         role_id: instructor_role.id
       )
 
       requestor = { 'account_id' => instructor.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -228,15 +228,15 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
 
       staff = create_test_account(name: 'Staff', roles: ['member'])
-      staff_role = Todo::Role.find(name: 'staff')
-      Todo::AccountCourse.create(
+      staff_role = Tyto::Role.find(name: 'staff')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: staff.id,
         role_id: staff_role.id
       )
 
       requestor = { 'account_id' => staff.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -252,7 +252,7 @@ describe 'Service::Events::UpdateEvent' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: 99999,
@@ -269,7 +269,7 @@ describe 'Service::Events::UpdateEvent' do
       account = create_test_account(roles: ['creator'])
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: 99999,
         event_id: 1,
@@ -285,7 +285,7 @@ describe 'Service::Events::UpdateEvent' do
       account = create_test_account(roles: ['creator'])
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: 'invalid',
         event_id: 1,
@@ -302,7 +302,7 @@ describe 'Service::Events::UpdateEvent' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: 'invalid',
@@ -322,7 +322,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course1, location) # Event belongs to course1
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course2.id, # Trying to update via course2
         event_id: event.id,
@@ -342,7 +342,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -362,7 +362,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -387,7 +387,7 @@ describe 'Service::Events::UpdateEvent' do
 
       requestor = { 'account_id' => account.id }
       # Try to set end_at to before the existing start_at
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -405,7 +405,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -427,7 +427,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id,
@@ -435,7 +435,7 @@ describe 'Service::Events::UpdateEvent' do
       )
 
       event_result = result.value!.message
-      json_hash = Todo::Representer::Event.new(event_result).to_hash
+      json_hash = Tyto::Representer::Event.new(event_result).to_hash
 
       _(json_hash).must_be_kind_of Hash
       _(json_hash['name']).must_equal 'Serialized Update'
@@ -448,7 +448,7 @@ describe 'Service::Events::UpdateEvent' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::UpdateEvent.new.call(
+      result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: 99999,

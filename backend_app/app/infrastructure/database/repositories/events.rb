@@ -2,7 +2,7 @@
 
 require_relative '../../../domain/courses/entities/event'
 
-module Todo
+module Tyto
   module Repository
     # Repository for Event entities.
     # Maps between ORM records and domain entities.
@@ -11,7 +11,7 @@ module Todo
       # @param id [Integer] the event ID
       # @return [Entity::Event, nil] the domain entity or nil if not found
       def find_id(id)
-        orm_record = Todo::Event[id]
+        orm_record = Tyto::Event[id]
         return nil unless orm_record
 
         rebuild_entity(orm_record)
@@ -21,7 +21,7 @@ module Todo
       # @param course_id [Integer] the course ID
       # @return [Array<Entity::Event>] array of domain entities
       def find_by_course(course_id)
-        Todo::Event
+        Tyto::Event
           .where(course_id:)
           .order(:start_at)
           .all
@@ -31,7 +31,7 @@ module Todo
       # Find all events
       # @return [Array<Entity::Event>] array of domain entities
       def find_all
-        Todo::Event.all.map { |record| rebuild_entity(record) }
+        Tyto::Event.all.map { |record| rebuild_entity(record) }
       end
 
       # Find events active at a given time for specified course IDs
@@ -39,7 +39,7 @@ module Todo
       # @param time [Time] the time to check
       # @return [Array<Entity::Event>] array of active domain entities
       def find_active_at(course_ids, time)
-        Todo::Event
+        Tyto::Event
           .where { start_at <= time }
           .where { end_at >= time }
           .where(course_id: course_ids)
@@ -51,7 +51,7 @@ module Todo
       # @param entity [Entity::Event] the domain entity to persist
       # @return [Entity::Event] the persisted entity with ID
       def create(entity)
-        orm_record = Todo::Event.find_or_create(
+        orm_record = Tyto::Event.find_or_create(
           course_id: entity.course_id,
           location_id: entity.location_id,
           name: entity.name,
@@ -66,7 +66,7 @@ module Todo
       # @param entity [Entity::Event] the domain entity with updates
       # @return [Entity::Event] the updated entity
       def update(entity)
-        orm_record = Todo::Event[entity.id]
+        orm_record = Tyto::Event[entity.id]
         raise "Event not found: #{entity.id}" unless orm_record
 
         orm_record.update(
@@ -83,7 +83,7 @@ module Todo
       # @param id [Integer] the event ID
       # @return [Boolean] true if deleted
       def delete(id)
-        orm_record = Todo::Event[id]
+        orm_record = Tyto::Event[id]
         return false unless orm_record
 
         orm_record.destroy
@@ -93,7 +93,7 @@ module Todo
       private
 
       # Rebuild a domain entity from an ORM record
-      # @param orm_record [Todo::Event] the Sequel model instance
+      # @param orm_record [Tyto::Event] the Sequel model instance
       # @return [Entity::Event] the domain entity
       def rebuild_entity(orm_record)
         Entity::Event.new(

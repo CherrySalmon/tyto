@@ -3,7 +3,7 @@
 
 require 'sequel'
 
-module Todo
+module Tyto
   class Role < Sequel::Model
     # You can also add validations for the model
     plugin :validation_helpers

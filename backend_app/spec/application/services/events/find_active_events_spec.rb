@@ -6,9 +6,9 @@ describe 'Service::Events::FindActiveEvents' do
   include TestHelpers
 
   def create_test_course(owner_account, name: 'Test Course')
-    course = Todo::Course.create(name: name)
-    owner_role = Todo::Role.find(name: 'owner')
-    Todo::AccountCourse.create(
+    course = Tyto::Course.create(name: name)
+    owner_role = Tyto::Role.find(name: 'owner')
+    Tyto::AccountCourse.create(
       course_id: course.id,
       account_id: owner_account.id,
       role_id: owner_role.id
@@ -17,7 +17,7 @@ describe 'Service::Events::FindActiveEvents' do
   end
 
   def create_test_location(course, name: 'Test Location')
-    Todo::Location.create(
+    Tyto::Location.create(
       course_id: course.id,
       name: name,
       latitude: 40.7128,
@@ -28,7 +28,7 @@ describe 'Service::Events::FindActiveEvents' do
   def create_test_event(course, location, name: 'Test Event', start_at: nil, end_at: nil)
     start_at ||= Time.now - 1800 # 30 minutes ago
     end_at ||= Time.now + 1800   # 30 minutes from now
-    Todo::Event.create(
+    Tyto::Event.create(
       course_id: course.id,
       location_id: location.id,
       name: name,
@@ -45,7 +45,7 @@ describe 'Service::Events::FindActiveEvents' do
       event = create_test_event(course, location, name: 'Active Event')
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
@@ -69,7 +69,7 @@ describe 'Service::Events::FindActiveEvents' do
                         end_at: Time.now - 3600)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
@@ -83,7 +83,7 @@ describe 'Service::Events::FindActiveEvents' do
       # Don't create any course enrollments
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
@@ -102,7 +102,7 @@ describe 'Service::Events::FindActiveEvents' do
       create_test_event(course2, location2, name: 'Event 2')
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
@@ -122,7 +122,7 @@ describe 'Service::Events::FindActiveEvents' do
       create_test_event(course, location)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
@@ -157,7 +157,7 @@ describe 'Service::Events::FindActiveEvents' do
                         end_at: Time.now + 7200)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
@@ -176,7 +176,7 @@ describe 'Service::Events::FindActiveEvents' do
       create_test_event(other_course, location, name: 'Other Event')
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
@@ -192,15 +192,15 @@ describe 'Service::Events::FindActiveEvents' do
       create_test_event(course, location, name: 'Class Event')
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: student.id,
         role_id: student_role.id
       )
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
@@ -223,14 +223,14 @@ describe 'Service::Events::FindActiveEvents' do
       requestor = { 'account_id' => account.id }
 
       # At current time, no events
-      result_now = Todo::Service::Events::FindActiveEvents.new.call(
+      result_now = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
       _(result_now.value!.message).must_be_empty
 
       # At future time, event is active
-      result_future = Todo::Service::Events::FindActiveEvents.new.call(
+      result_future = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: future_time
       )
@@ -238,7 +238,7 @@ describe 'Service::Events::FindActiveEvents' do
     end
 
     it 'returns Failure for invalid requestor' do
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor: {},
         time: Time.now
       )
@@ -256,13 +256,13 @@ describe 'Service::Events::FindActiveEvents' do
       create_test_event(course, location, name: 'Active Event')
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::FindActiveEvents.new.call(
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
       )
 
       events = result.value!.message
-      json_array = Todo::Representer::EventsList.from_entities(events).to_array
+      json_array = Tyto::Representer::EventsList.from_entities(events).to_array
 
       _(json_array).must_be_kind_of Array
       _(json_array.first['name']).must_equal 'Active Event'

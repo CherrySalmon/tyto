@@ -2,60 +2,60 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Value::GeoLocation' do
+describe 'Tyto::Value::GeoLocation' do
   # Reference coordinates for testing
-  let(:taipei) { Todo::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330) }
-  let(:tokyo) { Todo::Value::GeoLocation.new(longitude: 139.6917, latitude: 35.6895) }
-  let(:new_york) { Todo::Value::GeoLocation.new(longitude: -74.0060, latitude: 40.7128) }
+  let(:taipei) { Tyto::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330) }
+  let(:tokyo) { Tyto::Value::GeoLocation.new(longitude: 139.6917, latitude: 35.6895) }
+  let(:new_york) { Tyto::Value::GeoLocation.new(longitude: -74.0060, latitude: 40.7128) }
 
   describe 'creation' do
     it 'creates a valid geo location' do
-      geo = Todo::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330)
+      geo = Tyto::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330)
 
       _(geo.longitude).must_equal 121.5654
       _(geo.latitude).must_equal 25.0330
     end
 
     it 'accepts longitude at boundaries' do
-      west = Todo::Value::GeoLocation.new(longitude: -180.0, latitude: 0.0)
-      east = Todo::Value::GeoLocation.new(longitude: 180.0, latitude: 0.0)
+      west = Tyto::Value::GeoLocation.new(longitude: -180.0, latitude: 0.0)
+      east = Tyto::Value::GeoLocation.new(longitude: 180.0, latitude: 0.0)
 
       _(west.longitude).must_equal(-180.0)
       _(east.longitude).must_equal 180.0
     end
 
     it 'accepts latitude at boundaries' do
-      south = Todo::Value::GeoLocation.new(longitude: 0.0, latitude: -90.0)
-      north = Todo::Value::GeoLocation.new(longitude: 0.0, latitude: 90.0)
+      south = Tyto::Value::GeoLocation.new(longitude: 0.0, latitude: -90.0)
+      north = Tyto::Value::GeoLocation.new(longitude: 0.0, latitude: 90.0)
 
       _(south.latitude).must_equal(-90.0)
       _(north.latitude).must_equal 90.0
     end
 
     it 'rejects longitude below -180' do
-      _ { Todo::Value::GeoLocation.new(longitude: -180.1, latitude: 0.0) }
+      _ { Tyto::Value::GeoLocation.new(longitude: -180.1, latitude: 0.0) }
         .must_raise Dry::Struct::Error
     end
 
     it 'rejects longitude above 180' do
-      _ { Todo::Value::GeoLocation.new(longitude: 180.1, latitude: 0.0) }
+      _ { Tyto::Value::GeoLocation.new(longitude: 180.1, latitude: 0.0) }
         .must_raise Dry::Struct::Error
     end
 
     it 'rejects latitude below -90' do
-      _ { Todo::Value::GeoLocation.new(longitude: 0.0, latitude: -90.1) }
+      _ { Tyto::Value::GeoLocation.new(longitude: 0.0, latitude: -90.1) }
         .must_raise Dry::Struct::Error
     end
 
     it 'rejects latitude above 90' do
-      _ { Todo::Value::GeoLocation.new(longitude: 0.0, latitude: 90.1) }
+      _ { Tyto::Value::GeoLocation.new(longitude: 0.0, latitude: 90.1) }
         .must_raise Dry::Struct::Error
     end
   end
 
   describe 'immutability' do
     it 'allows valid updates via new()' do
-      geo = Todo::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330)
+      geo = Tyto::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330)
       updated = geo.new(longitude: 139.6917)
 
       _(updated.longitude).must_equal 139.6917
@@ -63,7 +63,7 @@ describe 'Todo::Value::GeoLocation' do
     end
 
     it 'creates immutable copies' do
-      geo = Todo::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330)
+      geo = Tyto::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330)
       updated = geo.new(longitude: 139.6917)
 
       _(geo.longitude).must_equal 121.5654 # Original unchanged
@@ -96,7 +96,7 @@ describe 'Todo::Value::GeoLocation' do
     end
 
     it 'returns infinity when other is NullGeoLocation' do
-      null_geo = Todo::Value::NullGeoLocation.new
+      null_geo = Tyto::Value::NullGeoLocation.new
 
       _(taipei.distance_to(null_geo)).must_equal Float::INFINITY
     end

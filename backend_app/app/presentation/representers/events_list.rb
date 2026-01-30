@@ -6,7 +6,7 @@ require 'roar/json'
 require 'json'
 require_relative 'event'
 
-module Todo
+module Tyto
   module Representer
     # Serializes a collection of Event entities to JSON array
     class EventsList < Roar::Decorator

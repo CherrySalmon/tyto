@@ -3,7 +3,7 @@
 require 'json'
 require 'dry/monads'
 
-module Todo
+module Tyto
   module Routes
     # Account routes for user management
     class Accounts < Roda

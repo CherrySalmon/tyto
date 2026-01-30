@@ -6,9 +6,9 @@ describe 'Service::Locations::CreateLocation' do
   include TestHelpers
 
   def create_test_course(owner_account, name: 'Test Course')
-    course = Todo::Course.create(name: name)
-    owner_role = Todo::Role.find(name: 'owner')
-    Todo::AccountCourse.create(
+    course = Tyto::Course.create(name: name)
+    owner_role = Tyto::Role.find(name: 'owner')
+    Tyto::AccountCourse.create(
       course_id: course.id,
       account_id: owner_account.id,
       role_id: owner_role.id
@@ -22,7 +22,7 @@ describe 'Service::Locations::CreateLocation' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Locations::CreateLocation.new.call(
+      result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
         location_data: { 'name' => 'New Location', 'latitude' => 40.7128, 'longitude' => -74.0060 }
@@ -38,7 +38,7 @@ describe 'Service::Locations::CreateLocation' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Locations::CreateLocation.new.call(
+      result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
         location_data: { 'name' => 'Virtual Location' }
@@ -52,27 +52,27 @@ describe 'Service::Locations::CreateLocation' do
     it 'persists location to database' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
-      initial_count = Todo::Location.count
+      initial_count = Tyto::Location.count
 
       requestor = { 'account_id' => account.id }
-      Todo::Service::Locations::CreateLocation.new.call(
+      Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
         location_data: { 'name' => 'New Location' }
       )
 
-      _(Todo::Location.count).must_equal(initial_count + 1)
+      _(Tyto::Location.count).must_equal(initial_count + 1)
     end
 
     it 'returns Failure for student (cannot create)' do
       owner = create_test_account(roles: ['creator'])
       course = create_test_course(owner)
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Locations::CreateLocation.new.call(
+      result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
         location_data: { 'name' => 'Test' }
@@ -87,7 +87,7 @@ describe 'Service::Locations::CreateLocation' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Locations::CreateLocation.new.call(
+      result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
         location_data: { 'latitude' => 40.7128 }
@@ -102,7 +102,7 @@ describe 'Service::Locations::CreateLocation' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Locations::CreateLocation.new.call(
+      result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
         location_data: { 'name' => 'Test', 'longitude' => -74.0060 }
@@ -117,7 +117,7 @@ describe 'Service::Locations::CreateLocation' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Locations::CreateLocation.new.call(
+      result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
         location_data: { 'name' => 'Test', 'latitude' => 91, 'longitude' => 0 }

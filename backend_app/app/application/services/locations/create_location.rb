@@ -3,7 +3,7 @@
 require_relative '../../../infrastructure/database/repositories/locations'
 require_relative '../application_operation'
 
-module Todo
+module Tyto
   module Service
     module Locations
       # Service: Create a new location for a course

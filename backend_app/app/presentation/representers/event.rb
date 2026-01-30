@@ -3,7 +3,7 @@
 require 'roar/decorator'
 require 'roar/json'
 
-module Todo
+module Tyto
   module Representer
     # Serializes Event domain entity to JSON
     class Event < Roar::Decorator

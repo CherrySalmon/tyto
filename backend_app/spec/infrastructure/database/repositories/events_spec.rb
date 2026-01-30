@@ -2,19 +2,19 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Repository::Events' do
-  let(:repository) { Todo::Repository::Events.new }
+describe 'Tyto::Repository::Events' do
+  let(:repository) { Tyto::Repository::Events.new }
   let(:now) { Time.now }
   let(:one_hour) { 3600 }
   let(:one_day) { 24 * 60 * 60 }
 
   # Events require a course and location, so create them first
-  let(:course) { Todo::Course.create(name: 'Test Course') }
-  let(:event_location) { Todo::Location.create(name: 'Room 101', course_id: course.id) }
+  let(:course) { Tyto::Course.create(name: 'Test Course') }
+  let(:event_location) { Tyto::Location.create(name: 'Room 101', course_id: course.id) }
 
   describe '#create' do
     it 'persists a new event and returns entity with ID' do
-      entity = Todo::Entity::Event.new(
+      entity = Tyto::Entity::Event.new(
         id: nil,
         course_id: course.id,
         location_id: event_location.id,
@@ -27,7 +27,7 @@ describe 'Todo::Repository::Events' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Todo::Entity::Event
+      _(result).must_be_instance_of Tyto::Entity::Event
       _(result.id).wont_be_nil
       _(result.name).must_equal 'Lecture 1'
       _(result.course_id).must_equal course.id
@@ -37,7 +37,7 @@ describe 'Todo::Repository::Events' do
     end
 
     it 'persists event with minimal attributes (no times)' do
-      entity = Todo::Entity::Event.new(
+      entity = Tyto::Entity::Event.new(
         id: nil,
         course_id: course.id,
         location_id: event_location.id,
@@ -59,7 +59,7 @@ describe 'Todo::Repository::Events' do
 
   describe '#find_id' do
     it 'returns domain entity for existing event' do
-      orm_event = Todo::Event.create(
+      orm_event = Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Test Event',
@@ -69,7 +69,7 @@ describe 'Todo::Repository::Events' do
 
       result = repository.find_id(orm_event.id)
 
-      _(result).must_be_instance_of Todo::Entity::Event
+      _(result).must_be_instance_of Tyto::Entity::Event
       _(result.id).must_equal orm_event.id
       _(result.name).must_equal 'Test Event'
       _(result.course_id).must_equal course.id
@@ -91,21 +91,21 @@ describe 'Todo::Repository::Events' do
 
     it 'returns events ordered by start_at' do
       # Create events out of order
-      Todo::Event.create(
+      Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Event 3',
         start_at: now + 2 * one_hour,
         end_at: now + 3 * one_hour
       )
-      Todo::Event.create(
+      Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Event 1',
         start_at: now,
         end_at: now + one_hour
       )
-      Todo::Event.create(
+      Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Event 2',
@@ -121,7 +121,7 @@ describe 'Todo::Repository::Events' do
 
     it 'filters by course_id' do
       # Just verify basic filtering works - use shared course/location
-      Todo::Event.create(
+      Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Test Event',
@@ -138,7 +138,7 @@ describe 'Todo::Repository::Events' do
   describe '#find_active_at' do
     it 'returns events active at specified time' do
       # Event that spans the test time
-      Todo::Event.create(
+      Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Active Event',
@@ -146,7 +146,7 @@ describe 'Todo::Repository::Events' do
         end_at: now + one_hour
       )
       # Event in the past
-      Todo::Event.create(
+      Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Past Event',
@@ -154,7 +154,7 @@ describe 'Todo::Repository::Events' do
         end_at: now - 2 * one_hour
       )
       # Event in the future
-      Todo::Event.create(
+      Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Future Event',
@@ -170,7 +170,7 @@ describe 'Todo::Repository::Events' do
 
     it 'filters by course_ids array' do
       # Just verify filtering by course IDs works
-      Todo::Event.create(
+      Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Active Event',
@@ -192,19 +192,19 @@ describe 'Todo::Repository::Events' do
     end
 
     it 'returns all events as domain entities' do
-      Todo::Event.create(course_id: course.id, location_id: event_location.id, name: 'Event 1')
-      Todo::Event.create(course_id: course.id, location_id: event_location.id, name: 'Event 2')
+      Tyto::Event.create(course_id: course.id, location_id: event_location.id, name: 'Event 1')
+      Tyto::Event.create(course_id: course.id, location_id: event_location.id, name: 'Event 2')
 
       result = repository.find_all
 
       _(result.length).must_equal 2
-      result.each { |event| _(event).must_be_instance_of Todo::Entity::Event }
+      result.each { |event| _(event).must_be_instance_of Tyto::Entity::Event }
     end
   end
 
   describe '#update' do
     it 'updates existing event and returns updated entity' do
-      orm_event = Todo::Event.create(
+      orm_event = Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'Original Name',
@@ -226,7 +226,7 @@ describe 'Todo::Repository::Events' do
     end
 
     it 'raises error for non-existent event' do
-      entity = Todo::Entity::Event.new(
+      entity = Tyto::Entity::Event.new(
         id: 999_999,
         course_id: course.id,
         location_id: event_location.id,
@@ -243,7 +243,7 @@ describe 'Todo::Repository::Events' do
 
   describe '#delete' do
     it 'deletes existing event and returns true' do
-      orm_event = Todo::Event.create(
+      orm_event = Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
         name: 'To Delete'
@@ -265,7 +265,7 @@ describe 'Todo::Repository::Events' do
   describe 'round-trip' do
     it 'maintains data integrity through create -> find -> update -> find cycle' do
       # Create
-      original = Todo::Entity::Event.new(
+      original = Tyto::Entity::Event.new(
         id: nil,
         course_id: course.id,
         location_id: event_location.id,

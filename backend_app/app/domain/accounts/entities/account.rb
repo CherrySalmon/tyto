@@ -2,7 +2,7 @@
 
 require_relative '../../types'
 
-module Todo
+module Tyto
   module Entity
     # Account entity within the Accounts bounded context.
     # Pure domain object with no infrastructure dependencies.

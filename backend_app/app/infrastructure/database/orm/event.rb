@@ -4,7 +4,7 @@
 
 require 'sequel'
 
-module Todo
+module Tyto
   class Event < Sequel::Model # rubocop:disable Style/Documentation
     plugin :validation_helpers
 

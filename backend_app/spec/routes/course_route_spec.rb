@@ -7,17 +7,17 @@ describe 'Course Routes' do
   include TestHelpers
 
   def app
-    Todo::Api
+    Tyto::Api
   end
 
   # Helper to create a course owned by a given account
   def create_test_course(owner_account, name: 'Test Course')
-    course = Todo::Course.create(
+    course = Tyto::Course.create(
       name: name
     )
     # Enroll owner with 'owner' role
-    owner_role = Todo::Role.find(name: 'owner')
-    Todo::AccountCourse.create(
+    owner_role = Tyto::Role.find(name: 'owner')
+    Tyto::AccountCourse.create(
       course_id: course.id,
       account_id: owner_account.id,
       role_id: owner_role.id
@@ -111,7 +111,7 @@ describe 'Course Routes' do
       course_id = json_response['course_info']['id']
 
       # Verify enrollment exists with owner role
-      enrollment = Todo::AccountCourse.where(course_id: course_id, account_id: account.id).first
+      enrollment = Tyto::AccountCourse.where(course_id: course_id, account_id: account.id).first
       _(enrollment).wont_be_nil
       _(enrollment.role.name).must_equal 'owner'
     end
@@ -135,8 +135,8 @@ describe 'Course Routes' do
       instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
 
       # Enroll as instructor
-      instructor_role = Todo::Role.find(name: 'instructor')
-      Todo::AccountCourse.create(
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: instructor_account.id,
         role_id: instructor_role.id
@@ -154,8 +154,8 @@ describe 'Course Routes' do
       student_account, student_auth = authenticated_header(roles: ['student'])
 
       # Enroll as student
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: student_account.id,
         role_id: student_role.id
@@ -195,8 +195,8 @@ describe 'Course Routes' do
       instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
 
       # Enroll as instructor
-      instructor_role = Todo::Role.find(name: 'instructor')
-      Todo::AccountCourse.create(
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: instructor_account.id,
         role_id: instructor_role.id
@@ -233,8 +233,8 @@ describe 'Course Routes' do
         student_account, student_auth = authenticated_header(roles: ['student'])
 
         # Enroll as student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student_account.id,
           role_id: student_role.id
@@ -258,8 +258,8 @@ describe 'Course Routes' do
         student_account, student_auth = authenticated_header(roles: ['student'])
 
         # Enroll student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student_account.id,
           role_id: student_role.id
@@ -302,8 +302,8 @@ describe 'Course Routes' do
         student = create_test_account(roles: ['student'])
 
         # First enroll the student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student.id,
           role_id: student_role.id
@@ -324,8 +324,8 @@ describe 'Course Routes' do
         student = create_test_account(roles: ['student'])
 
         # Enroll student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student.id,
           role_id: student_role.id
@@ -347,8 +347,8 @@ describe 'Course Routes' do
         instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
 
         # Enroll as instructor
-        instructor_role = Todo::Role.find(name: 'instructor')
-        Todo::AccountCourse.create(
+        instructor_role = Tyto::Role.find(name: 'instructor')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: instructor_account.id,
           role_id: instructor_role.id
@@ -368,8 +368,8 @@ describe 'Course Routes' do
         student_account, student_auth = authenticated_header(roles: ['student'])
 
         # Enroll as student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student_account.id,
           role_id: student_role.id
@@ -389,7 +389,7 @@ describe 'Course Routes' do
         course = create_test_course(account)
 
         # Create a location
-        Todo::Location.create(
+        Tyto::Location.create(
           course_id: course.id,
           name: 'Test Location',
           latitude: 0,
@@ -418,7 +418,7 @@ describe 'Course Routes' do
       it 'returns location for enrolled users' do
         account, auth = authenticated_header(roles: ['creator'])
         course = create_test_course(account)
-        location = Todo::Location.create(
+        location = Tyto::Location.create(
           course_id: course.id,
           name: 'Test Location',
           latitude: 0,
@@ -439,14 +439,14 @@ describe 'Course Routes' do
         instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
 
         # Enroll as instructor
-        instructor_role = Todo::Role.find(name: 'instructor')
-        Todo::AccountCourse.create(
+        instructor_role = Tyto::Role.find(name: 'instructor')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: instructor_account.id,
           role_id: instructor_role.id
         )
 
-        location = Todo::Location.create(
+        location = Tyto::Location.create(
           course_id: course.id,
           name: 'Old Name',
           latitude: 0,
@@ -467,14 +467,14 @@ describe 'Course Routes' do
         student_account, student_auth = authenticated_header(roles: ['student'])
 
         # Enroll as student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student_account.id,
           role_id: student_role.id
         )
 
-        location = Todo::Location.create(
+        location = Tyto::Location.create(
           course_id: course.id,
           name: 'Protected Location',
           latitude: 0,
@@ -493,7 +493,7 @@ describe 'Course Routes' do
       it 'succeeds when location has no events' do
         account, auth = authenticated_header(roles: ['creator'])
         course = create_test_course(account)
-        location = Todo::Location.create(
+        location = Tyto::Location.create(
           course_id: course.id,
           name: 'Empty Location',
           latitude: 0,
@@ -509,7 +509,7 @@ describe 'Course Routes' do
       it 'fails when location has associated events' do
         account, auth = authenticated_header(roles: ['creator'])
         course = create_test_course(account)
-        location = Todo::Location.create(
+        location = Tyto::Location.create(
           course_id: course.id,
           name: 'Active Location',
           latitude: 0,
@@ -517,7 +517,7 @@ describe 'Course Routes' do
         )
 
         # Create an event at this location
-        Todo::Event.create(
+        Tyto::Event.create(
           course_id: course.id,
           location_id: location.id,
           name: 'Test Event',
@@ -541,21 +541,21 @@ describe 'Course Routes' do
         student_account, student_auth = authenticated_header(roles: ['student'])
 
         # Enroll as student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student_account.id,
           role_id: student_role.id
         )
 
         # Create location and event
-        location = Todo::Location.create(
+        location = Tyto::Location.create(
           course_id: course.id,
           name: 'Test Location',
           latitude: 40.7128,
           longitude: -74.0060
         )
-        event = Todo::Event.create(
+        event = Tyto::Event.create(
           course_id: course.id,
           location_id: location.id,
           name: 'Test Event',
@@ -582,21 +582,21 @@ describe 'Course Routes' do
         student_account, student_auth = authenticated_header(roles: ['student'])
 
         # Enroll as student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student_account.id,
           role_id: student_role.id
         )
 
         # Create location and event
-        location = Todo::Location.create(
+        location = Tyto::Location.create(
           course_id: course.id,
           name: 'Test Location',
           latitude: 40.7128,
           longitude: -74.0060
         )
-        event = Todo::Event.create(
+        event = Tyto::Event.create(
           course_id: course.id,
           location_id: location.id,
           name: 'Test Event',
@@ -627,8 +627,8 @@ describe 'Course Routes' do
         student_account, student_auth = authenticated_header(roles: ['student'])
 
         # Enroll as student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student_account.id,
           role_id: student_role.id
@@ -649,8 +649,8 @@ describe 'Course Routes' do
         instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
 
         # Enroll as instructor
-        instructor_role = Todo::Role.find(name: 'instructor')
-        Todo::AccountCourse.create(
+        instructor_role = Tyto::Role.find(name: 'instructor')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: instructor_account.id,
           role_id: instructor_role.id
@@ -668,8 +668,8 @@ describe 'Course Routes' do
         student_account, student_auth = authenticated_header(roles: ['student'])
 
         # Enroll as student
-        student_role = Todo::Role.find(name: 'student')
-        Todo::AccountCourse.create(
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: student_account.id,
           role_id: student_role.id
@@ -688,21 +688,21 @@ describe 'Course Routes' do
         instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
 
         # Enroll as instructor
-        instructor_role = Todo::Role.find(name: 'instructor')
-        Todo::AccountCourse.create(
+        instructor_role = Tyto::Role.find(name: 'instructor')
+        Tyto::AccountCourse.create(
           course_id: course.id,
           account_id: instructor_account.id,
           role_id: instructor_role.id
         )
 
         # Create location and event
-        location = Todo::Location.create(
+        location = Tyto::Location.create(
           course_id: course.id,
           name: 'Test Location',
           latitude: 0,
           longitude: 0
         )
-        event = Todo::Event.create(
+        event = Tyto::Event.create(
           course_id: course.id,
           location_id: location.id,
           name: 'Test Event',

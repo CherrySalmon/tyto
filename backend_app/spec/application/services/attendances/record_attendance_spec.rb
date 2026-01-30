@@ -6,9 +6,9 @@ describe 'Service::Attendances::RecordAttendance' do
   include TestHelpers
 
   def create_test_course(owner_account, name: 'Test Course')
-    course = Todo::Course.create(name: name)
-    owner_role = Todo::Role.find(name: 'owner')
-    Todo::AccountCourse.create(
+    course = Tyto::Course.create(name: name)
+    owner_role = Tyto::Role.find(name: 'owner')
+    Tyto::AccountCourse.create(
       course_id: course.id,
       account_id: owner_account.id,
       role_id: owner_role.id
@@ -17,7 +17,7 @@ describe 'Service::Attendances::RecordAttendance' do
   end
 
   def create_test_location(course, name: 'Test Location')
-    Todo::Location.create(
+    Tyto::Location.create(
       course_id: course.id,
       name: name,
       latitude: 40.7128,
@@ -26,7 +26,7 @@ describe 'Service::Attendances::RecordAttendance' do
   end
 
   def create_test_event(course, location, name: 'Test Event')
-    Todo::Event.create(
+    Tyto::Event.create(
       course_id: course.id,
       location_id: location.id,
       name: name,
@@ -43,11 +43,11 @@ describe 'Service::Attendances::RecordAttendance' do
       event = create_test_event(course, location)
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Attendances::RecordAttendance.new.call(
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
         attendance_data: {
@@ -69,11 +69,11 @@ describe 'Service::Attendances::RecordAttendance' do
       event = create_test_event(course, location, name: 'Morning Class')
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Attendances::RecordAttendance.new.call(
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
         attendance_data: { 'event_id' => event.id }
@@ -90,18 +90,18 @@ describe 'Service::Attendances::RecordAttendance' do
       event = create_test_event(course, location)
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      initial_count = Todo::Attendance.count
+      initial_count = Tyto::Attendance.count
       requestor = { 'account_id' => student.id }
-      Todo::Service::Attendances::RecordAttendance.new.call(
+      Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
         attendance_data: { 'event_id' => event.id }
       )
 
-      _(Todo::Attendance.count).must_equal(initial_count + 1)
+      _(Tyto::Attendance.count).must_equal(initial_count + 1)
     end
 
     it 'returns Failure for non-enrolled user' do
@@ -112,7 +112,7 @@ describe 'Service::Attendances::RecordAttendance' do
       other = create_test_account(name: 'Other', roles: ['member'])
 
       requestor = { 'account_id' => other.id }
-      result = Todo::Service::Attendances::RecordAttendance.new.call(
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
         attendance_data: { 'event_id' => event.id }
@@ -127,11 +127,11 @@ describe 'Service::Attendances::RecordAttendance' do
       course = create_test_course(owner)
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Attendances::RecordAttendance.new.call(
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
         attendance_data: {}
@@ -146,11 +146,11 @@ describe 'Service::Attendances::RecordAttendance' do
       course = create_test_course(owner)
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Attendances::RecordAttendance.new.call(
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
         attendance_data: { 'event_id' => 99999 }
@@ -168,11 +168,11 @@ describe 'Service::Attendances::RecordAttendance' do
       event = create_test_event(course1, location)
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course2.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course2.id, account_id: student.id, role_id: student_role.id)
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Attendances::RecordAttendance.new.call(
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course2.id,
         attendance_data: { 'event_id' => event.id }
@@ -189,11 +189,11 @@ describe 'Service::Attendances::RecordAttendance' do
       event = create_test_event(course, location)
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Attendances::RecordAttendance.new.call(
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
         attendance_data: { 'event_id' => event.id, 'latitude' => 91, 'longitude' => 0 }
@@ -212,18 +212,18 @@ describe 'Service::Attendances::RecordAttendance' do
       event = create_test_event(course, location)
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Attendances::RecordAttendance.new.call(
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
         attendance_data: { 'event_id' => event.id }
       )
 
       attendance = result.value!.message
-      json_hash = Todo::Representer::Attendance.new(attendance).to_hash
+      json_hash = Tyto::Representer::Attendance.new(attendance).to_hash
 
       _(json_hash).must_be_kind_of Hash
       _(json_hash['event_id']).must_equal event.id

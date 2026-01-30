@@ -2,14 +2,14 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Repository::Courses' do
-  let(:repository) { Todo::Repository::Courses.new }
+describe 'Tyto::Repository::Courses' do
+  let(:repository) { Tyto::Repository::Courses.new }
   let(:now) { Time.now }
   let(:one_day) { 24 * 60 * 60 }
 
   describe '#create' do
     it 'persists a new course and returns entity with ID' do
-      entity = Todo::Entity::Course.new(
+      entity = Tyto::Entity::Course.new(
         id: nil,
         name: 'Ruby Programming',
         logo: 'ruby.png',
@@ -21,7 +21,7 @@ describe 'Todo::Repository::Courses' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Todo::Entity::Course
+      _(result).must_be_instance_of Tyto::Entity::Course
       _(result.id).wont_be_nil
       _(result.name).must_equal 'Ruby Programming'
       _(result.logo).must_equal 'ruby.png'
@@ -30,7 +30,7 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'persists course with minimal attributes' do
-      entity = Todo::Entity::Course.new(
+      entity = Tyto::Entity::Course.new(
         id: nil,
         name: 'Minimal Course',
         logo: nil,
@@ -52,7 +52,7 @@ describe 'Todo::Repository::Courses' do
   describe '#find_id' do
     it 'returns domain entity for existing course' do
       # Create via ORM for test setup
-      orm_course = Todo::Course.create(
+      orm_course = Tyto::Course.create(
         name: 'Test Course',
         logo: 'test.png',
         start_at: now,
@@ -61,16 +61,16 @@ describe 'Todo::Repository::Courses' do
 
       result = repository.find_id(orm_course.id)
 
-      _(result).must_be_instance_of Todo::Entity::Course
+      _(result).must_be_instance_of Tyto::Entity::Course
       _(result.id).must_equal orm_course.id
       _(result.name).must_equal 'Test Course'
       _(result.logo).must_equal 'test.png'
     end
 
     it 'returns course with children not loaded (nil)' do
-      orm_course = Todo::Course.create(name: 'Test Course')
-      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
-      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
 
       result = repository.find_id(orm_course.id)
 
@@ -91,10 +91,10 @@ describe 'Todo::Repository::Courses' do
 
   describe '#find_with_events' do
     it 'returns course with events loaded' do
-      orm_course = Todo::Course.create(name: 'Test Course')
-      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
-      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
-      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 2')
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 2')
 
       result = repository.find_with_events(orm_course.id)
 
@@ -105,7 +105,7 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'returns empty array for course with no events' do
-      orm_course = Todo::Course.create(name: 'Test Course')
+      orm_course = Tyto::Course.create(name: 'Test Course')
 
       result = repository.find_with_events(orm_course.id)
 
@@ -114,8 +114,8 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'does not load locations' do
-      orm_course = Todo::Course.create(name: 'Test Course')
-      Todo::Location.create(course_id: orm_course.id, name: 'Room A')
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
 
       result = repository.find_with_events(orm_course.id)
 
@@ -130,9 +130,9 @@ describe 'Todo::Repository::Courses' do
 
   describe '#find_with_locations' do
     it 'returns course with locations loaded' do
-      orm_course = Todo::Course.create(name: 'Test Course')
-      Todo::Location.create(course_id: orm_course.id, name: 'Room A')
-      Todo::Location.create(course_id: orm_course.id, name: 'Room B')
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
+      Tyto::Location.create(course_id: orm_course.id, name: 'Room B')
 
       result = repository.find_with_locations(orm_course.id)
 
@@ -143,7 +143,7 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'returns empty array for course with no locations' do
-      orm_course = Todo::Course.create(name: 'Test Course')
+      orm_course = Tyto::Course.create(name: 'Test Course')
 
       result = repository.find_with_locations(orm_course.id)
 
@@ -152,9 +152,9 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'does not load events' do
-      orm_course = Todo::Course.create(name: 'Test Course')
-      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
-      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
 
       result = repository.find_with_locations(orm_course.id)
 
@@ -168,17 +168,17 @@ describe 'Todo::Repository::Courses' do
   end
 
   describe '#find_with_enrollments' do
-    let(:owner_role) { Todo::Role.first(name: 'owner') }
-    let(:instructor_role) { Todo::Role.first(name: 'instructor') }
-    let(:student_role) { Todo::Role.first(name: 'student') }
+    let(:owner_role) { Tyto::Role.first(name: 'owner') }
+    let(:instructor_role) { Tyto::Role.first(name: 'instructor') }
+    let(:student_role) { Tyto::Role.first(name: 'student') }
 
     it 'returns course with enrollments loaded' do
-      orm_course = Todo::Course.create(name: 'Test Course')
-      account1 = Todo::Account.create(email: 'owner@example.com', name: 'Owner')
-      account2 = Todo::Account.create(email: 'student@example.com', name: 'Student')
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      account1 = Tyto::Account.create(email: 'owner@example.com', name: 'Owner')
+      account2 = Tyto::Account.create(email: 'student@example.com', name: 'Student')
 
-      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account1.id, role_id: owner_role.id)
-      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account2.id, role_id: student_role.id)
+      Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account1.id, role_id: owner_role.id)
+      Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account2.id, role_id: student_role.id)
 
       result = repository.find_with_enrollments(orm_course.id)
 
@@ -187,12 +187,12 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'aggregates multiple roles for same account into one enrollment' do
-      orm_course = Todo::Course.create(name: 'Test Course')
-      account = Todo::Account.create(email: 'multi@example.com', name: 'Multi-Role')
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      account = Tyto::Account.create(email: 'multi@example.com', name: 'Multi-Role')
 
       # Same account has both instructor and student roles
-      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: instructor_role.id)
-      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: student_role.id)
+      Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: instructor_role.id)
+      Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: student_role.id)
 
       result = repository.find_with_enrollments(orm_course.id)
 
@@ -205,7 +205,7 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'returns empty array for course with no enrollments' do
-      orm_course = Todo::Course.create(name: 'Test Course')
+      orm_course = Tyto::Course.create(name: 'Test Course')
 
       result = repository.find_with_enrollments(orm_course.id)
 
@@ -214,9 +214,9 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'does not load events or locations' do
-      orm_course = Todo::Course.create(name: 'Test Course')
-      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
-      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
 
       result = repository.find_with_enrollments(orm_course.id)
 
@@ -230,14 +230,14 @@ describe 'Todo::Repository::Courses' do
   end
 
   describe '#find_full' do
-    let(:student_role) { Todo::Role.first(name: 'student') }
+    let(:student_role) { Tyto::Role.first(name: 'student') }
 
     it 'returns course with all children loaded' do
-      orm_course = Todo::Course.create(name: 'Test Course')
-      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
-      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
-      account = Todo::Account.create(email: 'student@example.com', name: 'Student')
-      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: student_role.id)
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      account = Tyto::Account.create(email: 'student@example.com', name: 'Student')
+      Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: student_role.id)
 
       result = repository.find_full(orm_course.id)
 
@@ -250,7 +250,7 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'returns empty arrays for course with no children' do
-      orm_course = Todo::Course.create(name: 'Test Course')
+      orm_course = Tyto::Course.create(name: 'Test Course')
 
       result = repository.find_full(orm_course.id)
 
@@ -273,15 +273,15 @@ describe 'Todo::Repository::Courses' do
 
     it 'returns all courses as domain entities' do
       # Create courses via ORM
-      Todo::Course.create(name: 'Course 1')
-      Todo::Course.create(name: 'Course 2')
-      Todo::Course.create(name: 'Course 3')
+      Tyto::Course.create(name: 'Course 1')
+      Tyto::Course.create(name: 'Course 2')
+      Tyto::Course.create(name: 'Course 3')
 
       result = repository.find_all
 
       _(result.length).must_equal 3
       _(result).must_be_kind_of Array
-      result.each { |course| _(course).must_be_instance_of Todo::Entity::Course }
+      result.each { |course| _(course).must_be_instance_of Tyto::Entity::Course }
       _(result.map(&:name)).must_include 'Course 1'
       _(result.map(&:name)).must_include 'Course 2'
       _(result.map(&:name)).must_include 'Course 3'
@@ -291,7 +291,7 @@ describe 'Todo::Repository::Courses' do
   describe '#update' do
     it 'updates existing course and returns updated entity' do
       # Create via ORM
-      orm_course = Todo::Course.create(
+      orm_course = Tyto::Course.create(
         name: 'Original Name',
         logo: 'old.png'
       )
@@ -312,7 +312,7 @@ describe 'Todo::Repository::Courses' do
     end
 
     it 'raises error for non-existent course' do
-      entity = Todo::Entity::Course.new(
+      entity = Tyto::Entity::Course.new(
         id: 999_999,
         name: 'Ghost Course',
         logo: nil,
@@ -328,7 +328,7 @@ describe 'Todo::Repository::Courses' do
 
   describe '#delete' do
     it 'deletes existing course and returns true' do
-      orm_course = Todo::Course.create(name: 'To Delete')
+      orm_course = Tyto::Course.create(name: 'To Delete')
 
       result = repository.delete(orm_course.id)
 
@@ -346,7 +346,7 @@ describe 'Todo::Repository::Courses' do
   describe 'round-trip' do
     it 'maintains data integrity through create -> find -> update -> find cycle' do
       # Create
-      original = Todo::Entity::Course.new(
+      original = Tyto::Entity::Course.new(
         id: nil,
         name: 'Full Cycle Test',
         logo: 'cycle.png',

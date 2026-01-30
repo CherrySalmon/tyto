@@ -6,9 +6,9 @@ describe 'Service::Attendances::ListAllAttendances' do
   include TestHelpers
 
   def create_test_course(owner_account, name: 'Test Course')
-    course = Todo::Course.create(name: name)
-    owner_role = Todo::Role.find(name: 'owner')
-    Todo::AccountCourse.create(
+    course = Tyto::Course.create(name: name)
+    owner_role = Tyto::Role.find(name: 'owner')
+    Tyto::AccountCourse.create(
       course_id: course.id,
       account_id: owner_account.id,
       role_id: owner_role.id
@@ -17,8 +17,8 @@ describe 'Service::Attendances::ListAllAttendances' do
   end
 
   def create_test_attendance(course, account, event: nil)
-    student_role = Todo::Role.find(name: 'student')
-    Todo::Attendance.create(
+    student_role = Tyto::Role.find(name: 'student')
+    Tyto::Attendance.create(
       course_id: course.id,
       account_id: account.id,
       event_id: event&.id,
@@ -37,7 +37,7 @@ describe 'Service::Attendances::ListAllAttendances' do
       create_test_attendance(course, student)
 
       requestor = { 'account_id' => owner.id }
-      result = Todo::Service::Attendances::ListAllAttendances.new.call(
+      result = Tyto::Service::Attendances::ListAllAttendances.new.call(
         requestor:,
         course_id: course.id
       )
@@ -51,11 +51,11 @@ describe 'Service::Attendances::ListAllAttendances' do
       owner = create_test_account(roles: ['creator'])
       course = create_test_course(owner)
       instructor = create_test_account(name: 'Instructor', roles: ['member'])
-      instructor_role = Todo::Role.find(name: 'instructor')
-      Todo::AccountCourse.create(course_id: course.id, account_id: instructor.id, role_id: instructor_role.id)
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: instructor.id, role_id: instructor_role.id)
 
       requestor = { 'account_id' => instructor.id }
-      result = Todo::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: course.id)
+      result = Tyto::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: course.id)
 
       _(result.success?).must_equal true
     end
@@ -64,11 +64,11 @@ describe 'Service::Attendances::ListAllAttendances' do
       owner = create_test_account(roles: ['creator'])
       course = create_test_course(owner)
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: course.id)
+      result = Tyto::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: course.id)
 
       _(result.failure?).must_equal true
       _(result.failure.status).must_equal :forbidden
@@ -80,7 +80,7 @@ describe 'Service::Attendances::ListAllAttendances' do
       other = create_test_account(name: 'Other', roles: ['member'])
 
       requestor = { 'account_id' => other.id }
-      result = Todo::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: course.id)
+      result = Tyto::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: course.id)
 
       _(result.failure?).must_equal true
       _(result.failure.status).must_equal :forbidden
@@ -89,7 +89,7 @@ describe 'Service::Attendances::ListAllAttendances' do
     it 'returns Failure for non-existent course' do
       account = create_test_account(roles: ['creator'])
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: 99999)
+      result = Tyto::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: 99999)
 
       _(result.failure?).must_equal true
       _(result.failure.status).must_equal :not_found

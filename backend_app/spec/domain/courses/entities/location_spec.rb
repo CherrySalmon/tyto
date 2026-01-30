@@ -2,7 +2,7 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Entity::Location' do
+describe 'Tyto::Entity::Location' do
   let(:now) { Time.now }
 
   let(:valid_attributes) do
@@ -19,7 +19,7 @@ describe 'Todo::Entity::Location' do
 
   describe 'creation' do
     it 'creates a valid location' do
-      location = Todo::Entity::Location.new(valid_attributes)
+      location = Tyto::Entity::Location.new(valid_attributes)
 
       _(location.id).must_equal 1
       _(location.course_id).must_equal 10
@@ -29,7 +29,7 @@ describe 'Todo::Entity::Location' do
     end
 
     it 'creates a location without coordinates' do
-      location = Todo::Entity::Location.new(
+      location = Tyto::Entity::Location.new(
         valid_attributes.merge(longitude: nil, latitude: nil)
       )
 
@@ -39,7 +39,7 @@ describe 'Todo::Entity::Location' do
     end
 
     it 'creates a location with minimal attributes' do
-      location = Todo::Entity::Location.new(
+      location = Tyto::Entity::Location.new(
         id: nil,
         course_id: 10,
         name: 'Minimal Location',
@@ -54,24 +54,24 @@ describe 'Todo::Entity::Location' do
     end
 
     it 'rejects empty location name' do
-      _ { Todo::Entity::Location.new(valid_attributes.merge(name: '')) }
+      _ { Tyto::Entity::Location.new(valid_attributes.merge(name: '')) }
         .must_raise Dry::Struct::Error
     end
 
     it 'rejects location name over 200 characters' do
-      _ { Todo::Entity::Location.new(valid_attributes.merge(name: 'A' * 201)) }
+      _ { Tyto::Entity::Location.new(valid_attributes.merge(name: 'A' * 201)) }
         .must_raise Dry::Struct::Error
     end
 
     it 'requires course_id' do
-      _ { Todo::Entity::Location.new(valid_attributes.merge(course_id: nil)) }
+      _ { Tyto::Entity::Location.new(valid_attributes.merge(course_id: nil)) }
         .must_raise Dry::Struct::Error
     end
   end
 
   describe 'immutability and constraint enforcement' do
     it 'enforces name constraint on updates via new()' do
-      location = Todo::Entity::Location.new(valid_attributes)
+      location = Tyto::Entity::Location.new(valid_attributes)
 
       # Valid update
       updated = location.new(name: 'Secondary Lab')
@@ -83,7 +83,7 @@ describe 'Todo::Entity::Location' do
     end
 
     it 'preserves other attributes on partial update' do
-      location = Todo::Entity::Location.new(valid_attributes)
+      location = Tyto::Entity::Location.new(valid_attributes)
       updated = location.new(longitude: 139.6917)
 
       _(updated.longitude).must_equal 139.6917
@@ -95,38 +95,38 @@ describe 'Todo::Entity::Location' do
 
   describe '#geo_location' do
     it 'returns GeoLocation when coordinates exist' do
-      location = Todo::Entity::Location.new(valid_attributes)
+      location = Tyto::Entity::Location.new(valid_attributes)
 
-      _(location.geo_location).must_be_instance_of Todo::Value::GeoLocation
+      _(location.geo_location).must_be_instance_of Tyto::Value::GeoLocation
       _(location.geo_location.longitude).must_equal 121.5654
       _(location.geo_location.latitude).must_equal 25.0330
       _(location.geo_location.present?).must_equal true
     end
 
     it 'returns NullGeoLocation when longitude is missing' do
-      location = Todo::Entity::Location.new(valid_attributes.merge(longitude: nil))
+      location = Tyto::Entity::Location.new(valid_attributes.merge(longitude: nil))
 
-      _(location.geo_location).must_be_instance_of Todo::Value::NullGeoLocation
+      _(location.geo_location).must_be_instance_of Tyto::Value::NullGeoLocation
       _(location.geo_location.null?).must_equal true
     end
 
     it 'returns NullGeoLocation when latitude is missing' do
-      location = Todo::Entity::Location.new(valid_attributes.merge(latitude: nil))
+      location = Tyto::Entity::Location.new(valid_attributes.merge(latitude: nil))
 
-      _(location.geo_location).must_be_instance_of Todo::Value::NullGeoLocation
+      _(location.geo_location).must_be_instance_of Tyto::Value::NullGeoLocation
       _(location.geo_location.null?).must_equal true
     end
   end
 
   describe '#has_coordinates?' do
     it 'returns true when coordinates exist' do
-      location = Todo::Entity::Location.new(valid_attributes)
+      location = Tyto::Entity::Location.new(valid_attributes)
 
       _(location.has_coordinates?).must_equal true
     end
 
     it 'returns false when coordinates are missing' do
-      location = Todo::Entity::Location.new(valid_attributes.merge(longitude: nil))
+      location = Tyto::Entity::Location.new(valid_attributes.merge(longitude: nil))
 
       _(location.has_coordinates?).must_equal false
     end
@@ -134,7 +134,7 @@ describe 'Todo::Entity::Location' do
 
   describe '#distance_to' do
     let(:taipei_location) do
-      Todo::Entity::Location.new(
+      Tyto::Entity::Location.new(
         valid_attributes.merge(
           name: 'Taipei Office',
           longitude: 121.5654,
@@ -144,7 +144,7 @@ describe 'Todo::Entity::Location' do
     end
 
     let(:tokyo_location) do
-      Todo::Entity::Location.new(
+      Tyto::Entity::Location.new(
         valid_attributes.merge(
           id: 2,
           name: 'Tokyo Office',
@@ -155,7 +155,7 @@ describe 'Todo::Entity::Location' do
     end
 
     let(:no_coords_location) do
-      Todo::Entity::Location.new(
+      Tyto::Entity::Location.new(
         valid_attributes.merge(
           id: 3,
           name: 'Unknown Location',

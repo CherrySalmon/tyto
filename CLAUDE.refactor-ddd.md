@@ -93,7 +93,7 @@ Types live in the **domain layer** because they express domain vocabulary. Appli
 
 ```ruby
 # domain/types.rb
-module Todo
+module Tyto
   module Types
     include Dry.Types()
 
@@ -136,7 +136,7 @@ require_relative '../../domain/types'
 
 class CreateCourseContract < Dry::Validation::Contract
   params do
-    required(:name).filled(Todo::Types::CourseName)  # Reuse domain type
+    required(:name).filled(Tyto::Types::CourseName)  # Reuse domain type
     required(:start_at).filled(:time)
     required(:end_at).filled(:time)
   end
@@ -715,6 +715,11 @@ For each use case:
   - `lib/` contains cross-cutting utilities (jwt_credential.rb) - no external I/O, just crypto helpers
   - Updated `require_app.rb` to load config first, then app/ subdirectories
   - All 539 tests pass ✅
+
+- [x] **Rename Todo module to Tyto** (2026-01-30)
+  - Renamed `module Todo` → `module Tyto` and `Todo::` → `Tyto::` across 111 backend files (916 occurrences)
+  - Updated CLAUDE documentation to reflect new module name
+  - All tests pass ✅
 
 ### Completed Use Cases
 

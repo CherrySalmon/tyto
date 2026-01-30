@@ -2,7 +2,7 @@
 
 require_relative '../../../domain/attendance/entities/attendance'
 
-module Todo
+module Tyto
   module Repository
     # Repository for Attendance entities.
     # Maps between ORM records and domain entities.
@@ -11,7 +11,7 @@ module Todo
       # @param id [Integer] the attendance ID
       # @return [Entity::Attendance, nil] the domain entity or nil if not found
       def find_id(id)
-        orm_record = Todo::Attendance[id]
+        orm_record = Tyto::Attendance[id]
         return nil unless orm_record
 
         rebuild_entity(orm_record)
@@ -21,7 +21,7 @@ module Todo
       # @param course_id [Integer] the course ID
       # @return [Array<Entity::Attendance>] array of domain entities
       def find_by_course(course_id)
-        Todo::Attendance
+        Tyto::Attendance
           .where(course_id:)
           .order(:created_at)
           .all
@@ -32,7 +32,7 @@ module Todo
       # @param event_id [Integer] the event ID
       # @return [Array<Entity::Attendance>] array of domain entities
       def find_by_event(event_id)
-        Todo::Attendance
+        Tyto::Attendance
           .where(event_id:)
           .order(:created_at)
           .all
@@ -44,7 +44,7 @@ module Todo
       # @param course_id [Integer] the course ID
       # @return [Array<Entity::Attendance>] array of domain entities
       def find_by_account_course(account_id, course_id)
-        Todo::Attendance
+        Tyto::Attendance
           .where(account_id:, course_id:)
           .order(:created_at)
           .all
@@ -56,7 +56,7 @@ module Todo
       # @param event_id [Integer] the event ID
       # @return [Entity::Attendance, nil] the domain entity or nil
       def find_by_account_event(account_id, event_id)
-        orm_record = Todo::Attendance.first(account_id:, event_id:)
+        orm_record = Tyto::Attendance.first(account_id:, event_id:)
         return nil unless orm_record
 
         rebuild_entity(orm_record)
@@ -65,14 +65,14 @@ module Todo
       # Find all attendances
       # @return [Array<Entity::Attendance>] array of domain entities
       def find_all
-        Todo::Attendance.all.map { |record| rebuild_entity(record) }
+        Tyto::Attendance.all.map { |record| rebuild_entity(record) }
       end
 
       # Create a new attendance from a domain entity
       # @param entity [Entity::Attendance] the domain entity to persist
       # @return [Entity::Attendance] the persisted entity with ID
       def create(entity)
-        orm_record = Todo::Attendance.find_or_create(
+        orm_record = Tyto::Attendance.find_or_create(
           account_id: entity.account_id,
           course_id: entity.course_id,
           event_id: entity.event_id,
@@ -89,7 +89,7 @@ module Todo
       # @param id [Integer] the attendance ID
       # @return [Boolean] true if deleted
       def delete(id)
-        orm_record = Todo::Attendance[id]
+        orm_record = Tyto::Attendance[id]
         return false unless orm_record
 
         orm_record.destroy
@@ -99,7 +99,7 @@ module Todo
       private
 
       # Rebuild a domain entity from an ORM record
-      # @param orm_record [Todo::Attendance] the Sequel model instance
+      # @param orm_record [Tyto::Attendance] the Sequel model instance
       # @return [Entity::Attendance] the domain entity
       def rebuild_entity(orm_record)
         Entity::Attendance.new(

@@ -2,7 +2,7 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Entity::Attendance' do
+describe 'Tyto::Entity::Attendance' do
   let(:now) { Time.now }
 
   let(:valid_attributes) do
@@ -22,7 +22,7 @@ describe 'Todo::Entity::Attendance' do
 
   describe 'creation' do
     it 'creates a valid attendance' do
-      attendance = Todo::Entity::Attendance.new(valid_attributes)
+      attendance = Tyto::Entity::Attendance.new(valid_attributes)
 
       _(attendance.id).must_equal 1
       _(attendance.account_id).must_equal 10
@@ -32,7 +32,7 @@ describe 'Todo::Entity::Attendance' do
     end
 
     it 'creates attendance without coordinates' do
-      attendance = Todo::Entity::Attendance.new(
+      attendance = Tyto::Entity::Attendance.new(
         valid_attributes.merge(longitude: nil, latitude: nil)
       )
 
@@ -41,7 +41,7 @@ describe 'Todo::Entity::Attendance' do
     end
 
     it 'creates attendance with minimal attributes' do
-      attendance = Todo::Entity::Attendance.new(
+      attendance = Tyto::Entity::Attendance.new(
         id: nil,
         account_id: 10,
         course_id: 20,
@@ -59,44 +59,44 @@ describe 'Todo::Entity::Attendance' do
     end
 
     it 'requires account_id' do
-      _ { Todo::Entity::Attendance.new(valid_attributes.merge(account_id: nil)) }
+      _ { Tyto::Entity::Attendance.new(valid_attributes.merge(account_id: nil)) }
         .must_raise Dry::Struct::Error
     end
 
     it 'requires course_id' do
-      _ { Todo::Entity::Attendance.new(valid_attributes.merge(course_id: nil)) }
+      _ { Tyto::Entity::Attendance.new(valid_attributes.merge(course_id: nil)) }
         .must_raise Dry::Struct::Error
     end
   end
 
   describe '#check_in_location' do
     it 'returns GeoLocation when coordinates exist' do
-      attendance = Todo::Entity::Attendance.new(valid_attributes)
+      attendance = Tyto::Entity::Attendance.new(valid_attributes)
 
-      _(attendance.check_in_location).must_be_instance_of Todo::Value::GeoLocation
+      _(attendance.check_in_location).must_be_instance_of Tyto::Value::GeoLocation
       _(attendance.check_in_location.longitude).must_equal 121.5654
       _(attendance.check_in_location.latitude).must_equal 25.0330
     end
 
     it 'returns NullGeoLocation when coordinates missing' do
-      attendance = Todo::Entity::Attendance.new(
+      attendance = Tyto::Entity::Attendance.new(
         valid_attributes.merge(longitude: nil, latitude: nil)
       )
 
-      _(attendance.check_in_location).must_be_instance_of Todo::Value::NullGeoLocation
+      _(attendance.check_in_location).must_be_instance_of Tyto::Value::NullGeoLocation
       _(attendance.check_in_location.null?).must_equal true
     end
   end
 
   describe '#has_coordinates?' do
     it 'returns true when coordinates exist' do
-      attendance = Todo::Entity::Attendance.new(valid_attributes)
+      attendance = Tyto::Entity::Attendance.new(valid_attributes)
 
       _(attendance.has_coordinates?).must_equal true
     end
 
     it 'returns false when coordinates missing' do
-      attendance = Todo::Entity::Attendance.new(
+      attendance = Tyto::Entity::Attendance.new(
         valid_attributes.merge(longitude: nil)
       )
 
@@ -106,13 +106,13 @@ describe 'Todo::Entity::Attendance' do
 
   describe '#distance_to_event' do
     let(:taipei_attendance) do
-      Todo::Entity::Attendance.new(
+      Tyto::Entity::Attendance.new(
         valid_attributes.merge(longitude: 121.5654, latitude: 25.0330)
       )
     end
 
     let(:tokyo_location) do
-      Todo::Entity::Location.new(
+      Tyto::Entity::Location.new(
         id: 1, course_id: 20, name: 'Tokyo Venue',
         longitude: 139.6917, latitude: 35.6895,
         created_at: now, updated_at: now
@@ -120,7 +120,7 @@ describe 'Todo::Entity::Attendance' do
     end
 
     let(:nearby_location) do
-      Todo::Entity::Location.new(
+      Tyto::Entity::Location.new(
         id: 2, course_id: 20, name: 'Taipei Venue',
         longitude: 121.5660, latitude: 25.0335, # ~100m away
         created_at: now, updated_at: now
@@ -143,7 +143,7 @@ describe 'Todo::Entity::Attendance' do
     end
 
     it 'returns infinity when attendance has no coordinates' do
-      no_coords = Todo::Entity::Attendance.new(
+      no_coords = Tyto::Entity::Attendance.new(
         valid_attributes.merge(longitude: nil, latitude: nil)
       )
 
@@ -153,13 +153,13 @@ describe 'Todo::Entity::Attendance' do
 
   describe '#within_range?' do
     let(:attendance) do
-      Todo::Entity::Attendance.new(
+      Tyto::Entity::Attendance.new(
         valid_attributes.merge(longitude: 121.5654, latitude: 25.0330)
       )
     end
 
     let(:nearby_location) do
-      Todo::Entity::Location.new(
+      Tyto::Entity::Location.new(
         id: 1, course_id: 20, name: 'Nearby',
         longitude: 121.5660, latitude: 25.0335, # ~100m away
         created_at: now, updated_at: now
@@ -167,7 +167,7 @@ describe 'Todo::Entity::Attendance' do
     end
 
     let(:far_location) do
-      Todo::Entity::Location.new(
+      Tyto::Entity::Location.new(
         id: 2, course_id: 20, name: 'Far Away',
         longitude: 139.6917, latitude: 35.6895, # Tokyo
         created_at: now, updated_at: now
@@ -189,7 +189,7 @@ describe 'Todo::Entity::Attendance' do
     end
 
     it 'returns false when attendance has no coordinates' do
-      no_coords = Todo::Entity::Attendance.new(
+      no_coords = Tyto::Entity::Attendance.new(
         valid_attributes.merge(longitude: nil, latitude: nil)
       )
 

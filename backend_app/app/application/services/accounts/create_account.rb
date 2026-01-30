@@ -3,7 +3,7 @@
 require_relative '../../../infrastructure/database/repositories/accounts'
 require_relative '../application_operation'
 
-module Todo
+module Tyto
   module Service
     module Accounts
       # Service: Create a new account
@@ -37,7 +37,7 @@ module Todo
           return Failure(bad_request('Email is required')) if email.nil? || email.to_s.strip.empty?
 
           # Check if email already exists
-          existing = Todo::Account.first(email: email.strip)
+          existing = Tyto::Account.first(email: email.strip)
           return Failure(bad_request('Email already exists')) if existing
 
           Success(

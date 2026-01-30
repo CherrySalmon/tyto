@@ -1,7 +1,7 @@
 # routes/authentication.rb
 # frozen_string_literal: true
 
-module Todo
+module Tyto
   module Routes
     class Authentication < Roda # rubocop:disable Style/Documentation
       route do |r|

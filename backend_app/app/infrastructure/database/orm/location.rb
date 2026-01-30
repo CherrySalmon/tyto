@@ -3,7 +3,7 @@
 
 require 'sequel'
 
-module Todo
+module Tyto
   class Location < Sequel::Model
     # validation for the model
     plugin :validation_helpers

@@ -4,7 +4,7 @@ require_relative '../../types'
 require_relative '../values/geo_location'
 require_relative '../values/null_geo_location'
 
-module Todo
+module Tyto
   module Entity
     # Location entity within the Courses bounded context.
     # Locations belong to a Course and can be assigned to Events.

@@ -3,7 +3,7 @@
 require_relative '../../../infrastructure/database/repositories/accounts'
 require_relative '../application_operation'
 
-module Todo
+module Tyto
   module Service
     module Accounts
       # Service: List all accounts (admin only)

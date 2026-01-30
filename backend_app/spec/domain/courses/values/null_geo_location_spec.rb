@@ -2,9 +2,9 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Value::NullGeoLocation' do
-  let(:null_geo) { Todo::Value::NullGeoLocation.new }
-  let(:real_geo) { Todo::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330) }
+describe 'Tyto::Value::NullGeoLocation' do
+  let(:null_geo) { Tyto::Value::NullGeoLocation.new }
+  let(:real_geo) { Tyto::Value::GeoLocation.new(longitude: 121.5654, latitude: 25.0330) }
 
   describe 'attributes' do
     it 'returns nil for longitude' do
@@ -22,7 +22,7 @@ describe 'Todo::Value::NullGeoLocation' do
     end
 
     it 'returns infinity for distance to another null location' do
-      _(null_geo.distance_to(Todo::Value::NullGeoLocation.new)).must_equal Float::INFINITY
+      _(null_geo.distance_to(Tyto::Value::NullGeoLocation.new)).must_equal Float::INFINITY
     end
   end
 
@@ -38,11 +38,11 @@ describe 'Todo::Value::NullGeoLocation' do
 
   describe 'equality' do
     it 'is equal to another NullGeoLocation' do
-      _(null_geo).must_equal Todo::Value::NullGeoLocation.new
+      _(null_geo).must_equal Tyto::Value::NullGeoLocation.new
     end
 
     it 'has same hash as another NullGeoLocation' do
-      _(null_geo.hash).must_equal Todo::Value::NullGeoLocation.new.hash
+      _(null_geo.hash).must_equal Tyto::Value::NullGeoLocation.new.hash
     end
   end
 end

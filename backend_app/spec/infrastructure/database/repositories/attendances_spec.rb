@@ -2,22 +2,22 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Repository::Attendances' do
-  let(:repository) { Todo::Repository::Attendances.new }
+describe 'Tyto::Repository::Attendances' do
+  let(:repository) { Tyto::Repository::Attendances.new }
   let(:now) { Time.now }
 
   # Attendances require course, account, and optionally event
-  let(:course) { Todo::Course.create(name: 'Test Course') }
-  let(:account) { Todo::Account.create(email: 'student@example.com') }
-  let(:another_account) { Todo::Account.create(email: 'another@example.com') }
-  let(:event_location) { Todo::Location.create(course_id: course.id, name: 'Room 101') }
-  let(:event) { Todo::Event.create(course_id: course.id, location_id: event_location.id, name: 'Lecture 1') }
-  let(:another_event) { Todo::Event.create(course_id: course.id, location_id: event_location.id, name: 'Lecture 2') }
-  let(:student_role) { Todo::Role.first(name: 'student') }
+  let(:course) { Tyto::Course.create(name: 'Test Course') }
+  let(:account) { Tyto::Account.create(email: 'student@example.com') }
+  let(:another_account) { Tyto::Account.create(email: 'another@example.com') }
+  let(:event_location) { Tyto::Location.create(course_id: course.id, name: 'Room 101') }
+  let(:event) { Tyto::Event.create(course_id: course.id, location_id: event_location.id, name: 'Lecture 1') }
+  let(:another_event) { Tyto::Event.create(course_id: course.id, location_id: event_location.id, name: 'Lecture 2') }
+  let(:student_role) { Tyto::Role.first(name: 'student') }
 
   describe '#create' do
     it 'persists a new attendance and returns entity with ID' do
-      entity = Todo::Entity::Attendance.new(
+      entity = Tyto::Entity::Attendance.new(
         id: nil,
         account_id: account.id,
         course_id: course.id,
@@ -32,7 +32,7 @@ describe 'Todo::Repository::Attendances' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Todo::Entity::Attendance
+      _(result).must_be_instance_of Tyto::Entity::Attendance
       _(result.id).wont_be_nil
       _(result.account_id).must_equal account.id
       _(result.course_id).must_equal course.id
@@ -42,7 +42,7 @@ describe 'Todo::Repository::Attendances' do
     end
 
     it 'persists attendance without coordinates' do
-      entity = Todo::Entity::Attendance.new(
+      entity = Tyto::Entity::Attendance.new(
         id: nil,
         account_id: account.id,
         course_id: course.id,
@@ -65,7 +65,7 @@ describe 'Todo::Repository::Attendances' do
 
   describe '#find_id' do
     it 'returns domain entity for existing attendance' do
-      orm_attendance = Todo::Attendance.create(
+      orm_attendance = Tyto::Attendance.create(
         account_id: account.id,
         course_id: course.id,
         event_id: event.id,
@@ -74,7 +74,7 @@ describe 'Todo::Repository::Attendances' do
 
       result = repository.find_id(orm_attendance.id)
 
-      _(result).must_be_instance_of Todo::Entity::Attendance
+      _(result).must_be_instance_of Tyto::Entity::Attendance
       _(result.id).must_equal orm_attendance.id
       _(result.name).must_equal 'Test Attendance'
     end
@@ -92,13 +92,13 @@ describe 'Todo::Repository::Attendances' do
     end
 
     it 'returns attendances for a course ordered by created_at' do
-      Todo::Attendance.create(
+      Tyto::Attendance.create(
         account_id: account.id,
         course_id: course.id,
         event_id: event.id,
         name: 'First'
       )
-      Todo::Attendance.create(
+      Tyto::Attendance.create(
         account_id: another_account.id,
         course_id: course.id,
         event_id: event.id,
@@ -114,13 +114,13 @@ describe 'Todo::Repository::Attendances' do
 
   describe '#find_by_event' do
     it 'returns attendances for an event' do
-      Todo::Attendance.create(
+      Tyto::Attendance.create(
         account_id: account.id,
         course_id: course.id,
         event_id: event.id,
         name: 'Event 1 Attendance'
       )
-      Todo::Attendance.create(
+      Tyto::Attendance.create(
         account_id: another_account.id,
         course_id: course.id,
         event_id: another_event.id,
@@ -136,19 +136,19 @@ describe 'Todo::Repository::Attendances' do
 
   describe '#find_by_account_course' do
     it 'returns attendances for an account in a course' do
-      Todo::Attendance.create(
+      Tyto::Attendance.create(
         account_id: account.id,
         course_id: course.id,
         event_id: event.id,
         name: 'Account Attendance 1'
       )
-      Todo::Attendance.create(
+      Tyto::Attendance.create(
         account_id: account.id,
         course_id: course.id,
         event_id: another_event.id,
         name: 'Account Attendance 2'
       )
-      Todo::Attendance.create(
+      Tyto::Attendance.create(
         account_id: another_account.id,
         course_id: course.id,
         event_id: event.id,
@@ -164,7 +164,7 @@ describe 'Todo::Repository::Attendances' do
 
   describe '#find_by_account_event' do
     it 'returns attendance for account at event' do
-      Todo::Attendance.create(
+      Tyto::Attendance.create(
         account_id: account.id,
         course_id: course.id,
         event_id: event.id,
@@ -173,7 +173,7 @@ describe 'Todo::Repository::Attendances' do
 
       result = repository.find_by_account_event(account.id, event.id)
 
-      _(result).must_be_instance_of Todo::Entity::Attendance
+      _(result).must_be_instance_of Tyto::Entity::Attendance
       _(result.account_id).must_equal account.id
       _(result.event_id).must_equal event.id
     end
@@ -191,19 +191,19 @@ describe 'Todo::Repository::Attendances' do
     end
 
     it 'returns all attendances as domain entities' do
-      Todo::Attendance.create(account_id: account.id, course_id: course.id, name: 'One')
-      Todo::Attendance.create(account_id: another_account.id, course_id: course.id, name: 'Two')
+      Tyto::Attendance.create(account_id: account.id, course_id: course.id, name: 'One')
+      Tyto::Attendance.create(account_id: another_account.id, course_id: course.id, name: 'Two')
 
       result = repository.find_all
 
       _(result.length).must_equal 2
-      result.each { |a| _(a).must_be_instance_of Todo::Entity::Attendance }
+      result.each { |a| _(a).must_be_instance_of Tyto::Entity::Attendance }
     end
   end
 
   describe '#delete' do
     it 'deletes existing attendance and returns true' do
-      orm_attendance = Todo::Attendance.create(
+      orm_attendance = Tyto::Attendance.create(
         account_id: account.id,
         course_id: course.id,
         name: 'To Delete'
@@ -222,7 +222,7 @@ describe 'Todo::Repository::Attendances' do
 
   describe 'check_in_location integration' do
     it 'entity has functioning check_in_location' do
-      entity = Todo::Entity::Attendance.new(
+      entity = Tyto::Entity::Attendance.new(
         id: nil,
         account_id: account.id,
         course_id: course.id,
@@ -237,7 +237,7 @@ describe 'Todo::Repository::Attendances' do
 
       result = repository.create(entity)
 
-      _(result.check_in_location).must_be_instance_of Todo::Value::GeoLocation
+      _(result.check_in_location).must_be_instance_of Tyto::Value::GeoLocation
       _(result.has_coordinates?).must_equal true
     end
   end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Todo
+module Tyto
   module Value
     # Null object for GeoLocation when coordinates are not available.
     # Provides safe defaults that eliminate nil checks in calling code.

@@ -2,12 +2,12 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Todo::Repository::Accounts' do
-  let(:repository) { Todo::Repository::Accounts.new }
+describe 'Tyto::Repository::Accounts' do
+  let(:repository) { Tyto::Repository::Accounts.new }
 
   describe '#create' do
     it 'persists a new account and returns entity with ID' do
-      entity = Todo::Entity::Account.new(
+      entity = Tyto::Entity::Account.new(
         id: nil,
         name: 'John Doe',
         email: 'john@example.com',
@@ -18,14 +18,14 @@ describe 'Todo::Repository::Accounts' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Todo::Entity::Account
+      _(result).must_be_instance_of Tyto::Entity::Account
       _(result.id).wont_be_nil
       _(result.name).must_equal 'John Doe'
       _(result.email).must_equal 'john@example.com'
     end
 
     it 'persists account with minimal attributes' do
-      entity = Todo::Entity::Account.new(
+      entity = Tyto::Entity::Account.new(
         id: nil,
         name: nil,
         email: 'minimal@example.com',
@@ -42,7 +42,7 @@ describe 'Todo::Repository::Accounts' do
     end
 
     it 'assigns roles when provided' do
-      entity = Todo::Entity::Account.new(
+      entity = Tyto::Entity::Account.new(
         id: nil,
         name: 'Admin User',
         email: 'admin@example.com',
@@ -59,7 +59,7 @@ describe 'Todo::Repository::Accounts' do
     end
 
     it 'returns entity with roles not loaded when no roles provided' do
-      entity = Todo::Entity::Account.new(
+      entity = Tyto::Entity::Account.new(
         id: nil,
         name: 'No Roles',
         email: 'noroles@example.com',
@@ -76,22 +76,22 @@ describe 'Todo::Repository::Accounts' do
 
   describe '#find_id' do
     it 'returns domain entity for existing account' do
-      orm_account = Todo::Account.create(
+      orm_account = Tyto::Account.create(
         name: 'Test User',
         email: 'test@example.com'
       )
 
       result = repository.find_id(orm_account.id)
 
-      _(result).must_be_instance_of Todo::Entity::Account
+      _(result).must_be_instance_of Tyto::Entity::Account
       _(result.id).must_equal orm_account.id
       _(result.name).must_equal 'Test User'
       _(result.email).must_equal 'test@example.com'
     end
 
     it 'returns account with roles not loaded' do
-      orm_account = Todo::Account.create(email: 'test@example.com')
-      admin_role = Todo::Role.first(name: 'admin')
+      orm_account = Tyto::Account.create(email: 'test@example.com')
+      admin_role = Tyto::Role.first(name: 'admin')
       orm_account.add_role(admin_role)
 
       result = repository.find_id(orm_account.id)
@@ -109,9 +109,9 @@ describe 'Todo::Repository::Accounts' do
 
   describe '#find_with_roles' do
     it 'returns account with roles loaded' do
-      orm_account = Todo::Account.create(email: 'test@example.com')
-      admin_role = Todo::Role.first(name: 'admin')
-      creator_role = Todo::Role.first(name: 'creator')
+      orm_account = Tyto::Account.create(email: 'test@example.com')
+      admin_role = Tyto::Role.first(name: 'admin')
+      creator_role = Tyto::Role.first(name: 'creator')
       orm_account.add_role(admin_role)
       orm_account.add_role(creator_role)
 
@@ -123,7 +123,7 @@ describe 'Todo::Repository::Accounts' do
     end
 
     it 'returns empty array for account with no roles' do
-      orm_account = Todo::Account.create(email: 'test@example.com')
+      orm_account = Tyto::Account.create(email: 'test@example.com')
 
       result = repository.find_with_roles(orm_account.id)
 
@@ -138,14 +138,14 @@ describe 'Todo::Repository::Accounts' do
 
   describe '#find_by_email' do
     it 'returns account by email' do
-      orm_account = Todo::Account.create(
+      orm_account = Tyto::Account.create(
         name: 'Email User',
         email: 'findme@example.com'
       )
 
       result = repository.find_by_email('findme@example.com')
 
-      _(result).must_be_instance_of Todo::Entity::Account
+      _(result).must_be_instance_of Tyto::Entity::Account
       _(result.id).must_equal orm_account.id
       _(result.email).must_equal 'findme@example.com'
     end
@@ -157,8 +157,8 @@ describe 'Todo::Repository::Accounts' do
 
   describe '#find_by_email_with_roles' do
     it 'returns account with roles by email' do
-      orm_account = Todo::Account.create(email: 'withroles@example.com')
-      admin_role = Todo::Role.first(name: 'admin')
+      orm_account = Tyto::Account.create(email: 'withroles@example.com')
+      admin_role = Tyto::Role.first(name: 'admin')
       orm_account.add_role(admin_role)
 
       result = repository.find_by_email_with_roles('withroles@example.com')
@@ -180,18 +180,18 @@ describe 'Todo::Repository::Accounts' do
     end
 
     it 'returns all accounts as domain entities' do
-      Todo::Account.create(email: 'one@example.com')
-      Todo::Account.create(email: 'two@example.com')
+      Tyto::Account.create(email: 'one@example.com')
+      Tyto::Account.create(email: 'two@example.com')
 
       result = repository.find_all
 
       _(result.length).must_equal 2
-      result.each { |account| _(account).must_be_instance_of Todo::Entity::Account }
+      result.each { |account| _(account).must_be_instance_of Tyto::Entity::Account }
     end
 
     it 'returns accounts with roles not loaded' do
-      orm_account = Todo::Account.create(email: 'test@example.com')
-      admin_role = Todo::Role.first(name: 'admin')
+      orm_account = Tyto::Account.create(email: 'test@example.com')
+      admin_role = Tyto::Role.first(name: 'admin')
       orm_account.add_role(admin_role)
 
       result = repository.find_all
@@ -202,8 +202,8 @@ describe 'Todo::Repository::Accounts' do
 
   describe '#find_all_with_roles' do
     it 'returns all accounts with roles loaded' do
-      orm_account = Todo::Account.create(email: 'test@example.com')
-      admin_role = Todo::Role.first(name: 'admin')
+      orm_account = Tyto::Account.create(email: 'test@example.com')
+      admin_role = Tyto::Role.first(name: 'admin')
       orm_account.add_role(admin_role)
 
       result = repository.find_all_with_roles
@@ -215,7 +215,7 @@ describe 'Todo::Repository::Accounts' do
 
   describe '#update' do
     it 'updates existing account and returns updated entity' do
-      orm_account = Todo::Account.create(
+      orm_account = Tyto::Account.create(
         name: 'Original Name',
         email: 'update@example.com'
       )
@@ -234,8 +234,8 @@ describe 'Todo::Repository::Accounts' do
     end
 
     it 'updates roles when role_names provided' do
-      orm_account = Todo::Account.create(email: 'roles@example.com')
-      member_role = Todo::Role.first(name: 'member')
+      orm_account = Tyto::Account.create(email: 'roles@example.com')
+      member_role = Tyto::Role.first(name: 'member')
       orm_account.add_role(member_role)
 
       entity = repository.find_id(orm_account.id)
@@ -248,8 +248,8 @@ describe 'Todo::Repository::Accounts' do
     end
 
     it 'does not update roles when role_names is nil' do
-      orm_account = Todo::Account.create(email: 'keeproles@example.com')
-      admin_role = Todo::Role.first(name: 'admin')
+      orm_account = Tyto::Account.create(email: 'keeproles@example.com')
+      admin_role = Tyto::Role.first(name: 'admin')
       orm_account.add_role(admin_role)
 
       entity = repository.find_id(orm_account.id)
@@ -263,7 +263,7 @@ describe 'Todo::Repository::Accounts' do
     end
 
     it 'raises error for non-existent account' do
-      entity = Todo::Entity::Account.new(
+      entity = Tyto::Entity::Account.new(
         id: 999_999,
         name: 'Ghost',
         email: 'ghost@example.com',
@@ -278,7 +278,7 @@ describe 'Todo::Repository::Accounts' do
 
   describe '#delete' do
     it 'deletes existing account and returns true' do
-      orm_account = Todo::Account.create(email: 'delete@example.com')
+      orm_account = Tyto::Account.create(email: 'delete@example.com')
 
       result = repository.delete(orm_account.id)
 
@@ -296,7 +296,7 @@ describe 'Todo::Repository::Accounts' do
   describe 'round-trip' do
     it 'maintains data integrity through create -> find -> update -> find cycle' do
       # Create
-      original = Todo::Entity::Account.new(
+      original = Tyto::Entity::Account.new(
         id: nil,
         name: 'Full Cycle',
         email: 'cycle@example.com',

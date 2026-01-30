@@ -7,14 +7,14 @@ describe 'Event Routes' do
   include TestHelpers
 
   def app
-    Todo::Api
+    Tyto::Api
   end
 
   # Helper to create a course owned by a given account
   def create_test_course(owner_account, name: 'Test Course')
-    course = Todo::Course.create(name: name)
-    owner_role = Todo::Role.find(name: 'owner')
-    Todo::AccountCourse.create(
+    course = Tyto::Course.create(name: name)
+    owner_role = Tyto::Role.find(name: 'owner')
+    Tyto::AccountCourse.create(
       course_id: course.id,
       account_id: owner_account.id,
       role_id: owner_role.id
@@ -24,7 +24,7 @@ describe 'Event Routes' do
 
   # Helper to create a location for testing
   def create_test_location(course, name: 'Test Location')
-    Todo::Location.create(
+    Tyto::Location.create(
       course_id: course.id,
       name: name,
       latitude: 40.7128,
@@ -34,7 +34,7 @@ describe 'Event Routes' do
 
   # Helper to create an event
   def create_test_event(course, location, name: 'Test Event', start_at: Time.now, end_at: Time.now + 3600)
-    Todo::Event.create(
+    Tyto::Event.create(
       course_id: course.id,
       location_id: location.id,
       name: name,
@@ -50,8 +50,8 @@ describe 'Event Routes' do
       instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
 
       # Enroll as instructor
-      instructor_role = Todo::Role.find(name: 'instructor')
-      Todo::AccountCourse.create(
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: instructor_account.id,
         role_id: instructor_role.id
@@ -96,8 +96,8 @@ describe 'Event Routes' do
       student_account, student_auth = authenticated_header(roles: ['student'])
 
       # Enroll as student
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: student_account.id,
         role_id: student_role.id
@@ -186,8 +186,8 @@ describe 'Event Routes' do
       instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
 
       # Enroll as instructor
-      instructor_role = Todo::Role.find(name: 'instructor')
-      Todo::AccountCourse.create(
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: instructor_account.id,
         role_id: instructor_role.id
@@ -209,8 +209,8 @@ describe 'Event Routes' do
       student_account, student_auth = authenticated_header(roles: ['student'])
 
       # Enroll as student
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: student_account.id,
         role_id: student_role.id
@@ -258,8 +258,8 @@ describe 'Event Routes' do
       instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
 
       # Enroll as instructor
-      instructor_role = Todo::Role.find(name: 'instructor')
-      Todo::AccountCourse.create(
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: instructor_account.id,
         role_id: instructor_role.id
@@ -279,8 +279,8 @@ describe 'Event Routes' do
       student_account, student_auth = authenticated_header(roles: ['student'])
 
       # Enroll as student
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: student_account.id,
         role_id: student_role.id

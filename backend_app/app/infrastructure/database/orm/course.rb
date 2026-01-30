@@ -4,7 +4,7 @@
 
 require 'sequel'
 
-module Todo
+module Tyto
   class Course < Sequel::Model
     plugin :validation_helpers
     many_to_many :events

@@ -2,9 +2,9 @@
 
 require_relative '../../../spec_helper'
 
-describe Todo::Service::Accounts::UpdateAccount do
-  let(:account) { Todo::Account.create(email: 'user@example.com', name: 'User') }
-  let(:creator_role) { Todo::Role.first(name: 'creator') }
+describe Tyto::Service::Accounts::UpdateAccount do
+  let(:account) { Tyto::Account.create(email: 'user@example.com', name: 'User') }
+  let(:creator_role) { Tyto::Role.first(name: 'creator') }
 
   before do
     account.add_role(creator_role)
@@ -15,30 +15,30 @@ describe Todo::Service::Accounts::UpdateAccount do
       requestor = { 'account_id' => account.id, 'roles' => ['creator'] }
       account_data = { 'name' => 'Updated Name' }
 
-      result = Todo::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
+      result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Success
       _(result.value!.message).must_equal 'Account updated'
     end
 
     it 'returns Success when admin updates any account' do
-      admin = Todo::Account.create(email: 'admin@example.com', name: 'Admin')
-      admin_role = Todo::Role.first(name: 'admin')
+      admin = Tyto::Account.create(email: 'admin@example.com', name: 'Admin')
+      admin_role = Tyto::Role.first(name: 'admin')
       admin.add_role(admin_role)
       requestor = { 'account_id' => admin.id, 'roles' => ['admin'] }
       account_data = { 'name' => 'Admin Updated' }
 
-      result = Todo::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
+      result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Success
     end
 
     it 'returns Failure when updating other account without admin' do
-      other = Todo::Account.create(email: 'other@example.com', name: 'Other')
+      other = Tyto::Account.create(email: 'other@example.com', name: 'Other')
       requestor = { 'account_id' => other.id, 'roles' => ['creator'] }
       account_data = { 'name' => 'Hacked' }
 
-      result = Todo::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
+      result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Failure
       _(result.failure.status).must_equal :forbidden
@@ -48,7 +48,7 @@ describe Todo::Service::Accounts::UpdateAccount do
       requestor = { 'account_id' => account.id, 'roles' => ['admin'] }
       account_data = { 'name' => 'Ghost' }
 
-      result = Todo::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: 999_999, account_data:)
+      result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: 999_999, account_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Failure
       _(result.failure.status).must_equal :not_found

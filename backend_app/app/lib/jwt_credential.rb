@@ -2,7 +2,7 @@ require 'rbnacl'
 require 'base64'
 require 'json'
 
-module Todo
+module Tyto
   class JWTCredential
     class ArgumentError < StandardError; end
     # Generates a new key for encryption/decryption

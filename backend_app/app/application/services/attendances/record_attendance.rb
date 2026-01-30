@@ -4,7 +4,7 @@ require_relative '../../../infrastructure/database/repositories/attendances'
 require_relative '../../../infrastructure/database/repositories/events'
 require_relative '../application_operation'
 
-module Todo
+module Tyto
   module Service
     module Attendances
       # Service: Record attendance (check-in) for an event

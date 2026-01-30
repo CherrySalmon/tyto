@@ -2,7 +2,7 @@
 
 require_relative '../../../domain/accounts/entities/account'
 
-module Todo
+module Tyto
   module Repository
     # Repository for Account entities.
     # Maps between ORM records and domain entities.
@@ -17,7 +17,7 @@ module Todo
       # @param id [Integer] the account ID
       # @return [Entity::Account, nil] the domain entity or nil if not found
       def find_id(id)
-        orm_record = Todo::Account[id]
+        orm_record = Tyto::Account[id]
         return nil unless orm_record
 
         rebuild_entity(orm_record)
@@ -27,7 +27,7 @@ module Todo
       # @param id [Integer] the account ID
       # @return [Entity::Account, nil] the domain entity with roles, or nil
       def find_with_roles(id)
-        orm_record = Todo::Account[id]
+        orm_record = Tyto::Account[id]
         return nil unless orm_record
 
         rebuild_entity(orm_record, load_roles: true)
@@ -37,7 +37,7 @@ module Todo
       # @param email [String] the email address
       # @return [Entity::Account, nil] the domain entity or nil if not found
       def find_by_email(email)
-        orm_record = Todo::Account.first(email: email)
+        orm_record = Tyto::Account.first(email: email)
         return nil unless orm_record
 
         rebuild_entity(orm_record)
@@ -47,7 +47,7 @@ module Todo
       # @param email [String] the email address
       # @return [Entity::Account, nil] the domain entity with roles, or nil
       def find_by_email_with_roles(email)
-        orm_record = Todo::Account.first(email: email)
+        orm_record = Tyto::Account.first(email: email)
         return nil unless orm_record
 
         rebuild_entity(orm_record, load_roles: true)
@@ -56,13 +56,13 @@ module Todo
       # Find all accounts (roles not loaded)
       # @return [Array<Entity::Account>] array of domain entities
       def find_all
-        Todo::Account.all.map { |record| rebuild_entity(record) }
+        Tyto::Account.all.map { |record| rebuild_entity(record) }
       end
 
       # Find all accounts with roles loaded
       # @return [Array<Entity::Account>] array of domain entities with roles
       def find_all_with_roles
-        Todo::Account.all.map { |record| rebuild_entity(record, load_roles: true) }
+        Tyto::Account.all.map { |record| rebuild_entity(record, load_roles: true) }
       end
 
       # Create a new account from a domain entity
@@ -70,7 +70,7 @@ module Todo
       # @param role_names [Array<String>] optional role names to assign
       # @return [Entity::Account] the persisted entity with ID
       def create(entity, role_names: [])
-        orm_record = Todo::Account.create(
+        orm_record = Tyto::Account.create(
           name: entity.name,
           email: entity.email,
           access_token: entity.access_token,
@@ -80,7 +80,7 @@ module Todo
 
         # Assign roles if provided
         role_names.each do |role_name|
-          role = Todo::Role.first(name: role_name)
+          role = Tyto::Role.first(name: role_name)
           orm_record.add_role(role) if role
         end
 
@@ -92,7 +92,7 @@ module Todo
       # @param role_names [Array<String>, nil] new role names (nil = don't update roles)
       # @return [Entity::Account] the updated entity
       def update(entity, role_names: nil)
-        orm_record = Todo::Account[entity.id]
+        orm_record = Tyto::Account[entity.id]
         raise "Account not found: #{entity.id}" unless orm_record
 
         orm_record.update(
@@ -107,7 +107,7 @@ module Todo
         if role_names
           orm_record.remove_all_roles
           role_names.each do |role_name|
-            role = Todo::Role.first(name: role_name)
+            role = Tyto::Role.first(name: role_name)
             orm_record.add_role(role) if role
           end
         end
@@ -119,7 +119,7 @@ module Todo
       # @param id [Integer] the account ID
       # @return [Boolean] true if deleted
       def delete(id)
-        orm_record = Todo::Account[id]
+        orm_record = Tyto::Account[id]
         return false unless orm_record
 
         orm_record.destroy
@@ -129,7 +129,7 @@ module Todo
       private
 
       # Rebuild a domain entity from an ORM record
-      # @param orm_record [Todo::Account] the Sequel model instance
+      # @param orm_record [Tyto::Account] the Sequel model instance
       # @param load_roles [Boolean] whether to load roles
       # @return [Entity::Account] the domain entity
       def rebuild_entity(orm_record, load_roles: false)

@@ -5,7 +5,7 @@ require_relative '../../../domain/courses/entities/event'
 require_relative '../../../domain/courses/entities/location'
 require_relative '../../../domain/courses/entities/enrollment'
 
-module Todo
+module Tyto
   module Repository
     # Repository for Course aggregate root.
     # Maps between ORM records and domain entities.
@@ -21,7 +21,7 @@ module Todo
       # @param id [Integer] the course ID
       # @return [Entity::Course, nil] the domain entity or nil if not found
       def find_id(id)
-        orm_record = Todo::Course[id]
+        orm_record = Tyto::Course[id]
         return nil unless orm_record
 
         rebuild_entity(orm_record)
@@ -31,7 +31,7 @@ module Todo
       # @param id [Integer] the course ID
       # @return [Entity::Course, nil] the domain entity with events, or nil
       def find_with_events(id)
-        orm_record = Todo::Course[id]
+        orm_record = Tyto::Course[id]
         return nil unless orm_record
 
         rebuild_entity(orm_record, load_events: true)
@@ -41,7 +41,7 @@ module Todo
       # @param id [Integer] the course ID
       # @return [Entity::Course, nil] the domain entity with locations, or nil
       def find_with_locations(id)
-        orm_record = Todo::Course[id]
+        orm_record = Tyto::Course[id]
         return nil unless orm_record
 
         rebuild_entity(orm_record, load_locations: true)
@@ -51,7 +51,7 @@ module Todo
       # @param id [Integer] the course ID
       # @return [Entity::Course, nil] the domain entity with enrollments, or nil
       def find_with_enrollments(id)
-        orm_record = Todo::Course[id]
+        orm_record = Tyto::Course[id]
         return nil unless orm_record
 
         rebuild_entity(orm_record, load_enrollments: true)
@@ -61,7 +61,7 @@ module Todo
       # @param id [Integer] the course ID
       # @return [Entity::Course, nil] the full aggregate, or nil
       def find_full(id)
-        orm_record = Todo::Course[id]
+        orm_record = Tyto::Course[id]
         return nil unless orm_record
 
         rebuild_entity(orm_record, load_events: true, load_locations: true, load_enrollments: true)
@@ -70,14 +70,14 @@ module Todo
       # Find all courses (children not loaded)
       # @return [Array<Entity::Course>] array of domain entities
       def find_all
-        Todo::Course.all.map { |record| rebuild_entity(record) }
+        Tyto::Course.all.map { |record| rebuild_entity(record) }
       end
 
       # Create a new course from a domain entity
       # @param entity [Entity::Course] the domain entity to persist
       # @return [Entity::Course] the persisted entity with ID
       def create(entity)
-        orm_record = Todo::Course.create(
+        orm_record = Tyto::Course.create(
           name: entity.name,
           logo: entity.logo,
           start_at: entity.start_at,
@@ -91,7 +91,7 @@ module Todo
       # @param entity [Entity::Course] the domain entity with updates
       # @return [Entity::Course] the updated entity
       def update(entity)
-        orm_record = Todo::Course[entity.id]
+        orm_record = Tyto::Course[entity.id]
         raise "Course not found: #{entity.id}" unless orm_record
 
         orm_record.update(
@@ -108,7 +108,7 @@ module Todo
       # @param id [Integer] the course ID
       # @return [Boolean] true if deleted
       def delete(id)
-        orm_record = Todo::Course[id]
+        orm_record = Tyto::Course[id]
         return false unless orm_record
 
         orm_record.destroy
@@ -118,7 +118,7 @@ module Todo
       private
 
       # Rebuild a domain entity from an ORM record
-      # @param orm_record [Todo::Course] the Sequel model instance
+      # @param orm_record [Tyto::Course] the Sequel model instance
       # @param load_events [Boolean] whether to load events
       # @param load_locations [Boolean] whether to load locations
       # @param load_enrollments [Boolean] whether to load enrollments
@@ -141,7 +141,7 @@ module Todo
       # rubocop:enable Metrics/ParameterLists
 
       def rebuild_events(orm_course)
-        Todo::Event
+        Tyto::Event
           .where(course_id: orm_course.id)
           .order(:start_at)
           .all
@@ -149,7 +149,7 @@ module Todo
       end
 
       def rebuild_locations(orm_course)
-        Todo::Location
+        Tyto::Location
           .where(course_id: orm_course.id)
           .order(:name)
           .all
@@ -185,7 +185,7 @@ module Todo
       # into a single Enrollment entity with multiple roles
       def rebuild_enrollments(orm_course)
         # Get all account_course_roles for this course
-        account_courses = Todo::AccountCourse
+        account_courses = Tyto::AccountCourse
                           .where(course_id: orm_course.id)
                           .all
 

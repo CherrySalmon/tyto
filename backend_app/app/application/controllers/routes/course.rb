@@ -3,7 +3,7 @@
 require 'json'
 require 'dry/monads'
 
-module Todo
+module Tyto
   module Routes
     # Course routes including events, locations, attendance, and enrollments
     class Courses < Roda

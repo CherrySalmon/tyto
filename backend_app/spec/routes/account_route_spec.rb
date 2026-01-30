@@ -7,7 +7,7 @@ describe 'Account Routes' do
   include TestHelpers
 
   def app
-    Todo::Api
+    Tyto::Api
   end
 
   describe 'GET /api/account' do

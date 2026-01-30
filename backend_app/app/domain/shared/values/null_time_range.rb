@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Todo
+module Tyto
   module Value
     # Null Object for TimeRange.
     # Represents a missing/undefined time range with safe default behavior.

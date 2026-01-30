@@ -2,14 +2,14 @@
 
 require_relative '../../../spec_helper'
 
-describe Todo::Service::Events::CreateEvent do
-  let(:course) { Todo::Course.create(name: 'Test Course') }
-  let(:event_location) { Todo::Location.create(name: 'Room 101', course_id: course.id) }
-  let(:account) { Todo::Account.create(email: 'test@example.com', name: 'Test User') }
-  let(:owner_role) { Todo::Role.first(name: 'owner') }
+describe Tyto::Service::Events::CreateEvent do
+  let(:course) { Tyto::Course.create(name: 'Test Course') }
+  let(:event_location) { Tyto::Location.create(name: 'Room 101', course_id: course.id) }
+  let(:account) { Tyto::Account.create(email: 'test@example.com', name: 'Test User') }
+  let(:owner_role) { Tyto::Role.first(name: 'owner') }
 
   before do
-    Todo::AccountCourse.create(account_id: account.id, course_id: course.id, role_id: owner_role.id)
+    Tyto::AccountCourse.create(account_id: account.id, course_id: course.id, role_id: owner_role.id)
   end
 
   let(:requestor) { { 'account_id' => account.id, 'roles' => ['creator'] } }
@@ -23,7 +23,7 @@ describe Todo::Service::Events::CreateEvent do
         'end_at' => (Time.now + 3600).iso8601
       }
 
-      result = Todo::Service::Events::CreateEvent.new.call(requestor:, course_id: course.id, event_data:)
+      result = Tyto::Service::Events::CreateEvent.new.call(requestor:, course_id: course.id, event_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Success
       _(result.value!.message.name).must_equal 'New Event'
@@ -32,18 +32,18 @@ describe Todo::Service::Events::CreateEvent do
     it 'returns Failure when name is missing' do
       event_data = { 'location_id' => event_location.id }
 
-      result = Todo::Service::Events::CreateEvent.new.call(requestor:, course_id: course.id, event_data:)
+      result = Tyto::Service::Events::CreateEvent.new.call(requestor:, course_id: course.id, event_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Failure
       _(result.failure.status).must_equal :bad_request
     end
 
     it 'returns Failure when user has no access' do
-      other_account = Todo::Account.create(email: 'other@example.com', name: 'Other')
+      other_account = Tyto::Account.create(email: 'other@example.com', name: 'Other')
       other_requestor = { 'account_id' => other_account.id, 'roles' => [] }
       event_data = { 'name' => 'New Event', 'location_id' => event_location.id }
 
-      result = Todo::Service::Events::CreateEvent.new.call(requestor: other_requestor, course_id: course.id, event_data:)
+      result = Tyto::Service::Events::CreateEvent.new.call(requestor: other_requestor, course_id: course.id, event_data:)
 
       _(result).must_be_kind_of Dry::Monads::Result::Failure
       _(result.failure.status).must_equal :forbidden

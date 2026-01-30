@@ -6,9 +6,9 @@ describe 'Service::Events::DeleteEvent' do
   include TestHelpers
 
   def create_test_course(owner_account, name: 'Test Course')
-    course = Todo::Course.create(name: name)
-    owner_role = Todo::Role.find(name: 'owner')
-    Todo::AccountCourse.create(
+    course = Tyto::Course.create(name: name)
+    owner_role = Tyto::Role.find(name: 'owner')
+    Tyto::AccountCourse.create(
       course_id: course.id,
       account_id: owner_account.id,
       role_id: owner_role.id
@@ -17,7 +17,7 @@ describe 'Service::Events::DeleteEvent' do
   end
 
   def create_test_location(course, name: 'Test Location')
-    Todo::Location.create(
+    Tyto::Location.create(
       course_id: course.id,
       name: name,
       latitude: 40.7128,
@@ -26,7 +26,7 @@ describe 'Service::Events::DeleteEvent' do
   end
 
   def create_test_event(course, location, name: 'Test Event')
-    Todo::Event.create(
+    Tyto::Event.create(
       course_id: course.id,
       location_id: location.id,
       name: name,
@@ -43,7 +43,7 @@ describe 'Service::Events::DeleteEvent' do
       event = create_test_event(course, location)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id
@@ -64,14 +64,14 @@ describe 'Service::Events::DeleteEvent' do
       event_id = event.id
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event_id
       )
 
       _(result.success?).must_equal true
-      _(Todo::Event[event_id]).must_be_nil
+      _(Tyto::Event[event_id]).must_be_nil
     end
 
     it 'allows instructor to delete events' do
@@ -81,15 +81,15 @@ describe 'Service::Events::DeleteEvent' do
       event = create_test_event(course, location)
 
       instructor = create_test_account(name: 'Instructor', roles: ['member'])
-      instructor_role = Todo::Role.find(name: 'instructor')
-      Todo::AccountCourse.create(
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: instructor.id,
         role_id: instructor_role.id
       )
 
       requestor = { 'account_id' => instructor.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id
@@ -105,15 +105,15 @@ describe 'Service::Events::DeleteEvent' do
       event = create_test_event(course, location)
 
       staff = create_test_account(name: 'Staff', roles: ['member'])
-      staff_role = Todo::Role.find(name: 'staff')
-      Todo::AccountCourse.create(
+      staff_role = Tyto::Role.find(name: 'staff')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: staff.id,
         role_id: staff_role.id
       )
 
       requestor = { 'account_id' => staff.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id
@@ -129,15 +129,15 @@ describe 'Service::Events::DeleteEvent' do
       event = create_test_event(course, location)
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: student.id,
         role_id: student_role.id
       )
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id
@@ -156,7 +156,7 @@ describe 'Service::Events::DeleteEvent' do
       other_user = create_test_account(name: 'Other User', roles: ['member'])
 
       requestor = { 'account_id' => other_user.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id
@@ -171,7 +171,7 @@ describe 'Service::Events::DeleteEvent' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: 99999
@@ -187,7 +187,7 @@ describe 'Service::Events::DeleteEvent' do
       account = create_test_account(roles: ['creator'])
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: 99999,
         event_id: 1
@@ -201,7 +201,7 @@ describe 'Service::Events::DeleteEvent' do
       account = create_test_account(roles: ['creator'])
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: 'invalid',
         event_id: 1
@@ -216,7 +216,7 @@ describe 'Service::Events::DeleteEvent' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: 'invalid'
@@ -234,7 +234,7 @@ describe 'Service::Events::DeleteEvent' do
       event = create_test_event(course1, location) # Event belongs to course1
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course2.id, # Trying to delete via course2
         event_id: event.id
@@ -253,15 +253,15 @@ describe 'Service::Events::DeleteEvent' do
       event_id = event.id
 
       student = create_test_account(name: 'Student', roles: ['member'])
-      student_role = Todo::Role.find(name: 'student')
-      Todo::AccountCourse.create(
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
         course_id: course.id,
         account_id: student.id,
         role_id: student_role.id
       )
 
       requestor = { 'account_id' => student.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event_id
@@ -269,7 +269,7 @@ describe 'Service::Events::DeleteEvent' do
 
       _(result.failure?).must_equal true
       # Event should still exist
-      _(Todo::Event[event_id]).wont_be_nil
+      _(Tyto::Event[event_id]).wont_be_nil
     end
   end
 
@@ -281,7 +281,7 @@ describe 'Service::Events::DeleteEvent' do
       event = create_test_event(course, location)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: event.id
@@ -296,7 +296,7 @@ describe 'Service::Events::DeleteEvent' do
       course = create_test_course(account)
 
       requestor = { 'account_id' => account.id }
-      result = Todo::Service::Events::DeleteEvent.new.call(
+      result = Tyto::Service::Events::DeleteEvent.new.call(
         requestor:,
         course_id: course.id,
         event_id: 99999
