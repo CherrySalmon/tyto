@@ -351,11 +351,27 @@ Move policies to `application/policies/`:
 
 ## Phase 5: Enrollments
 
-### 5.1 Enrollment as first-class concept
+### 5.1 Enrollment as Course child entity
 
-- [ ] Decide: Enrollment as Course child or separate context
-- [ ] Create enrollment entity/value object
-- [ ] Move enrollment logic from CourseService
+Decision: Enrollment is a **child entity of the Course aggregate** (like Events and Locations).
+Rationale: Enrollments are always accessed in the context of a course, and course roles are course-specific vocabulary.
+
+- [x] Create `domain/courses/entities/enrollment.rb`
+  - Aggregates multiple roles per account into single entity
+  - Role predicates: `owner?`, `instructor?`, `staff?`, `student?`
+  - `teaching?` returns true for owner/instructor/staff
+  - `has_role?(role_name)` for checking specific roles
+- [x] Update Course entity with `enrollments` attribute
+  - Loading convention: `nil` = not loaded, `[]` = loaded but empty
+  - `find_enrollment(account_id)` to find by account
+  - `enrollments_with_role(role)` to filter by role
+  - `teaching_staff` and `students` helper methods
+- [x] Update Courses repository
+  - `find_with_enrollments` - loads enrollments only
+  - `find_full` - now loads events, locations, AND enrollments
+  - Aggregates AccountCourse rows into Enrollment entities
+- [x] Write unit tests for Enrollment entity
+- [x] Write integration tests for repository enrollment loading
 
 ---
 
@@ -428,9 +444,9 @@ Each phase should:
 
 ## Current Status
 
-**Phase**: 4 - Attendance Context ✅
-**Completed**: Phase 2 ✅, Phase 3 ✅, Phase 4 ✅
-**Next**: Phase 5 - Enrollments
+**Phase**: 5 - Enrollments ✅
+**Completed**: Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅
+**Next**: Phase 6 - Application Layer Refactoring
 
 ### Built but Not Yet Wired (Phase 6 will address)
 
@@ -443,9 +459,11 @@ The following domain objects and repository methods exist but services haven't b
 | `Repository::Accounts` | ✅ Built | AccountService still uses ORM |
 | `Repository::Attendances` | ✅ Built | AttendanceService still uses ORM |
 | `Course#find_event`, `#find_location` | ✅ Built | Services need aggregate loading |
-| `Courses#find_with_events`, etc. | ✅ Built | Services need refactoring |
+| `Course#find_enrollment`, `#teaching_staff`, `#students` | ✅ Built | Services need aggregate loading |
+| `Courses#find_with_events`, `#find_with_enrollments`, etc. | ✅ Built | Services need refactoring |
 | `Account#admin?`, `#creator?`, etc. | ✅ Built | Services need refactoring |
 | `Attendance#within_range?`, etc. | ✅ Built | AttendanceService needs refactoring |
+| `Enrollment#owner?`, `#teaching?`, etc. | ✅ Built | CourseService needs refactoring |
 
 **Not part of this refactoring** (see `doc/future-work.md`):
 
