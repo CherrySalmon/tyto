@@ -1,33 +1,59 @@
 # frozen_string_literal: true
 
+# rubocop:disable Bundler/DuplicatedGroup
+
 source 'https://rubygems.org'
 ruby File.read('.ruby-version').strip
 
-gem 'figaro', '~>1.2'
-gem 'foreman', '~>0.0'
-gem 'json_schemer'
+# WEB APPLICATION
+gem 'logger'
+gem 'ostruct'
 gem 'puma', '~>6.0'
-gem 'rake', '~>13.0'
 gem 'roda', '~>3.0'
-gem 'sequel', '~>5.0'
 gem 'tilt'
+
+# CONFIGURATION
+gem 'figaro', '~>1.2'
+
+# SECURITY AND AUTHENTICATION
 gem 'google-id-token'
-gem 'dry-validation', '~>1.10'
+gem 'openssl', '~>3.3'
 gem 'rack-ssl-enforcer'
 gem 'rbnacl'
-gem 'openssl', '~>3.3'
+
+# VALIDATION
+gem 'dry-validation', '~>1.10'
+gem 'json_schemer'
+
+# INFRASTRUCTURE
+gem 'foreman', '~>0.0'
+gem 'rake', '~>13.0'
+
+# DATABASE
+gem 'sequel', '~>5.0'
 
 group :production do
   gem 'pg', '~>1.0'
 end
 
 group :development, :test do
-  gem 'minitest'
-  gem 'pry'
-  gem 'rack-test'
   gem 'sqlite3', '~> 1.0'
 end
 
+# TESTING
+group :development, :test do
+  gem 'minitest'
+  gem 'rack-test'
+end
+
+# DEBUGGING
+group :development, :test do
+  gem 'pry'
+end
+
+# CODE QUALITY
 group :development do
   gem 'rubocop'
 end
+
+# rubocop:enable Bundler/DuplicatedGroup
