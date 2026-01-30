@@ -68,69 +68,69 @@ backend_app/
 
 ---
 
-## Phase 0: Reorganize Existing Code (Current Phase)
+## Phase 0: Reorganize Existing Code (Complete)
 
 **Goal**: Move existing files to new folder structure without changing behavior. All tests must pass after each step.
 
 ### 0.1 Create folder structure
 
-- [ ] Create `backend_app/infrastructure/database/orm/`
-- [ ] Create `backend_app/application/services/`
-- [ ] Create `backend_app/application/policies/`
-- [ ] Create `backend_app/infrastructure/auth/`
+- [x] Create `backend_app/infrastructure/database/orm/`
+- [x] Create `backend_app/application/services/`
+- [x] Create `backend_app/application/policies/`
+- [x] Create `backend_app/infrastructure/auth/`
 
 ### 0.2 Move ORM models
 
 Move models to `infrastructure/database/orm/`:
 
-- [ ] `models/account.rb` → `infrastructure/database/orm/account.rb`
-- [ ] `models/account_course.rb` → `infrastructure/database/orm/account_course.rb`
-- [ ] `models/account_role.rb` → `infrastructure/database/orm/account_role.rb`
-- [ ] `models/attendance.rb` → `infrastructure/database/orm/attendance.rb`
-- [ ] `models/course.rb` → `infrastructure/database/orm/course.rb`
-- [ ] `models/event.rb` → `infrastructure/database/orm/event.rb`
-- [ ] `models/location.rb` → `infrastructure/database/orm/location.rb`
-- [ ] `models/role.rb` → `infrastructure/database/orm/role.rb`
-- [ ] Delete empty `models/` folder
-- [ ] Update `require_app.rb` to load from new path
-- [ ] Run tests to verify
+- [x] `models/account.rb` → `infrastructure/database/orm/account.rb`
+- [x] `models/account_course.rb` → `infrastructure/database/orm/account_course.rb`
+- [x] `models/account_role.rb` → `infrastructure/database/orm/account_role.rb`
+- [x] `models/attendance.rb` → `infrastructure/database/orm/attendance.rb`
+- [x] `models/course.rb` → `infrastructure/database/orm/course.rb`
+- [x] `models/event.rb` → `infrastructure/database/orm/event.rb`
+- [x] `models/location.rb` → `infrastructure/database/orm/location.rb`
+- [x] `models/role.rb` → `infrastructure/database/orm/role.rb`
+- [x] Delete empty `models/` folder
+- [x] Update `require_app.rb` to load from new path
+- [x] Run tests to verify
 
 ### 0.3 Move services
 
 Move services to `application/services/`:
 
-- [ ] `services/account_service.rb` → `application/services/account_service.rb`
-- [ ] `services/attendance_service.rb` → `application/services/attendance_service.rb`
-- [ ] `services/course_service.rb` → `application/services/course_service.rb`
-- [ ] `services/event_service.rb` → `application/services/event_service.rb`
-- [ ] `services/location_service.rb` → `application/services/location_service.rb`
-- [ ] `services/sso_auth.rb` → `infrastructure/auth/sso_auth.rb`
-- [ ] Delete empty `services/` folder
-- [ ] Update `require_app.rb` to load from new paths
-- [ ] Update `require_relative` paths in services for policies
-- [ ] Run tests to verify
+- [x] `services/account_service.rb` → `application/services/account_service.rb`
+- [x] `services/attendance_service.rb` → `application/services/attendance_service.rb`
+- [x] `services/course_service.rb` → `application/services/course_service.rb`
+- [x] `services/event_service.rb` → `application/services/event_service.rb`
+- [x] `services/location_service.rb` → `application/services/location_service.rb`
+- [x] `services/sso_auth.rb` → `infrastructure/auth/sso_auth.rb`
+- [x] Delete empty `services/` folder
+- [x] Update `require_app.rb` to load from new paths
+- [x] Update `require_relative` paths in services for policies
+- [x] Run tests to verify
 
 ### 0.4 Move policies
 
 Move policies to `application/policies/`:
 
-- [ ] `policies/account_policy.rb` → `application/policies/account_policy.rb`
-- [ ] `policies/attendance_policy.rb` → `application/policies/attendance_policy.rb`
-- [ ] `policies/course_policy.rb` → `application/policies/course_policy.rb`
-- [ ] `policies/course_scopes.rb` → `application/policies/course_scopes.rb`
-- [ ] `policies/event_policy.rb` → `application/policies/event_policy.rb`
-- [ ] `policies/location_policy.rb` → `application/policies/location_policy.rb`
-- [ ] `policies/role_policy.rb` → `application/policies/role_policy.rb`
-- [ ] Delete empty `policies/` folder
-- [ ] Update `require_relative` paths in services
-- [ ] Run tests to verify
+- [x] `policies/account_policy.rb` → `application/policies/account_policy.rb`
+- [x] `policies/attendance_policy.rb` → `application/policies/attendance_policy.rb`
+- [x] `policies/course_policy.rb` → `application/policies/course_policy.rb`
+- [x] `policies/course_scopes.rb` → `application/policies/course_scopes.rb`
+- [x] `policies/event_policy.rb` → `application/policies/event_policy.rb`
+- [x] `policies/location_policy.rb` → `application/policies/location_policy.rb`
+- [x] `policies/role_policy.rb` → `application/policies/role_policy.rb`
+- [x] Delete empty `policies/` folder
+- [x] Update `require_relative` paths in services
+- [x] Run tests to verify
 
 ### 0.5 Update controller requires
 
-- [ ] Update `controllers/app.rb` require paths
-- [ ] Update any other files with direct requires
-- [ ] Run full test suite
-- [ ] Commit: "Reorganize backend into DDD folder structure"
+- [x] Update `controllers/app.rb` require paths
+- [x] Update any other files with direct requires
+- [x] Run full test suite
+- [x] Commit: "Reorganize backend into DDD folder structure"
 
 ---
 
@@ -260,8 +260,8 @@ Each phase should:
 
 ## Current Status
 
-**Phase**: 0.1 - Create folder structure
-**Next Task**: Create `infrastructure/` and `application/` directories
+**Phase**: 1 - Foundation (Domain Layer Setup)
+**Next Task**: Add dry-struct and dry-types to Gemfile
 
 ---
 
