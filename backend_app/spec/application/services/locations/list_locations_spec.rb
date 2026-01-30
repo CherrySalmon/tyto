@@ -32,7 +32,7 @@ describe 'Service::Locations::ListLocations' do
       create_test_location(course, name: 'Location 1')
       create_test_location(course, name: 'Location 2')
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::ListLocations.new.call(
         requestor:,
         course_id: course.id
@@ -48,7 +48,7 @@ describe 'Service::Locations::ListLocations' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::ListLocations.new.call(
         requestor:,
         course_id: course.id
@@ -67,7 +67,7 @@ describe 'Service::Locations::ListLocations' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Locations::ListLocations.new.call(requestor:, course_id: course.id)
 
       _(result.success?).must_equal true
@@ -78,7 +78,7 @@ describe 'Service::Locations::ListLocations' do
       course = create_test_course(owner)
       other_user = create_test_account(name: 'Other', roles: ['member'])
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: other_user.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: other_user.id, roles: ['creator'])
       result = Tyto::Service::Locations::ListLocations.new.call(requestor:, course_id: course.id)
 
       _(result.failure?).must_equal true
@@ -87,7 +87,7 @@ describe 'Service::Locations::ListLocations' do
 
     it 'returns Failure for invalid course_id' do
       account = create_test_account(roles: ['creator'])
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::ListLocations.new.call(requestor:, course_id: 'invalid')
 
       _(result.failure?).must_equal true
@@ -96,7 +96,7 @@ describe 'Service::Locations::ListLocations' do
 
     it 'returns Failure for non-existent course' do
       account = create_test_account(roles: ['creator'])
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::ListLocations.new.call(requestor:, course_id: 99999)
 
       _(result.failure?).must_equal true
@@ -110,7 +110,7 @@ describe 'Service::Locations::ListLocations' do
       course = create_test_course(account)
       create_test_location(course, name: 'Test Location')
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::ListLocations.new.call(requestor:, course_id: course.id)
 
       locations = result.value!.message

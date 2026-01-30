@@ -36,7 +36,7 @@ describe 'Service::Attendances::ListAllAttendances' do
       student = create_test_account(name: 'Student', roles: ['member'])
       create_test_attendance(course, student)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: owner.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: owner.id, roles: ['creator'])
       result = Tyto::Service::Attendances::ListAllAttendances.new.call(
         requestor:,
         course_id: course.id
@@ -54,7 +54,7 @@ describe 'Service::Attendances::ListAllAttendances' do
       instructor_role = Tyto::Role.find(name: 'instructor')
       Tyto::AccountCourse.create(course_id: course.id, account_id: instructor.id, role_id: instructor_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: instructor.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: instructor.id, roles: ['creator'])
       result = Tyto::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: course.id)
 
       _(result.success?).must_equal true
@@ -67,7 +67,7 @@ describe 'Service::Attendances::ListAllAttendances' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: course.id)
 
       _(result.failure?).must_equal true
@@ -79,7 +79,7 @@ describe 'Service::Attendances::ListAllAttendances' do
       course = create_test_course(owner)
       other = create_test_account(name: 'Other', roles: ['member'])
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: other.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: other.id, roles: ['creator'])
       result = Tyto::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: course.id)
 
       _(result.failure?).must_equal true
@@ -88,7 +88,7 @@ describe 'Service::Attendances::ListAllAttendances' do
 
     it 'returns Failure for non-existent course' do
       account = create_test_account(roles: ['creator'])
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Attendances::ListAllAttendances.new.call(requestor:, course_id: 99999)
 
       _(result.failure?).must_equal true

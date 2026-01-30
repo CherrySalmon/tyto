@@ -6,9 +6,10 @@ module Tyto
   module Domain
     module Accounts
       module Values
-        # Represents an authenticated identity extracted from a JWT token.
+        # Security capability extracted from a JWT token.
+        # Represents what this request is authorized to do (account_id + roles).
         # Used throughout the application for authorization decisions.
-        class Requestor < Dry::Struct
+        class AuthCapability < Dry::Struct
           attribute :account_id, Types::Integer
           attribute :roles, Types::Array.of(Types::Role)
 

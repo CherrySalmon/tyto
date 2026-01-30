@@ -10,7 +10,7 @@ describe Tyto::Service::Courses::CreateCourse do
     creator_account.add_role(creator_role)
   end
 
-  let(:requestor) { Tyto::Domain::Accounts::Values::Requestor.new(account_id: creator_account.id, roles: ['creator']) }
+  let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: creator_account.id, roles: ['creator']) }
 
   describe '#call' do
     it 'returns Success with created course' do
@@ -36,7 +36,7 @@ describe Tyto::Service::Courses::CreateCourse do
       member_account = Tyto::Account.create(email: 'member@example.com', name: 'Member')
       member_role = Tyto::Role.first(name: 'member')
       member_account.add_role(member_role)
-      member_requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: member_account.id, roles: ['member'])
+      member_requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: member_account.id, roles: ['member'])
       course_data = { 'name' => 'Unauthorized Course' }
 
       result = Tyto::Service::Courses::CreateCourse.new.call(requestor: member_requestor, course_data:)

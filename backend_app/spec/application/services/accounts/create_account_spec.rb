@@ -10,7 +10,7 @@ describe Tyto::Service::Accounts::CreateAccount do
     creator_account.add_role(creator_role)
   end
 
-  let(:requestor) { Tyto::Domain::Accounts::Values::Requestor.new(account_id: creator_account.id, roles: ['creator']) }
+  let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: creator_account.id, roles: ['creator']) }
 
   describe '#call' do
     it 'returns Success with created account' do

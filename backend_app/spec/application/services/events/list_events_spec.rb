@@ -11,7 +11,7 @@ describe Tyto::Service::Events::ListEvents do
     Tyto::AccountCourse.create(account_id: account.id, course_id: course.id, role_id: owner_role.id)
   end
 
-  let(:requestor) { Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator']) }
+  let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator']) }
 
   describe '#call' do
     it 'returns Success with empty list when no events' do
@@ -48,7 +48,7 @@ describe Tyto::Service::Events::ListEvents do
 
     it 'returns Failure when user has no access' do
       other_account = Tyto::Account.create(email: 'other@example.com', name: 'Other')
-      other_requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: other_account.id, roles: ['member'])
+      other_requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: other_account.id, roles: ['member'])
 
       result = Tyto::Service::Events::ListEvents.new.call(requestor: other_requestor, course_id: course.id)
 

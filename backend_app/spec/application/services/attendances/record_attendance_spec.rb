@@ -46,7 +46,7 @@ describe 'Service::Attendances::RecordAttendance' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
@@ -72,7 +72,7 @@ describe 'Service::Attendances::RecordAttendance' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
@@ -94,7 +94,7 @@ describe 'Service::Attendances::RecordAttendance' do
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
       initial_count = Tyto::Attendance.count
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
@@ -111,7 +111,7 @@ describe 'Service::Attendances::RecordAttendance' do
       event = create_test_event(course, location)
       other = create_test_account(name: 'Other', roles: ['member'])
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: other.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: other.id, roles: ['creator'])
       result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
@@ -130,7 +130,7 @@ describe 'Service::Attendances::RecordAttendance' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
@@ -149,7 +149,7 @@ describe 'Service::Attendances::RecordAttendance' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
@@ -171,7 +171,7 @@ describe 'Service::Attendances::RecordAttendance' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course2.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course2.id,
@@ -192,7 +192,7 @@ describe 'Service::Attendances::RecordAttendance' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,
@@ -215,7 +215,7 @@ describe 'Service::Attendances::RecordAttendance' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Attendances::RecordAttendance.new.call(
         requestor:,
         course_id: course.id,

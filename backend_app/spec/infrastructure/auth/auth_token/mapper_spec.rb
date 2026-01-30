@@ -4,17 +4,17 @@ require_relative '../../../spec_helper'
 
 describe Tyto::AuthToken::Mapper do
   let(:mapper) { Tyto::AuthToken::Mapper.new }
-  let(:requestor) { Tyto::Domain::Accounts::Values::Requestor.new(account_id: 42, roles: ['admin', 'creator']) }
+  let(:capability) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: 42, roles: ['admin', 'creator']) }
 
   describe '#to_token' do
-    it 'returns a string token from Requestor' do
-      token = mapper.to_token(requestor)
+    it 'returns a string token from AuthCapability' do
+      token = mapper.to_token(capability)
 
       _(token).must_be_kind_of String
       _(token).wont_be_empty
     end
 
-    it 'raises MappingError with nil requestor' do
+    it 'raises MappingError with nil capability' do
       _(-> { mapper.to_token(nil) }).must_raise Tyto::AuthToken::Mapper::MappingError
     end
   end
@@ -37,11 +37,11 @@ describe Tyto::AuthToken::Mapper do
   end
 
   describe '#from_auth_header' do
-    it 'returns Requestor from valid token' do
-      token = mapper.to_token(requestor)
+    it 'returns AuthCapability from valid token' do
+      token = mapper.to_token(capability)
       result = mapper.from_auth_header("Bearer #{token}")
 
-      _(result).must_be_kind_of Tyto::Domain::Accounts::Values::Requestor
+      _(result).must_be_kind_of Tyto::Domain::Accounts::Values::AuthCapability
       _(result.account_id).must_equal 42
       _(result.roles).must_equal ['admin', 'creator']
     end
@@ -51,7 +51,7 @@ describe Tyto::AuthToken::Mapper do
     end
 
     it 'raises MappingError without Bearer prefix' do
-      token = mapper.to_token(requestor)
+      token = mapper.to_token(capability)
       _(-> { mapper.from_auth_header(token) }).must_raise Tyto::AuthToken::Mapper::MappingError
     end
 

@@ -33,7 +33,7 @@ backend_app/
 │   │       ├── sso_auth.rb        # Google OAuth verification
 │   │       └── auth_token/        # JWT token handling
 │   │           ├── gateway.rb     # Encryption/decryption (RbNaCl)
-│   │           └── mapper.rb      # Requestor ↔ token transformation
+│   │           └── mapper.rb      # AuthCapability ↔ token transformation
 │   │
 │   ├── application/               # Use cases and orchestration
 │   │   ├── controllers/           # Roda routes (thin HTTP layer)
@@ -66,7 +66,7 @@ backend_app/
 ### Accounts (Aggregate Root: Account)
 
 - **Entities**: Account
-- **Values**: Email, Role, Requestor (authenticated identity from JWT)
+- **Values**: Email, Role, AuthCapability (authenticated identity from JWT)
 
 ### Attendance (Aggregate Root: Attendance)
 
@@ -738,16 +738,16 @@ For each use case:
         - `encrypt(payload)` → encrypted token string
         - `decrypt(token)` → payload string
         - `generate_key` → Base64 key
-      - `AuthToken::Mapper` - Requestor ↔ token transformation
+      - `AuthToken::Mapper` - AuthCapability ↔ token transformation
         - `to_token(requestor)` → token string
-        - `from_auth_header(auth_header)` → Requestor
+        - `from_auth_header(auth_header)` → AuthCapability
         - `from_credentials(account_id, roles)` → token string (convenience)
   - **Updated consumers**:
-    - Controllers: `AuthToken::Mapper.new.from_auth_header(auth_header)` returns `Requestor`
+    - Controllers: `AuthToken::Mapper.new.from_auth_header(auth_header)` returns `AuthCapability`
     - Services/policies: `requestor.account_id` instead of `requestor['account_id']`
     - Policies: `requestor.admin?` instead of `requestor['roles'].include?('admin')`
   - Deleted: `lib/jwt_credential.rb`, `spec/lib/jwt_credential_spec.rb`
-  - Added: Unit tests for Requestor, AuthToken::Gateway, AuthToken::Mapper
+  - Added: Unit tests for AuthCapability, AuthToken::Gateway, AuthToken::Mapper
   - All 561 tests pass ✅
 
 ### Completed Use Cases

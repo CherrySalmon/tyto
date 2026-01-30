@@ -31,7 +31,7 @@ describe 'Service::Locations::DeleteLocation' do
       course = create_test_course(account)
       location = create_test_location(course)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::DeleteLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -48,7 +48,7 @@ describe 'Service::Locations::DeleteLocation' do
       location = create_test_location(course)
       location_id = location.id
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       Tyto::Service::Locations::DeleteLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -70,7 +70,7 @@ describe 'Service::Locations::DeleteLocation' do
         end_at: Time.now + 3600
       )
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::DeleteLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -90,7 +90,7 @@ describe 'Service::Locations::DeleteLocation' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Locations::DeleteLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -105,7 +105,7 @@ describe 'Service::Locations::DeleteLocation' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::DeleteLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -122,7 +122,7 @@ describe 'Service::Locations::DeleteLocation' do
       course2 = create_test_course(account, name: 'Course 2')
       location = create_test_location(course1)
 
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::DeleteLocation.new.call(
         requestor:,
         course_id: course2.id,

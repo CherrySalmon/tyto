@@ -12,7 +12,7 @@ describe Tyto::Service::Accounts::DeleteAccount do
 
   describe '#call' do
     it 'returns Success when deleting own account' do
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
 
       result = Tyto::Service::Accounts::DeleteAccount.new.call(requestor:, account_id: account.id)
 
@@ -24,7 +24,7 @@ describe Tyto::Service::Accounts::DeleteAccount do
       admin = Tyto::Account.create(email: 'admin@example.com', name: 'Admin')
       admin_role = Tyto::Role.first(name: 'admin')
       admin.add_role(admin_role)
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: admin.id, roles: ['admin'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: admin.id, roles: ['admin'])
 
       result = Tyto::Service::Accounts::DeleteAccount.new.call(requestor:, account_id: account.id)
 
@@ -33,7 +33,7 @@ describe Tyto::Service::Accounts::DeleteAccount do
 
     it 'returns Failure when deleting other account without admin' do
       other = Tyto::Account.create(email: 'other@example.com', name: 'Other')
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: other.id, roles: ['creator'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: other.id, roles: ['creator'])
 
       result = Tyto::Service::Accounts::DeleteAccount.new.call(requestor:, account_id: account.id)
 
@@ -42,7 +42,7 @@ describe Tyto::Service::Accounts::DeleteAccount do
     end
 
     it 'returns Failure for non-existent account' do
-      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['admin'])
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['admin'])
 
       result = Tyto::Service::Accounts::DeleteAccount.new.call(requestor:, account_id: 999_999)
 
