@@ -76,8 +76,10 @@ describe 'Todo::Repository::Courses' do
 
       _(result.events).must_be_nil
       _(result.locations).must_be_nil
+      _(result.enrollments).must_be_nil
       _(result.events_loaded?).must_equal false
       _(result.locations_loaded?).must_equal false
+      _(result.enrollments_loaded?).must_equal false
     end
 
     it 'returns nil for non-existent course' do
@@ -165,18 +167,86 @@ describe 'Todo::Repository::Courses' do
     end
   end
 
-  describe '#find_full' do
-    it 'returns course with both events and locations loaded' do
+  describe '#find_with_enrollments' do
+    let(:owner_role) { Todo::Role.first(name: 'owner') }
+    let(:instructor_role) { Todo::Role.first(name: 'instructor') }
+    let(:student_role) { Todo::Role.first(name: 'student') }
+
+    it 'returns course with enrollments loaded' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+      account1 = Todo::Account.create(email: 'owner@example.com', name: 'Owner')
+      account2 = Todo::Account.create(email: 'student@example.com', name: 'Student')
+
+      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account1.id, role_id: owner_role.id)
+      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account2.id, role_id: student_role.id)
+
+      result = repository.find_with_enrollments(orm_course.id)
+
+      _(result.enrollments_loaded?).must_equal true
+      _(result.enrollments.length).must_equal 2
+    end
+
+    it 'aggregates multiple roles for same account into one enrollment' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+      account = Todo::Account.create(email: 'multi@example.com', name: 'Multi-Role')
+
+      # Same account has both instructor and student roles
+      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: instructor_role.id)
+      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: student_role.id)
+
+      result = repository.find_with_enrollments(orm_course.id)
+
+      _(result.enrollments.length).must_equal 1
+      enrollment = result.enrollments.first
+      _(enrollment.roles.length).must_equal 2
+      _(enrollment.roles).must_include 'instructor'
+      _(enrollment.roles).must_include 'student'
+      _(enrollment.account_email).must_equal 'multi@example.com'
+    end
+
+    it 'returns empty array for course with no enrollments' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+
+      result = repository.find_with_enrollments(orm_course.id)
+
+      _(result.enrollments_loaded?).must_equal true
+      _(result.enrollments).must_equal []
+    end
+
+    it 'does not load events or locations' do
       orm_course = Todo::Course.create(name: 'Test Course')
       orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
       Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+
+      result = repository.find_with_enrollments(orm_course.id)
+
+      _(result.events).must_be_nil
+      _(result.locations).must_be_nil
+    end
+
+    it 'returns nil for non-existent course' do
+      _(repository.find_with_enrollments(999_999)).must_be_nil
+    end
+  end
+
+  describe '#find_full' do
+    let(:student_role) { Todo::Role.first(name: 'student') }
+
+    it 'returns course with all children loaded' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
+      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      account = Todo::Account.create(email: 'student@example.com', name: 'Student')
+      Todo::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: student_role.id)
 
       result = repository.find_full(orm_course.id)
 
       _(result.events_loaded?).must_equal true
       _(result.locations_loaded?).must_equal true
+      _(result.enrollments_loaded?).must_equal true
       _(result.events.length).must_equal 1
       _(result.locations.length).must_equal 1
+      _(result.enrollments.length).must_equal 1
     end
 
     it 'returns empty arrays for course with no children' do
@@ -186,6 +256,7 @@ describe 'Todo::Repository::Courses' do
 
       _(result.events).must_equal []
       _(result.locations).must_equal []
+      _(result.enrollments).must_equal []
     end
 
     it 'returns nil for non-existent course' do

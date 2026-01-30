@@ -364,4 +364,170 @@ describe 'Todo::Entity::Course' do
       end
     end
   end
+
+  describe 'enrollment collection' do
+    let(:owner_enrollment) do
+      Todo::Entity::Enrollment.new(
+        id: 1, account_id: 10, course_id: 1,
+        account_email: 'owner@example.com', account_name: 'Owner',
+        roles: ['owner'],
+        created_at: now, updated_at: now
+      )
+    end
+
+    let(:instructor_enrollment) do
+      Todo::Entity::Enrollment.new(
+        id: 2, account_id: 20, course_id: 1,
+        account_email: 'instructor@example.com', account_name: 'Instructor',
+        roles: ['instructor'],
+        created_at: now, updated_at: now
+      )
+    end
+
+    let(:student_enrollment) do
+      Todo::Entity::Enrollment.new(
+        id: 3, account_id: 30, course_id: 1,
+        account_email: 'student@example.com', account_name: 'Student',
+        roles: ['student'],
+        created_at: now, updated_at: now
+      )
+    end
+
+    let(:multi_role_enrollment) do
+      Todo::Entity::Enrollment.new(
+        id: 4, account_id: 40, course_id: 1,
+        account_email: 'ta@example.com', account_name: 'TA',
+        roles: %w[staff student],
+        created_at: now, updated_at: now
+      )
+    end
+
+    describe 'default state (not loaded)' do
+      it 'has nil enrollments by default' do
+        course = Todo::Entity::Course.new(valid_attributes)
+
+        _(course.enrollments).must_be_nil
+        _(course.enrollments_loaded?).must_equal false
+      end
+    end
+
+    describe 'loaded state' do
+      it 'can have enrollments loaded (empty)' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments: []))
+
+        _(course.enrollments).must_equal []
+        _(course.enrollments_loaded?).must_equal true
+      end
+
+      it 'can have enrollments loaded (with data)' do
+        enrollments = [owner_enrollment, instructor_enrollment, student_enrollment]
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments:))
+
+        _(course.enrollments.length).must_equal 3
+        _(course.enrollments_loaded?).must_equal true
+      end
+    end
+
+    describe '#find_enrollment' do
+      it 'finds enrollment by account ID when loaded' do
+        enrollments = [owner_enrollment, student_enrollment]
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments:))
+
+        found = course.find_enrollment(30)
+        _(found.account_email).must_equal 'student@example.com'
+      end
+
+      it 'returns nil when enrollment not found' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments: [owner_enrollment]))
+
+        _(course.find_enrollment(999)).must_be_nil
+      end
+
+      it 'raises ChildrenNotLoadedError when not loaded' do
+        course = Todo::Entity::Course.new(valid_attributes)
+
+        _ { course.find_enrollment(10) }
+          .must_raise Todo::Entity::Course::ChildrenNotLoadedError
+      end
+    end
+
+    describe '#enrollment_count' do
+      it 'returns count when loaded' do
+        enrollments = [owner_enrollment, student_enrollment]
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments:))
+
+        _(course.enrollment_count).must_equal 2
+      end
+
+      it 'returns 0 for empty enrollments' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments: []))
+
+        _(course.enrollment_count).must_equal 0
+      end
+
+      it 'raises ChildrenNotLoadedError when not loaded' do
+        course = Todo::Entity::Course.new(valid_attributes)
+
+        _ { course.enrollment_count }
+          .must_raise Todo::Entity::Course::ChildrenNotLoadedError
+      end
+    end
+
+    describe '#enrollments_with_role' do
+      it 'returns enrollments with specific role' do
+        enrollments = [owner_enrollment, instructor_enrollment, student_enrollment, multi_role_enrollment]
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments:))
+
+        students = course.enrollments_with_role('student')
+        _(students.length).must_equal 2 # student + multi_role (has student)
+      end
+
+      it 'returns empty array when no match' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments: [student_enrollment]))
+
+        _(course.enrollments_with_role('owner')).must_equal []
+      end
+
+      it 'raises ChildrenNotLoadedError when not loaded' do
+        course = Todo::Entity::Course.new(valid_attributes)
+
+        _ { course.enrollments_with_role('student') }
+          .must_raise Todo::Entity::Course::ChildrenNotLoadedError
+      end
+    end
+
+    describe '#teaching_staff' do
+      it 'returns all teaching enrollments' do
+        enrollments = [owner_enrollment, instructor_enrollment, student_enrollment, multi_role_enrollment]
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments:))
+
+        staff = course.teaching_staff
+        _(staff.length).must_equal 3 # owner, instructor, multi_role (has staff)
+      end
+
+      it 'excludes student-only enrollments' do
+        enrollments = [student_enrollment]
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments:))
+
+        _(course.teaching_staff).must_equal []
+      end
+    end
+
+    describe '#students' do
+      it 'returns all student enrollments' do
+        enrollments = [owner_enrollment, instructor_enrollment, student_enrollment, multi_role_enrollment]
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments:))
+
+        students = course.students
+        _(students.length).must_equal 2 # student + multi_role (has student)
+      end
+
+      it 'excludes non-student enrollments' do
+        enrollments = [owner_enrollment, instructor_enrollment]
+        course = Todo::Entity::Course.new(valid_attributes.merge(enrollments:))
+
+        _(course.students).must_equal []
+      end
+    end
+  end
 end

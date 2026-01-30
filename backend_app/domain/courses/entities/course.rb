@@ -28,6 +28,7 @@ module Todo
       # Child collections - nil means not loaded (default)
       attribute :events, Types::Array.optional.default(nil)
       attribute :locations, Types::Array.optional.default(nil)
+      attribute :enrollments, Types::Array.optional.default(nil)
 
       # Returns a TimeRange value object, or NullTimeRange if dates are missing.
       # Uses Null Object pattern to eliminate nil checks in delegating methods.
@@ -46,6 +47,7 @@ module Todo
       # Check if children are loaded
       def events_loaded? = !events.nil?
       def locations_loaded? = !locations.nil?
+      def enrollments_loaded? = !enrollments.nil?
 
       # Find an event by ID within this course's events
       # @raise [ChildrenNotLoadedError] if events weren't loaded
@@ -73,6 +75,38 @@ module Todo
         locations.size
       end
 
+      # Find an enrollment by account ID within this course
+      # @raise [ChildrenNotLoadedError] if enrollments weren't loaded
+      def find_enrollment(account_id)
+        require_enrollments_loaded!
+        enrollments.find { |e| e.account_id == account_id }
+      end
+
+      # Count of enrollments (raises if not loaded)
+      def enrollment_count
+        require_enrollments_loaded!
+        enrollments.size
+      end
+
+      # Get all enrollments with a specific role
+      # @raise [ChildrenNotLoadedError] if enrollments weren't loaded
+      def enrollments_with_role(role_name)
+        require_enrollments_loaded!
+        enrollments.select { |e| e.has_role?(role_name) }
+      end
+
+      # Get all teaching staff (owners, instructors, staff)
+      def teaching_staff
+        require_enrollments_loaded!
+        enrollments.select(&:teaching?)
+      end
+
+      # Get all students
+      def students
+        require_enrollments_loaded!
+        enrollments.select(&:student?)
+      end
+
       private
 
       def require_events_loaded!
@@ -81,6 +115,10 @@ module Todo
 
       def require_locations_loaded!
         raise ChildrenNotLoadedError, 'Locations not loaded for this course' if locations.nil?
+      end
+
+      def require_enrollments_loaded!
+        raise ChildrenNotLoadedError, 'Enrollments not loaded for this course' if enrollments.nil?
       end
     end
   end

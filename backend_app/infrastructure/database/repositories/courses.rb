@@ -3,6 +3,7 @@
 require_relative '../../../domain/courses/entities/course'
 require_relative '../../../domain/courses/entities/event'
 require_relative '../../../domain/courses/entities/location'
+require_relative '../../../domain/courses/entities/enrollment'
 
 module Todo
   module Repository
@@ -10,10 +11,11 @@ module Todo
     # Maps between ORM records and domain entities.
     #
     # Loading conventions:
-    #   find_id / find_all        - Course only (events/locations = nil)
+    #   find_id / find_all        - Course only (children = nil)
     #   find_with_events          - Course + events loaded
     #   find_with_locations       - Course + locations loaded
-    #   find_full                 - Course + events + locations loaded
+    #   find_with_enrollments     - Course + enrollments loaded
+    #   find_full                 - Course + all children loaded
     class Courses
       # Find a course by ID (children not loaded)
       # @param id [Integer] the course ID
@@ -45,6 +47,16 @@ module Todo
         rebuild_entity(orm_record, load_locations: true)
       end
 
+      # Find a course by ID with enrollments loaded
+      # @param id [Integer] the course ID
+      # @return [Entity::Course, nil] the domain entity with enrollments, or nil
+      def find_with_enrollments(id)
+        orm_record = Todo::Course[id]
+        return nil unless orm_record
+
+        rebuild_entity(orm_record, load_enrollments: true)
+      end
+
       # Find a course by ID with all children loaded
       # @param id [Integer] the course ID
       # @return [Entity::Course, nil] the full aggregate, or nil
@@ -52,7 +64,7 @@ module Todo
         orm_record = Todo::Course[id]
         return nil unless orm_record
 
-        rebuild_entity(orm_record, load_events: true, load_locations: true)
+        rebuild_entity(orm_record, load_events: true, load_locations: true, load_enrollments: true)
       end
 
       # Find all courses (children not loaded)
@@ -109,8 +121,10 @@ module Todo
       # @param orm_record [Todo::Course] the Sequel model instance
       # @param load_events [Boolean] whether to load events
       # @param load_locations [Boolean] whether to load locations
+      # @param load_enrollments [Boolean] whether to load enrollments
       # @return [Entity::Course] the domain entity
-      def rebuild_entity(orm_record, load_events: false, load_locations: false)
+      # rubocop:disable Metrics/ParameterLists
+      def rebuild_entity(orm_record, load_events: false, load_locations: false, load_enrollments: false)
         Entity::Course.new(
           id: orm_record.id,
           name: orm_record.name,
@@ -120,9 +134,11 @@ module Todo
           created_at: orm_record.created_at,
           updated_at: orm_record.updated_at,
           events: load_events ? rebuild_events(orm_record) : nil,
-          locations: load_locations ? rebuild_locations(orm_record) : nil
+          locations: load_locations ? rebuild_locations(orm_record) : nil,
+          enrollments: load_enrollments ? rebuild_enrollments(orm_record) : nil
         )
       end
+      # rubocop:enable Metrics/ParameterLists
 
       def rebuild_events(orm_course)
         Todo::Event
@@ -163,6 +179,36 @@ module Todo
           created_at: orm_record.created_at,
           updated_at: orm_record.updated_at
         )
+      end
+
+      # Rebuild enrollments - aggregates multiple AccountCourse rows per account
+      # into a single Enrollment entity with multiple roles
+      def rebuild_enrollments(orm_course)
+        # Get all account_course_roles for this course
+        account_courses = Todo::AccountCourse
+                          .where(course_id: orm_course.id)
+                          .all
+
+        # Group by account_id
+        grouped = account_courses.group_by(&:account_id)
+
+        # Build enrollment for each account
+        grouped.map do |account_id, records|
+          account = records.first.account
+          roles = records.map { |r| r.role.name }.uniq
+          first_record = records.min_by(&:id)
+
+          Entity::Enrollment.new(
+            id: first_record.id, # Use first record's ID as enrollment ID
+            account_id:,
+            course_id: orm_course.id,
+            account_email: account.email,
+            account_name: account.name,
+            roles:,
+            created_at: nil, # account_course_roles table has no timestamps
+            updated_at: nil
+          )
+        end
       end
     end
   end
