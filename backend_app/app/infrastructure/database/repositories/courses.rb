@@ -73,6 +73,29 @@ module Tyto
         Tyto::Course.all.map { |record| rebuild_entity(record) }
       end
 
+      # Find a single enrollment for an account in a course
+      # @param account_id [Integer] the account ID
+      # @param course_id [Integer] the course ID
+      # @return [Entity::Enrollment, nil] the enrollment entity or nil if not enrolled
+      def find_enrollment(account_id:, course_id:)
+        account_courses = Tyto::AccountCourse.where(account_id:, course_id:).all
+        return nil if account_courses.empty?
+
+        account = account_courses.first.account
+        roles = account_courses.map { |ac| ac.role.name }.uniq
+
+        Entity::Enrollment.new(
+          id: account_courses.min_by(&:id).id,
+          account_id:,
+          course_id:,
+          account_email: account.email,
+          account_name: account.name,
+          roles:,
+          created_at: nil,
+          updated_at: nil
+        )
+      end
+
       # Create a new course from a domain entity
       # @param entity [Entity::Course] the domain entity to persist
       # @return [Entity::Course] the persisted entity with ID

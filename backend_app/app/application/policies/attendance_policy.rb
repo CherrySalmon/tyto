@@ -1,30 +1,29 @@
 # frozen_string_literal: true
 
 module Tyto
-  # Policy to determine if an account can view, edit, or delete a particular course
+  # Policy to determine if an account can view, edit, or record attendance
   class AttendancePolicy
-    def initialize(requestor, course = nil, course_roles = nil)
+    def initialize(requestor, enrollment)
       @requestor = requestor
-      @this_course = course
-      @course_roles = course_roles
+      @enrollment = enrollment
     end
 
-    # Student can create a attendance;
+    # Enrolled users can create attendance (record their own attendance)
     def can_create?
       self_enrolled?
     end
 
-    # Student can view the attendance;
+    # Enrolled users can view their own attendance
     def can_view?
       self_enrolled?
     end
 
-    # Teaching staff can view all the attendance;
+    # Teaching staff can view all attendance records
     def can_view_all?
-      requestor_is_instructor? || requestor_is_owner? || requestor_is_staff?
+      teaching_staff?
     end
 
-    # Student can update the attendance;
+    # Enrolled users can update their own attendance
     def can_update?
       self_enrolled?
     end
@@ -43,19 +42,23 @@ module Tyto
 
     # Check if the requestor is enrolled in the course
     def self_enrolled?
-      @this_course&.accounts&.any? { |account| account.id == @requestor.account_id }
+      @enrollment&.active? || false
+    end
+
+    def requestor_is_owner?
+      @enrollment&.owner? || false
     end
 
     def requestor_is_instructor?
-      @course_roles.include?('instructor')
+      @enrollment&.instructor? || false
     end
-  
+
     def requestor_is_staff?
-      @course_roles.include?('staff')
+      @enrollment&.staff? || false
     end
-  
-    def requestor_is_owner?
-      @course_roles.include?('owner')
+
+    def teaching_staff?
+      @enrollment&.teaching? || false
     end
   end
 end

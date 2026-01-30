@@ -1,35 +1,31 @@
 # frozen_string_literal: true
 
 module Tyto
-  # Policy to determine if an account can view, edit, or delete a particular course
+  # Policy to determine if an account can view, edit, or delete events
   class EventPolicy
-    def initialize(requestor, course_roles)
+    def initialize(requestor, enrollment)
       @requestor = requestor
-      @course_roles = course_roles
+      @enrollment = enrollment
     end
 
-    # Instructor and staff can view all events;
-    # def can_view_all?
-    #   requestor_is_instructor? || requestor_is_staff?
-    # end
-
-    # Instructor and staff can create a event;
+    # Teaching staff (owner, instructor, staff) can create events
     def can_create?
-      requestor_is_owner? || requestor_is_instructor? || requestor_is_staff?
+      teaching_staff?
     end
 
-    # Instructor and staff can view a event;
+    # Teaching staff can view events
     def can_view?
-      requestor_is_owner? || requestor_is_instructor? || requestor_is_staff?
+      teaching_staff?
     end
 
-    # Student can update the attendance;
+    # Teaching staff can update events
     def can_update?
-      requestor_is_owner? || requestor_is_instructor? || requestor_is_staff?
+      teaching_staff?
     end
 
+    # Teaching staff can delete events
     def can_delete?
-      requestor_is_owner? || requestor_is_instructor? || requestor_is_staff?
+      teaching_staff?
     end
 
     # Summary of permissions
@@ -38,31 +34,30 @@ module Tyto
         can_view: can_view?,
         can_create: can_create?,
         can_update: can_update?,
-        can_delete: can_delete?,
+        can_delete: can_delete?
       }
     end
 
     private
 
-    # Check if the requestor is enrolled in the course
-    def self_enrolled?
-      @this_course&.accounts&.any? { |account| account.id == @requestor.account_id }
-    end
-
     def requestor_is_admin?
       @requestor.admin?
     end
 
+    def requestor_is_owner?
+      @enrollment&.owner? || false
+    end
+
     def requestor_is_instructor?
-      @course_roles.include?('instructor')
+      @enrollment&.instructor? || false
     end
 
     def requestor_is_staff?
-      @course_roles.include?('staff')
+      @enrollment&.staff? || false
     end
 
-    def requestor_is_owner?
-      @course_roles.include?('owner')
+    def teaching_staff?
+      @enrollment&.teaching? || false
     end
   end
 end

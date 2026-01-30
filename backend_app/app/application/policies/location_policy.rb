@@ -1,31 +1,31 @@
 # frozen_string_literal: true
 
 module Tyto
-  # Policy to determine if an requestor can view, edit, or delete a particular course
+  # Policy to determine if an account can view, edit, or delete locations
   class LocationPolicy
-    def initialize(requestor, course_roles)
+    def initialize(requestor, enrollment)
       @requestor = requestor
-      @course_roles = course_roles
+      @enrollment = enrollment
     end
 
-    # Only the course's teachers and staff can update a location
-    def can_create? #expect student
-      requestor_is_owner? || requestor_is_instructor? || requestor_is_staff?
+    # Only the course's teachers and staff can create a location
+    def can_create?
+      teaching_staff?
     end
 
     # Only enrolled users can view locations
     def can_view?
-      @course_roles.any?
+      @enrollment&.active? || false
     end
 
     # Only the course's teachers and staff can update a location
-    def can_update? #expect student
-      requestor_is_owner? || requestor_is_instructor? || requestor_is_staff?
+    def can_update?
+      teaching_staff?
     end
 
-    # Only the course's teachers and staff can update a location
-    def can_delete? #expect student
-      requestor_is_owner? || requestor_is_instructor? || requestor_is_staff?
+    # Only the course's teachers and staff can delete a location
+    def can_delete?
+      teaching_staff?
     end
 
     def summary
@@ -39,21 +39,24 @@ module Tyto
 
     private
 
-    # Check if the requestor has an admin role
     def requestor_is_admin?
       @requestor.admin?
     end
 
+    def requestor_is_owner?
+      @enrollment&.owner? || false
+    end
+
     def requestor_is_instructor?
-      @course_roles.include?('instructor')
+      @enrollment&.instructor? || false
     end
 
     def requestor_is_staff?
-      @course_roles.include?('staff')
+      @enrollment&.staff? || false
     end
 
-    def requestor_is_owner?
-      @course_roles.include?('owner')
+    def teaching_staff?
+      @enrollment&.teaching? || false
     end
   end
 end

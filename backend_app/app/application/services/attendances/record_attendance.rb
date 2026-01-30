@@ -2,6 +2,7 @@
 
 require_relative '../../../infrastructure/database/repositories/attendances'
 require_relative '../../../infrastructure/database/repositories/events'
+require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
 
 module Tyto
@@ -10,16 +11,18 @@ module Tyto
       # Service: Record attendance (check-in) for an event
       # Returns Success(ApiResult) with created attendance or Failure(ApiResult) with error
       class RecordAttendance < ApplicationOperation
-        def initialize(attendances_repo: Repository::Attendances.new, events_repo: Repository::Events.new)
+        def initialize(attendances_repo: Repository::Attendances.new, events_repo: Repository::Events.new,
+                       courses_repo: Repository::Courses.new)
           @attendances_repo = attendances_repo
           @events_repo = events_repo
+          @courses_repo = courses_repo
           super()
         end
 
         def call(requestor:, course_id:, attendance_data:)
           course_id = step validate_course_id(course_id)
-          course = step verify_course_exists(course_id)
-          step authorize(requestor, course, course_id)
+          step verify_course_exists(course_id)
+          step authorize(requestor, course_id)
           validated = step validate_input(attendance_data, requestor, course_id)
           attendance = step persist_attendance(validated)
 
@@ -42,11 +45,9 @@ module Tyto
           Success(course)
         end
 
-        def authorize(requestor, course, course_id)
-          course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map do |ac|
-            ac.role.name
-          end
-          policy = AttendancePolicy.new(requestor, course, course_roles)
+        def authorize(requestor, course_id)
+          enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
+          policy = AttendancePolicy.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to record attendance')) unless policy.can_create?
 

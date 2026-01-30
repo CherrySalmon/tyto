@@ -229,6 +229,81 @@ describe 'Tyto::Repository::Courses' do
     end
   end
 
+  describe '#find_enrollment' do
+    let(:owner_role) { Tyto::Role.first(name: 'owner') }
+    let(:instructor_role) { Tyto::Role.first(name: 'instructor') }
+    let(:student_role) { Tyto::Role.first(name: 'student') }
+
+    it 'returns enrollment entity for existing enrollment' do
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      account = Tyto::Account.create(email: 'student@example.com', name: 'Student')
+      Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: student_role.id)
+
+      result = repository.find_enrollment(account_id: account.id, course_id: orm_course.id)
+
+      _(result).must_be_instance_of Tyto::Entity::Enrollment
+      _(result.account_id).must_equal account.id
+      _(result.course_id).must_equal orm_course.id
+      _(result.account_email).must_equal 'student@example.com'
+      _(result.account_name).must_equal 'Student'
+      _(result.roles).must_equal ['student']
+    end
+
+    it 'aggregates multiple roles for same account' do
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      account = Tyto::Account.create(email: 'multi@example.com', name: 'Multi-Role')
+
+      Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: instructor_role.id)
+      Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: student_role.id)
+
+      result = repository.find_enrollment(account_id: account.id, course_id: orm_course.id)
+
+      _(result.roles.length).must_equal 2
+      _(result.roles).must_include 'instructor'
+      _(result.roles).must_include 'student'
+      _(result.teaching?).must_equal true
+      _(result.student?).must_equal true
+    end
+
+    it 'returns nil when account not enrolled in course' do
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      account = Tyto::Account.create(email: 'not-enrolled@example.com', name: 'Not Enrolled')
+
+      result = repository.find_enrollment(account_id: account.id, course_id: orm_course.id)
+
+      _(result).must_be_nil
+    end
+
+    it 'returns nil for non-existent account' do
+      orm_course = Tyto::Course.create(name: 'Test Course')
+
+      result = repository.find_enrollment(account_id: 999_999, course_id: orm_course.id)
+
+      _(result).must_be_nil
+    end
+
+    it 'returns nil for non-existent course' do
+      account = Tyto::Account.create(email: 'test@example.com', name: 'Test')
+
+      result = repository.find_enrollment(account_id: account.id, course_id: 999_999)
+
+      _(result).must_be_nil
+    end
+
+    it 'supports role predicate methods on returned enrollment' do
+      orm_course = Tyto::Course.create(name: 'Test Course')
+      account = Tyto::Account.create(email: 'owner@example.com', name: 'Owner')
+      Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: owner_role.id)
+
+      result = repository.find_enrollment(account_id: account.id, course_id: orm_course.id)
+
+      _(result.owner?).must_equal true
+      _(result.instructor?).must_equal false
+      _(result.teaching?).must_equal true
+      _(result.active?).must_equal true
+    end
+  end
+
   describe '#find_full' do
     let(:student_role) { Tyto::Role.first(name: 'student') }
 

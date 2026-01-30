@@ -24,7 +24,7 @@ module Tyto
         private
 
         def authorize(requestor)
-          policy = CoursePolicy.new(requestor, nil, [])
+          policy = Tyto::CoursePolicy.new(requestor)
 
           return Failure(forbidden('You have no access to view all courses')) unless policy.can_view_all?
 

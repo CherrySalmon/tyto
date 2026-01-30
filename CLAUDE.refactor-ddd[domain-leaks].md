@@ -10,12 +10,12 @@ This document tracks domain logic that has leaked outside of `backend_app/app/do
 
 | Leak Type | Location | Severity | Status |
 |-----------|----------|----------|--------|
-| Role checking duplication | 4 policy files | CRITICAL | Pending |
-| Course role retrieval | 10+ services | CRITICAL | Pending |
+| Role checking duplication | 4 policy files | CRITICAL | ✅ Complete |
+| Course role retrieval | 10+ services | CRITICAL | ✅ Complete |
 | Enrollment business logic | `orm/course.rb` | CRITICAL | Pending |
 | Coordinate validation duplication | `record_attendance.rb` | HIGH | Pending |
 | Time range logic in ORM | `orm/event.rb` | HIGH | Pending |
-| Enrollment check in policy | `course_policy.rb` | HIGH | Pending |
+| Enrollment check in policy | `course_policy.rb` | HIGH | ✅ Complete |
 | Course/owner auto-creation | `orm/course.rb` | HIGH | Pending |
 | Account auto-creation rule | `orm/course.rb` | HIGH | Pending |
 | Role string parsing | `orm/course.rb` | MEDIUM | Pending |
@@ -318,8 +318,8 @@ role_names = roles_string.split(',').map(&:strip)
 
 ## Recommended Fix Order
 
-1. **Create enrollment lookup in repository** - Foundation for other fixes
-2. **Refactor policies to use Enrollment entity** - Eliminates role checking duplication
+1. ✅ **Create enrollment lookup in repository** - Foundation for other fixes
+2. ✅ **Refactor policies to use Enrollment entity** - Eliminates role checking duplication
 3. **Extract enrollment management from ORM** - Largest leak, enables clean services
 4. **Use domain types for validation** - Coordinate validation consolidation
 5. **Add time predicates to domain** - Express business concepts in domain layer
@@ -332,3 +332,168 @@ role_names = roles_string.split(',').map(&:strip)
 - Some leaks exist because policies predate the `Enrollment` entity
 - ORM methods like `create_course` are still used by some services - need migration path
 - Consider creating a `CourseEnrollmentService` to encapsulate enrollment management
+
+---
+
+## Implementation Plan: Leaks #1 and #2 (Role Checking + Course Role Retrieval) — ✅ COMPLETE
+
+These two leaks are tightly coupled and should be fixed together.
+
+> **Status**: All phases completed on 2026-01-30. See "Completed" section at end for summary.
+
+### Scope
+
+- **4 policies** to refactor: CoursePolicy, EventPolicy, LocationPolicy, AttendancePolicy
+- **20 services** using the duplicate `AccountCourse.where()` pattern
+- **1 repository method** to add: `find_enrollment(account_id:, course_id:)`
+
+### Phase A: Add Repository Method (No Breaking Changes) ✅
+
+**File**: `backend_app/app/infrastructure/database/repositories/courses.rb`
+
+Add method:
+```ruby
+def find_enrollment(account_id:, course_id:)
+  account_courses = Tyto::AccountCourse.where(account_id:, course_id:).all
+  return nil if account_courses.empty?
+
+  account = account_courses.first.account
+  roles = account_courses.map { |ac| ac.role.name }.uniq
+
+  Entity::Enrollment.new(
+    id: account_courses.min_by(&:id).id,
+    account_id:,
+    course_id:,
+    account_email: account.email,
+    account_name: account.name,
+    roles:,
+    created_at: nil,
+    updated_at: nil
+  )
+end
+```
+
+**Test**: Add to `spec/infrastructure/database/repositories/courses_spec.rb`
+
+### Phase B: Refactor EventPolicy + 4 Event Services ✅
+
+**Policy changes** (`application/policies/event_policy.rb`):
+1. Constructor: `(requestor, course_roles)` → `(requestor, enrollment)`
+2. Replace `@course_roles` with `@enrollment`
+3. Replace role methods with delegation:
+   ```ruby
+   def requestor_is_owner? = @enrollment&.owner? || false
+   def requestor_is_instructor? = @enrollment&.instructor? || false
+   def requestor_is_staff? = @enrollment&.staff? || false
+   def teaching_staff? = @enrollment&.teaching? || false
+   ```
+4. Simplify permission methods to use `teaching_staff?`
+5. Remove unused `self_enrolled?` (references undefined `@this_course`)
+
+**Service changes** (4 files):
+- `services/events/create_event.rb`
+- `services/events/delete_event.rb`
+- `services/events/list_events.rb`
+- `services/events/update_event.rb`
+
+Pattern per service:
+```ruby
+# BEFORE:
+course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map { |ac| ac.role.name }
+policy = EventPolicy.new(requestor, course_roles)
+
+# AFTER:
+enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
+policy = Tyto::EventPolicy.new(requestor, enrollment)
+```
+
+**Test**: Add `spec/application/policies/event_policy_spec.rb`
+
+### Phase C: Refactor Remaining 3 Policies + 16 Services ✅
+
+#### LocationPolicy (5 services)
+- `services/locations/create_location.rb`
+- `services/locations/delete_location.rb`
+- `services/locations/get_location.rb`
+- `services/locations/list_locations.rb`
+- `services/locations/update_location.rb`
+
+Changes:
+- Update `can_view?` from `@course_roles.any?` to `@enrollment&.active? || false`
+
+#### AttendancePolicy (4 services)
+- `services/attendances/list_all_attendances.rb`
+- `services/attendances/list_attendances_by_event.rb`
+- `services/attendances/list_user_attendances.rb`
+- `services/attendances/record_attendance.rb`
+
+Changes:
+- Remove `@this_course` parameter
+- Update `self_enrolled?` to use `@enrollment&.active? || false`
+
+#### CoursePolicy (7 services)
+- `services/courses/delete_course.rb`
+- `services/courses/get_course.rb` (fix double lookup bug)
+- `services/courses/get_enrollments.rb`
+- `services/courses/remove_enrollment.rb`
+- `services/courses/update_course.rb`
+- `services/courses/update_enrollment.rb`
+- `services/courses/update_enrollments.rb`
+
+Changes:
+- Add `module Tyto` namespace wrapper (currently missing)
+- Remove `@this_course` parameter
+- Update `self_enrolled?` to use `@enrollment&.active? || false`
+
+**Tests**: Add policy spec files for each
+
+### Phase D: Cleanup ✅
+
+1. Verify all 539+ tests pass
+2. Remove any remaining dead code
+3. Update this document to mark leaks #1 and #2 as complete
+
+### Files Changed Summary
+
+| Category | Count | Files |
+|----------|-------|-------|
+| Repository | 1 | `repositories/courses.rb` |
+| Policies | 4 | `course_policy.rb`, `event_policy.rb`, `location_policy.rb`, `attendance_policy.rb` |
+| Services | 20 | All services under `events/`, `locations/`, `attendances/`, `courses/` that use policies |
+| Tests | 5+ | Repository test + 4 policy test files |
+
+### Verification
+
+```bash
+# After each phase:
+bundle exec rake spec
+
+# Manual check:
+rake run:api
+# Test course access with different roles via frontend
+```
+
+---
+
+## ✅ Completed: Leaks #1, #2, and #6 (2026-01-30)
+
+**Summary**: All four policies refactored to accept `Enrollment` entity instead of raw role arrays. All 20+ services updated to use `@courses_repo.find_enrollment()` instead of direct ORM queries.
+
+**Changes made**:
+
+- Added `find_enrollment(account_id:, course_id:)` to `Repository::Courses`
+- Refactored `EventPolicy`, `LocationPolicy`, `AttendancePolicy`, `CoursePolicy` to use `Enrollment` entity
+- Updated all services in `events/`, `locations/`, `attendances/`, `courses/` to use repository method
+- Added `module Tyto` namespace to `CoursePolicy`
+- Fixed double-lookup bug in `GetCourse` service
+- Removed unused `@this_course` parameter from attendance and course policies
+
+**Tests added**:
+
+- `spec/infrastructure/database/repositories/courses_spec.rb` - 6 tests for `find_enrollment`
+- `spec/application/policies/event_policy_spec.rb` - 8 tests
+- `spec/application/policies/location_policy_spec.rb` - 7 tests
+- `spec/application/policies/attendance_policy_spec.rb` - 7 tests
+- `spec/application/policies/course_policy_spec.rb` - 10 tests
+
+**Test results**: 621 tests, 1297 assertions, 0 failures

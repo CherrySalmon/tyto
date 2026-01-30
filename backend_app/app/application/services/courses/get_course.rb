@@ -17,8 +17,8 @@ module Tyto
         def call(requestor:, course_id:)
           course_id = step validate_course_id(course_id)
           course_orm = step find_course_orm(course_id)
-          step authorize(requestor, course_orm, course_id)
-          course = step build_course_response(course_orm, requestor)
+          enrollment = step authorize(requestor, course_id)
+          course = step build_course_response(course_orm, enrollment)
 
           ok(course)
         end
@@ -39,23 +39,16 @@ module Tyto
           Success(course)
         end
 
-        def authorize(requestor, course, course_id)
-          course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map do |ac|
-            ac.role.name
-          end
-          policy = CoursePolicy.new(requestor, course, course_roles)
+        def authorize(requestor, course_id)
+          enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
+          policy = Tyto::CoursePolicy.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to view this course')) unless policy.can_view?
 
-          Success(course_roles)
+          Success(enrollment)
         end
 
-        def build_course_response(course_orm, requestor)
-          enroll_identity = AccountCourse.where(
-            account_id: requestor.account_id,
-            course_id: course_orm.id
-          ).map { |ac| ac.role.name }
-
+        def build_course_response(course_orm, enrollment)
           course = OpenStruct.new(
             id: course_orm.id,
             name: course_orm.name,
@@ -64,7 +57,7 @@ module Tyto
             end_at: course_orm.end_at,
             created_at: course_orm.created_at,
             updated_at: course_orm.updated_at,
-            enroll_identity:
+            enroll_identity: enrollment&.roles || []
           )
 
           Success(course)

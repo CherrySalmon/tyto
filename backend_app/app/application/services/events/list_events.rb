@@ -2,6 +2,7 @@
 
 require_relative '../../../infrastructure/database/repositories/events'
 require_relative '../../../infrastructure/database/repositories/locations'
+require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
 
 module Tyto
@@ -10,9 +11,11 @@ module Tyto
       # Service: List all events for a course
       # Returns Success(ApiResult) with event entities or Failure(ApiResult) with error
       class ListEvents < ApplicationOperation
-        def initialize(events_repo: Repository::Events.new, locations_repo: Repository::Locations.new)
+        def initialize(events_repo: Repository::Events.new, locations_repo: Repository::Locations.new,
+                       courses_repo: Repository::Courses.new)
           @events_repo = events_repo
           @locations_repo = locations_repo
+          @courses_repo = courses_repo
           super()
         end
 
@@ -43,10 +46,8 @@ module Tyto
         end
 
         def authorize(requestor, course_id)
-          course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map do |ac|
-            ac.role.name
-          end
-          policy = EventPolicy.new(requestor, course_roles)
+          enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
+          policy = EventPolicy.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to view events')) unless policy.can_view?
 

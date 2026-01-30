@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../../../infrastructure/database/repositories/events'
+require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
 
 module Tyto
@@ -9,8 +10,9 @@ module Tyto
       # Service: Delete an existing event
       # Returns Success(ApiResult) or Failure(ApiResult) with error
       class DeleteEvent < ApplicationOperation
-        def initialize(events_repo: Repository::Events.new)
+        def initialize(events_repo: Repository::Events.new, courses_repo: Repository::Courses.new)
           @events_repo = events_repo
+          @courses_repo = courses_repo
           super()
         end
 
@@ -57,10 +59,8 @@ module Tyto
         end
 
         def authorize(requestor, course_id)
-          course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map do |ac|
-            ac.role.name
-          end
-          policy = EventPolicy.new(requestor, course_roles)
+          enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
+          policy = EventPolicy.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to delete events')) unless policy.can_delete?
 

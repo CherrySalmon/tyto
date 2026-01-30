@@ -25,7 +25,7 @@ module Tyto
         private
 
         def authorize(requestor)
-          policy = CoursePolicy.new(requestor, nil, [])
+          policy = Tyto::CoursePolicy.new(requestor)
 
           return Failure(forbidden('You have no access to create courses')) unless policy.can_create?
 

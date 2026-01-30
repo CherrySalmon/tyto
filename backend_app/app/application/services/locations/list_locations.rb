@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../../../infrastructure/database/repositories/locations'
+require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
 
 module Tyto
@@ -9,8 +10,9 @@ module Tyto
       # Service: List all locations for a course
       # Returns Success(ApiResult) with list of locations or Failure(ApiResult) with error
       class ListLocations < ApplicationOperation
-        def initialize(locations_repo: Repository::Locations.new)
+        def initialize(locations_repo: Repository::Locations.new, courses_repo: Repository::Courses.new)
           @locations_repo = locations_repo
+          @courses_repo = courses_repo
           super()
         end
 
@@ -40,10 +42,8 @@ module Tyto
         end
 
         def authorize(requestor, course_id)
-          course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map do |ac|
-            ac.role.name
-          end
-          policy = LocationPolicy.new(requestor, course_roles)
+          enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
+          policy = LocationPolicy.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to view locations')) unless policy.can_view?
 

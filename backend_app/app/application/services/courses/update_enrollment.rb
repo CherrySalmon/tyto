@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
 
 module Tyto
@@ -8,11 +9,16 @@ module Tyto
       # Service: Update a single enrollment for a course
       # Returns Success(ApiResult) or Failure(ApiResult) with error
       class UpdateEnrollment < ApplicationOperation
+        def initialize(courses_repo: Repository::Courses.new)
+          @courses_repo = courses_repo
+          super()
+        end
+
         def call(requestor:, course_id:, account_id:, enrolled_data:)
           course_id = step validate_course_id(course_id)
           account_id = step validate_account_id(account_id)
           course = step find_course(course_id)
-          step authorize(requestor, course, course_id)
+          step authorize(requestor, course_id)
           step validate_enrolled_data(enrolled_data)
           step process_enrollment(course, account_id, enrolled_data)
 
@@ -42,11 +48,9 @@ module Tyto
           Success(course)
         end
 
-        def authorize(requestor, course, course_id)
-          course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map do |ac|
-            ac.role.name
-          end
-          policy = CoursePolicy.new(requestor, course, course_roles)
+        def authorize(requestor, course_id)
+          enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
+          policy = Tyto::CoursePolicy.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to update enrollments')) unless policy.can_update?
 

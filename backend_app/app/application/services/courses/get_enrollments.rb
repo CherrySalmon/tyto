@@ -16,8 +16,8 @@ module Tyto
 
         def call(requestor:, course_id:)
           course_id = step validate_course_id(course_id)
-          course = step find_course(course_id)
-          step authorize(requestor, course, course_id)
+          step find_course(course_id)
+          step authorize(requestor, course_id)
           enrollments = step fetch_enrollments(course_id)
 
           ok(enrollments)
@@ -39,11 +39,9 @@ module Tyto
           Success(course)
         end
 
-        def authorize(requestor, course, course_id)
-          course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map do |ac|
-            ac.role.name
-          end
-          policy = CoursePolicy.new(requestor, course, course_roles)
+        def authorize(requestor, course_id)
+          enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
+          policy = Tyto::CoursePolicy.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to view enrollments')) unless policy.can_view?
 
