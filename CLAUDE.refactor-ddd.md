@@ -377,51 +377,131 @@ Rationale: Enrollments are always accessed in the context of a course, and cours
 
 ## Phase 6: Application Layer Refactoring
 
-### 6.0 Update services to use repositories
+### Problem: God Object Services
 
-Services currently still use ORM directly. Update to use domain repositories:
+Current services violate Single Responsibility Principle. Comparison with `api-codepraise`:
 
-- [x] `EventService` → use `Repository::Events`
-  - Inject events_repository and locations_repository
-  - Replace ORM class methods with repository calls
-  - Add entity_to_hash bridge for API compatibility
-  - Handle type coercion for route parameter IDs
-- [ ] `LocationService` → use `Repository::Locations`
-- [ ] `CourseService` → use aggregate loading methods (`find_with_events`, etc.) where appropriate
-- [ ] `AttendanceService` → use `Repository::Attendances`
-- [ ] `AccountService` → use `Repository::Accounts`
-- [ ] Remove `entity_to_hash` bridge methods once representers are in place
+| Aspect | Tyto (Anti-pattern) | Codepraise (DDD Convention) |
+|--------|---------------------|----------------------------|
+| Structure | 10+ methods per class | 1 use case per class |
+| Naming | `CourseService` | `CreateCourse`, `ListCourses` |
+| Authorization | `verify_policy` in every method | Separate request/policy layer |
+| Error handling | `raise ForbiddenError` | `Success`/`Failure` results |
+| Method style | Class methods (`self.`) | Instance with `call` |
 
-### 6.1 Railway-oriented error handling (dry-monads)
+**Example - Current `CourseService`** (God object with 10+ responsibilities):
+- `list_all`, `list`, `create`, `get`, `update`, `remove` (CRUD)
+- `remove_enroll`, `get_enrollments`, `update_enrollments`, `update_enrollment` (Enrollment management)
 
-**Current state**: Exception-based error handling with 50+ rescue blocks scattered across controllers. Each service defines its own error classes (`ForbiddenError`, `NotFoundError`, etc.).
+### Target Structure
 
-**Target state**: Railway-oriented programming with `Success`/`Failure` returns.
+Break monolithic services into focused use case classes:
 
-- [ ] Add `dry-monads` to Gemfile
-- [ ] Add `Dry::Monads::Result::Mixin` to services
-- [ ] Replace `raise ForbiddenError` with `Failure(ApiResult.forbidden(...))`
-- [ ] Replace `return course` with `Success(course)`
-- [ ] Update controllers to pattern-match on results instead of rescue blocks
-- [ ] Consider `dry-transaction` for multi-step service composition
-- [ ] Update repositories to return `Success`/`Failure` for database error handling
+```text
+application/services/
+├── events/
+│   ├── list_events.rb           # Service::Events::ListEvents
+│   ├── create_event.rb          # Service::Events::CreateEvent
+│   ├── update_event.rb          # Service::Events::UpdateEvent
+│   ├── delete_event.rb          # Service::Events::DeleteEvent
+│   └── find_active_events.rb    # Service::Events::FindActiveEvents
+├── locations/
+│   ├── list_locations.rb
+│   ├── create_location.rb
+│   ├── update_location.rb
+│   └── delete_location.rb
+├── courses/
+│   ├── list_all_courses.rb
+│   ├── list_user_courses.rb
+│   ├── create_course.rb
+│   ├── get_course.rb
+│   ├── update_course.rb
+│   ├── delete_course.rb
+│   └── enrollments/
+│       ├── list_enrollments.rb
+│       ├── add_enrollment.rb
+│       ├── update_enrollment.rb
+│       └── remove_enrollment.rb
+├── attendances/
+│   ├── list_attendances.rb
+│   ├── list_attendances_by_event.rb
+│   ├── record_attendance.rb
+│   └── list_user_attendances.rb
+└── accounts/
+    ├── list_accounts.rb
+    ├── create_account.rb
+    ├── update_account.rb
+    └── delete_account.rb
+```
 
-**Note:** Infrastructure adapters (repositories, external gateways) should also use monads to handle external failures explicitly at the boundary (database errors, API timeouts, network failures).
+### 6.0 Refactor EventService (First)
 
-### 6.2 Service refactoring
+Start with EventService as the pattern. Break into focused use case classes:
 
-- [ ] Services return domain entities wrapped in Success, not hashes
-- [ ] Remove exception-based error classes from services
+- [ ] Create `application/services/events/` folder
+- [ ] `ListEvents` - list events for a course
+  - Uses `Repository::Events.find_by_course`
+  - Returns `Success(events)` or `Failure(error)`
+- [ ] `CreateEvent` - create a new event
+  - Uses `Repository::Events.create`
+  - Validates with contract before creating entity
+- [ ] `UpdateEvent` - update existing event
+- [ ] `DeleteEvent` - delete an event
+- [ ] `FindActiveEvents` - find events active at given time
+- [ ] Update controllers to use new service classes
+- [ ] Delete old `EventService` once all methods migrated
+- [ ] Run integration tests to verify controllers work
 
-### 6.3 Contracts and Response objects
+### 6.1 Refactor LocationService
+
+- [ ] Create `application/services/locations/` folder
+- [ ] `ListLocations`, `GetLocation`, `CreateLocation`, `UpdateLocation`, `DeleteLocation`
+- [ ] Update controllers
+- [ ] Delete old `LocationService`
+
+### 6.2 Refactor AttendanceService
+
+- [ ] Create `application/services/attendances/` folder
+- [ ] `ListAttendances`, `ListAttendancesByEvent`, `ListUserAttendances`, `RecordAttendance`
+- [ ] Update controllers
+- [ ] Delete old `AttendanceService`
+
+### 6.3 Refactor CourseService
+
+- [ ] Create `application/services/courses/` folder
+- [ ] `ListAllCourses`, `ListUserCourses`, `GetCourse`, `CreateCourse`, `UpdateCourse`, `DeleteCourse`
+- [ ] Create `application/services/courses/enrollments/` subfolder
+- [ ] `ListEnrollments`, `AddEnrollment`, `UpdateEnrollment`, `RemoveEnrollment`
+- [ ] Update controllers
+- [ ] Delete old `CourseService`
+
+### 6.4 Refactor AccountService
+
+- [ ] Create `application/services/accounts/` folder
+- [ ] `ListAccounts`, `CreateAccount`, `UpdateAccount`, `DeleteAccount`
+- [ ] Update controllers
+- [ ] Delete old `AccountService`
+
+### 6.5 Railway-oriented error handling (dry-monads)
+
+Add after service restructuring is complete:
+
+- [ ] Add `dry-monads` and `dry-transaction` to Gemfile
+- [ ] Each service class includes `Dry::Transaction`
+- [ ] Define steps for multi-step operations
+- [ ] Return `Success(result)` or `Failure(ApiResult.new(...))`
+- [ ] Update controllers to pattern-match on results
+- [ ] Remove rescue blocks from controllers
+
+### 6.6 Contracts and Response objects
 
 - [ ] Create `application/contracts/` folder
 - [ ] Create contracts importing domain types:
-  - `CreateCourseContract` - uses `Types::CourseName`
-  - `CreateAccountContract` - uses `Types::Email`
-  - `EnrollmentContract` - uses `Types::CourseRole`
+  - `CreateEventContract`, `UpdateEventContract`
+  - `CreateCourseContract`, `CreateAccountContract`
+  - `EnrollmentContract`
 - [ ] Services validate with contracts before creating entities
-- [ ] Create response DTOs for API output
+- [ ] Create `application/responses/api_result.rb` for standardized responses
 
 ---
 
@@ -450,9 +530,9 @@ Each phase should:
 
 ## Current Status
 
-**Phase**: 5 - Enrollments ✅
+**Phase**: 6 - Application Layer Refactoring (In Progress)
 **Completed**: Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅
-**Next**: Phase 6 - Application Layer Refactoring
+**Next**: Phase 6.0 - Refactor EventService into focused use case classes
 
 ### Built but Not Yet Wired (Phase 6 will address)
 
@@ -460,7 +540,7 @@ The following domain objects and repository methods exist but services haven't b
 
 | Component | Status | Blocked By |
 | --------- | ------ | ---------- |
-| `Repository::Events` | ✅ Wired | EventService now uses it |
+| `Repository::Events` | ✅ Wired | EventService uses it (will be restructured) |
 | `Repository::Locations` | ✅ Built | LocationService still uses ORM |
 | `Repository::Accounts` | ✅ Built | AccountService still uses ORM |
 | `Repository::Attendances` | ✅ Built | AttendanceService still uses ORM |
@@ -470,6 +550,8 @@ The following domain objects and repository methods exist but services haven't b
 | `Account#admin?`, `#creator?`, etc. | ✅ Built | Services need refactoring |
 | `Attendance#within_range?`, etc. | ✅ Built | AttendanceService needs refactoring |
 | `Enrollment#owner?`, `#teaching?`, etc. | ✅ Built | CourseService needs refactoring |
+
+**Note**: God object services (e.g., `CourseService` with 10+ methods) will be broken into focused use case classes following `api-codepraise` patterns.
 
 **Not part of this refactoring** (see `doc/future-work.md`):
 
