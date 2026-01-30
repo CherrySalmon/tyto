@@ -43,7 +43,7 @@ module Tyto
 
     # Check if the requestor is enrolled in the course
     def self_enrolled?
-      @this_course&.accounts&.any? { |account| account.id == @requestor['account_id'] }
+      @this_course&.accounts&.any? { |account| account.id == @requestor.account_id }
     end
 
     def requestor_is_instructor?

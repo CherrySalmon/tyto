@@ -12,7 +12,7 @@ describe Tyto::Service::Events::CreateEvent do
     Tyto::AccountCourse.create(account_id: account.id, course_id: course.id, role_id: owner_role.id)
   end
 
-  let(:requestor) { { 'account_id' => account.id, 'roles' => ['creator'] } }
+  let(:requestor) { Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator']) }
 
   describe '#call' do
     it 'returns Success with created event' do
@@ -40,7 +40,7 @@ describe Tyto::Service::Events::CreateEvent do
 
     it 'returns Failure when user has no access' do
       other_account = Tyto::Account.create(email: 'other@example.com', name: 'Other')
-      other_requestor = { 'account_id' => other_account.id, 'roles' => [] }
+      other_requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: other_account.id, roles: ['member'])
       event_data = { 'name' => 'New Event', 'location_id' => event_location.id }
 
       result = Tyto::Service::Events::CreateEvent.new.call(requestor: other_requestor, course_id: course.id, event_data:)

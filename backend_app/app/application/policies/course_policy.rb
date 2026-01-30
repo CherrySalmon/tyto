@@ -41,18 +41,18 @@ class CoursePolicy
 
   # Check if the requestor is enrolled in the course
   def self_enrolled?
-    enroll = @this_course&.accounts&.any? { |account| account.id == @requestor['account_id'] }
+    enroll = @this_course&.accounts&.any? { |account| account.id == @requestor.account_id }
     enroll
   end
 
   # Check if the requestor has an admin role
   def requestor_is_admin?
-    @requestor['roles'].include?('admin')
+    @requestor.admin?
   end
 
   # Check if the requestor has an creator role
   def requestor_is_creator?
-    @requestor['roles'].include?('creator')
+    @requestor.creator?
   end
 
   def requestor_is_instructor?

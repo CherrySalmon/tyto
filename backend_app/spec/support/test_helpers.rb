@@ -18,7 +18,7 @@ module TestHelpers
 
   # Generate auth header for a given account
   def auth_header_for(account)
-    token = Tyto::JWTCredential.generate_jwt(
+    token = Tyto::AuthToken::Mapper.new.from_credentials(
       account.id,
       account.roles.map(&:name)
     )

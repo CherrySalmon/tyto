@@ -14,7 +14,7 @@ module Tyto
       route do |r|
         r.on do
           auth_header = r.headers['Authorization']
-          requestor = JWTCredential.decode_jwt(auth_header)
+          requestor = AuthToken::Mapper.new.from_auth_header(auth_header)
 
           # GET api/current_event/
           r.get do
@@ -27,7 +27,7 @@ module Tyto
               api_result.to_json
             end
           end
-        rescue JWTCredential::ArgumentError => e
+        rescue AuthToken::Mapper::MappingError => e
           response.status = 400
           response.write({ error: 'Token error', details: e.message }.to_json)
           r.halt

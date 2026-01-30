@@ -39,7 +39,7 @@ module Tyto
         end
 
         def authorize(requestor, course_id)
-          course_roles = AccountCourse.where(account_id: requestor['account_id'], course_id:).map do |ac|
+          course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map do |ac|
             ac.role.name
           end
           policy = LocationPolicy.new(requestor, course_roles)

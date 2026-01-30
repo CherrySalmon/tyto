@@ -43,7 +43,7 @@ module Tyto
         end
 
         def authorize(requestor, course, course_id)
-          course_roles = AccountCourse.where(account_id: requestor['account_id'], course_id:).map do |ac|
+          course_roles = AccountCourse.where(account_id: requestor.account_id, course_id:).map do |ac|
             ac.role.name
           end
           policy = AttendancePolicy.new(requestor, course, course_roles)
@@ -72,7 +72,7 @@ module Tyto
           name = attendance_data['name'] || "#{event.name} Attendance"
 
           Success(
-            account_id: requestor['account_id'],
+            account_id: requestor.account_id,
             course_id: course_id,
             event_id: event_id.value!,
             role_id: student_role.id,

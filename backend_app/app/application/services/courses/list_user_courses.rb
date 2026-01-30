@@ -18,7 +18,7 @@ module Tyto
         private
 
         def validate_requestor(requestor)
-          account_id = requestor['account_id']
+          account_id = requestor.account_id
           return Failure(bad_request('Invalid requestor')) if account_id.nil?
 
           Success(account_id)

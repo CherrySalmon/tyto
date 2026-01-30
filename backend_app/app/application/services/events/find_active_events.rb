@@ -37,7 +37,9 @@ module Tyto
         end
 
         def get_user_course_ids(requestor)
-          account_id = requestor['account_id']
+          return Failure(bad_request('Invalid requestor')) unless requestor.respond_to?(:account_id)
+
+          account_id = requestor.account_id
           return Failure(bad_request('Invalid requestor')) if account_id.nil?
 
           course_ids = AccountCourse.where(account_id:).select_map(:course_id)

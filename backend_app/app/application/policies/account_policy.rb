@@ -46,11 +46,11 @@ class AccountPolicy # rubocop:disable Style/Documentation
 
   # Check if the requestor is the owner of the account
   def self_request?
-    @requestor['account_id'] == @this_account.to_i
+    @requestor.account_id == @this_account.to_i
   end
 
   # Check if the requestor has an admin role
   def requestor_is_admin?
-    @requestor['roles'].include?('admin')
+    @requestor.admin?
   end
 end

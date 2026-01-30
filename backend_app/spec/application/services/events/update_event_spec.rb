@@ -42,7 +42,7 @@ describe 'Service::Events::UpdateEvent' do
       location = create_test_location(course)
       event = create_test_event(course, location)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -64,7 +64,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location, name: 'Original Name')
       original_start = event.start_at
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -89,7 +89,7 @@ describe 'Service::Events::UpdateEvent' do
       new_start = (Time.now + 10_800).iso8601
       new_end = (Time.now + 14_400).iso8601
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -114,7 +114,7 @@ describe 'Service::Events::UpdateEvent' do
       location = create_test_location(course)
       event = create_test_event(course, location)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -134,7 +134,7 @@ describe 'Service::Events::UpdateEvent' do
       location = create_test_location(course)
       event = create_test_event(course, location, name: 'Original')
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -155,7 +155,7 @@ describe 'Service::Events::UpdateEvent' do
       event = create_test_event(course, location)
       other_user = create_test_account(name: 'Other User', roles: ['member'])
 
-      requestor = { 'account_id' => other_user.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: other_user.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -183,7 +183,7 @@ describe 'Service::Events::UpdateEvent' do
         role_id: student_role.id
       )
 
-      requestor = { 'account_id' => student.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -209,7 +209,7 @@ describe 'Service::Events::UpdateEvent' do
         role_id: instructor_role.id
       )
 
-      requestor = { 'account_id' => instructor.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: instructor.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -235,7 +235,7 @@ describe 'Service::Events::UpdateEvent' do
         role_id: staff_role.id
       )
 
-      requestor = { 'account_id' => staff.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: staff.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -251,7 +251,7 @@ describe 'Service::Events::UpdateEvent' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -268,7 +268,7 @@ describe 'Service::Events::UpdateEvent' do
     it 'returns Failure for non-existent course' do
       account = create_test_account(roles: ['creator'])
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: 99999,
@@ -284,7 +284,7 @@ describe 'Service::Events::UpdateEvent' do
     it 'returns Failure for invalid course_id' do
       account = create_test_account(roles: ['creator'])
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: 'invalid',
@@ -301,7 +301,7 @@ describe 'Service::Events::UpdateEvent' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -321,7 +321,7 @@ describe 'Service::Events::UpdateEvent' do
       location = create_test_location(course1)
       event = create_test_event(course1, location) # Event belongs to course1
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course2.id, # Trying to update via course2
@@ -341,7 +341,7 @@ describe 'Service::Events::UpdateEvent' do
       location = create_test_location(course)
       event = create_test_event(course, location)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -361,7 +361,7 @@ describe 'Service::Events::UpdateEvent' do
       location = create_test_location(course)
       event = create_test_event(course, location)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -385,7 +385,7 @@ describe 'Service::Events::UpdateEvent' do
       # Create event with start_at = now + 1hr, end_at = now + 2hr
       event = create_test_event(course, location)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       # Try to set end_at to before the existing start_at
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
@@ -404,7 +404,7 @@ describe 'Service::Events::UpdateEvent' do
       location = create_test_location(course)
       event = create_test_event(course, location)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -426,7 +426,7 @@ describe 'Service::Events::UpdateEvent' do
       location = create_test_location(course)
       event = create_test_event(course, location)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,
@@ -447,7 +447,7 @@ describe 'Service::Events::UpdateEvent' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::UpdateEvent.new.call(
         requestor:,
         course_id: course.id,

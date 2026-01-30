@@ -46,7 +46,7 @@ module Tyto
 
         def persist_course(validated, requestor)
           # Create the course using ORM (which handles owner role assignment)
-          course = Course.create_course(requestor['account_id'], validated)
+          course = Course.create_course(requestor.account_id, validated)
 
           # Build response with enrollment info
           result = OpenStruct.new(

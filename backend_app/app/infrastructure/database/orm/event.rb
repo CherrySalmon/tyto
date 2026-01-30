@@ -47,7 +47,7 @@ module Tyto
     end
 
     def self.find_event(requestor, time)
-      course_ids = AccountCourse.where(account_id: requestor['account_id']).select_map(:course_id)
+      course_ids = AccountCourse.where(account_id: requestor.account_id).select_map(:course_id)
       events = Event.where{start_at <= time}.where{end_at >= time}.where(course_id: course_ids).all
       events.map(&:attributes)
     end

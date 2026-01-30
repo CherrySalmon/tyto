@@ -12,7 +12,7 @@ describe Tyto::Service::Accounts::UpdateAccount do
 
   describe '#call' do
     it 'returns Success when updating own account' do
-      requestor = { 'account_id' => account.id, 'roles' => ['creator'] }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       account_data = { 'name' => 'Updated Name' }
 
       result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
@@ -25,7 +25,7 @@ describe Tyto::Service::Accounts::UpdateAccount do
       admin = Tyto::Account.create(email: 'admin@example.com', name: 'Admin')
       admin_role = Tyto::Role.first(name: 'admin')
       admin.add_role(admin_role)
-      requestor = { 'account_id' => admin.id, 'roles' => ['admin'] }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: admin.id, roles: ['admin'])
       account_data = { 'name' => 'Admin Updated' }
 
       result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
@@ -35,7 +35,7 @@ describe Tyto::Service::Accounts::UpdateAccount do
 
     it 'returns Failure when updating other account without admin' do
       other = Tyto::Account.create(email: 'other@example.com', name: 'Other')
-      requestor = { 'account_id' => other.id, 'roles' => ['creator'] }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: other.id, roles: ['creator'])
       account_data = { 'name' => 'Hacked' }
 
       result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
@@ -45,7 +45,7 @@ describe Tyto::Service::Accounts::UpdateAccount do
     end
 
     it 'returns Failure for non-existent account' do
-      requestor = { 'account_id' => account.id, 'roles' => ['admin'] }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['admin'])
       account_data = { 'name' => 'Ghost' }
 
       result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: 999_999, account_data:)

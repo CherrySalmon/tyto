@@ -21,7 +21,7 @@ describe 'Service::Locations::CreateLocation' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -37,7 +37,7 @@ describe 'Service::Locations::CreateLocation' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -54,7 +54,7 @@ describe 'Service::Locations::CreateLocation' do
       course = create_test_course(account)
       initial_count = Tyto::Location.count
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -71,7 +71,7 @@ describe 'Service::Locations::CreateLocation' do
       student_role = Tyto::Role.find(name: 'student')
       Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
 
-      requestor = { 'account_id' => student.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -86,7 +86,7 @@ describe 'Service::Locations::CreateLocation' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -101,7 +101,7 @@ describe 'Service::Locations::CreateLocation' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,
@@ -116,7 +116,7 @@ describe 'Service::Locations::CreateLocation' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Locations::CreateLocation.new.call(
         requestor:,
         course_id: course.id,

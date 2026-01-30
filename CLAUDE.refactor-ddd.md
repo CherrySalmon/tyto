@@ -29,7 +29,11 @@ backend_app/
 │   │   ├── database/
 │   │   │   ├── orm/               # Sequel models
 │   │   │   └── repositories/      # Data mappers between ORM and domain
-│   │   └── auth/                  # SSO/OAuth gateway
+│   │   └── auth/                  # Authentication boundary adapters
+│   │       ├── sso_auth.rb        # Google OAuth verification
+│   │       └── auth_token/        # JWT token handling
+│   │           ├── gateway.rb     # Encryption/decryption (RbNaCl)
+│   │           └── mapper.rb      # Requestor ↔ token transformation
 │   │
 │   ├── application/               # Use cases and orchestration
 │   │   ├── controllers/           # Roda routes (thin HTTP layer)
@@ -41,7 +45,7 @@ backend_app/
 │   ├── presentation/              # API responses
 │   │   └── representers/          # JSON serialization
 │   │
-│   └── lib/                       # Cross-cutting utilities (jwt_credential.rb)
+│   └── lib/                       # Cross-cutting utilities (currently empty)
 │
 ├── config/
 ├── db/                            # Database tooling (not auto-loaded)
@@ -62,7 +66,7 @@ backend_app/
 ### Accounts (Aggregate Root: Account)
 
 - **Entities**: Account
-- **Values**: Email, Role
+- **Values**: Email, Role, Requestor (authenticated identity from JWT)
 
 ### Attendance (Aggregate Root: Attendance)
 
@@ -721,6 +725,31 @@ For each use case:
   - Updated CLAUDE documentation to reflect new module name
   - All tests pass ✅
 
+- [x] **Split JWTCredential into domain and infrastructure** (2026-01-30)
+  - **Problem**: `lib/jwt_credential.rb` conflated two concerns:
+    1. Domain concept: authenticated identity (`account_id` + `roles`)
+    2. Encoding mechanism: JWT encryption/decryption
+  - **Solution**: Split into proper DDD layers:
+    - `domain/accounts/values/requestor.rb` - Value object representing authenticated identity
+      - Attributes: `account_id`, `roles` (uses `Types::Role` for all role types)
+      - Predicates: `admin?`, `creator?`, `member?`, `has_role?(name)`
+    - `infrastructure/auth/auth_token/` - Boundary adapters for JWT encoding (gateway + mapper pattern)
+      - `AuthToken::Gateway` - Pure encryption/decryption (RbNaCl SecretBox)
+        - `encrypt(payload)` → encrypted token string
+        - `decrypt(token)` → payload string
+        - `generate_key` → Base64 key
+      - `AuthToken::Mapper` - Requestor ↔ token transformation
+        - `to_token(requestor)` → token string
+        - `from_auth_header(auth_header)` → Requestor
+        - `from_credentials(account_id, roles)` → token string (convenience)
+  - **Updated consumers**:
+    - Controllers: `AuthToken::Mapper.new.from_auth_header(auth_header)` returns `Requestor`
+    - Services/policies: `requestor.account_id` instead of `requestor['account_id']`
+    - Policies: `requestor.admin?` instead of `requestor['roles'].include?('admin')`
+  - Deleted: `lib/jwt_credential.rb`, `spec/lib/jwt_credential_spec.rb`
+  - Added: Unit tests for Requestor, AuthToken::Gateway, AuthToken::Mapper
+  - All 561 tests pass ✅
+
 ### Completed Use Cases
 
 | Use Case | Service | Representer | Controller | Tests |
@@ -811,8 +840,9 @@ These God object services will be incrementally replaced by focused use case cla
 
 ## Notes
 
-- All runtime code lives in `app/` folder: `domain/`, `infrastructure/`, `application/`, `presentation/`, `lib/`
-- `lib/` contains cross-cutting utilities (jwt_credential.rb) that don't fit DDD layers but are runtime code
+- All runtime code lives in `app/` folder: `domain/`, `infrastructure/`, `application/`, `presentation/`
+- `lib/` folder exists but is currently empty (JWT handling moved to proper DDD locations)
+- Authentication boundary adapters live in `infrastructure/auth/` (TokenEncoder for JWT, SSOAuth for Google OAuth)
 - `config/` stays at top level (loaded before app code)
 - `db/` contains database tooling (migrations, seeds, store) - not auto-loaded
 - Specs will need path updates as code moves

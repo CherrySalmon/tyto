@@ -41,7 +41,7 @@ module Tyto
 
     # Check if the requestor has an admin role
     def requestor_is_admin?
-      @requestor['roles'].include?('admin')
+      @requestor.admin?
     end
 
     def requestor_is_instructor?

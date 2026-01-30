@@ -64,7 +64,7 @@ All runtime code lives in `app/`:
 **Infrastructure Layer** (`app/infrastructure/`):
 - **database/orm/**: Sequel ORM models (thin, no business logic)
 - **database/repositories/**: Maps ORM ↔ domain entities
-- **auth/**: SSO/OAuth gateway
+- **auth/**: Authentication boundary adapters (AuthToken::Gateway/Mapper for JWT, SSOAuth for Google OAuth)
 
 **Application Layer** (`app/application/`):
 - **controllers/routes/**: API route handlers (Roda). Routes are under `/api/` namespace
@@ -76,7 +76,7 @@ All runtime code lives in `app/`:
 - **representers/**: JSON serialization (Roar)
 
 **Cross-cutting Utilities** (`app/lib/`):
-- **jwt_credential.rb**: JWT generation/validation using RbNaCl SecretBox
+- Currently empty (JWT handling moved to `infrastructure/auth/` and `domain/accounts/values/`)
 
 **Refactoring status**: See `CLAUDE.refactor-ddd.md` for current progress.
 

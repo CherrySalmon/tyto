@@ -12,7 +12,7 @@ describe Tyto::Service::Accounts::ListAllAccounts do
 
   describe '#call' do
     it 'returns Success with all accounts for admin' do
-      requestor = { 'account_id' => admin_account.id, 'roles' => ['admin'] }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: admin_account.id, roles: ['admin'])
       Tyto::Account.create(email: 'user1@example.com', name: 'User 1')
       Tyto::Account.create(email: 'user2@example.com', name: 'User 2')
 
@@ -24,7 +24,7 @@ describe Tyto::Service::Accounts::ListAllAccounts do
 
     it 'returns Failure for non-admin' do
       regular_account = Tyto::Account.create(email: 'regular@example.com', name: 'Regular')
-      requestor = { 'account_id' => regular_account.id, 'roles' => ['creator'] }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: regular_account.id, roles: ['creator'])
 
       result = Tyto::Service::Accounts::ListAllAccounts.new.call(requestor:)
 

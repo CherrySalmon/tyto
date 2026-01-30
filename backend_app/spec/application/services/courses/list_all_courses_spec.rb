@@ -12,7 +12,7 @@ describe Tyto::Service::Courses::ListAllCourses do
 
   describe '#call' do
     it 'returns Success with all courses for admin' do
-      requestor = { 'account_id' => admin_account.id, 'roles' => ['admin'] }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: admin_account.id, roles: ['admin'])
       Tyto::Course.create(name: 'Course 1')
       Tyto::Course.create(name: 'Course 2')
 
@@ -24,7 +24,7 @@ describe Tyto::Service::Courses::ListAllCourses do
 
     it 'returns Failure for non-admin' do
       regular_account = Tyto::Account.create(email: 'regular@example.com', name: 'Regular')
-      requestor = { 'account_id' => regular_account.id, 'roles' => ['creator'] }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: regular_account.id, roles: ['creator'])
 
       result = Tyto::Service::Courses::ListAllCourses.new.call(requestor:)
 

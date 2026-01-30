@@ -23,7 +23,9 @@ module Tyto
                 avatar: user_data['picture'],
                 access_token: user_data['access_token']
               )
-              jwt = JWTCredential.generate_jwt(account.attributes[:id], account.attributes[:roles])
+              jwt = AuthToken::Mapper.new.from_credentials(
+                account.attributes[:id], account.attributes[:roles]
+              )
               account_data = account.attributes
               account_data['credential'] = jwt
               response.status = 200

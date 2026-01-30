@@ -44,7 +44,7 @@ describe 'Service::Events::FindActiveEvents' do
       location = create_test_location(course)
       event = create_test_event(course, location, name: 'Active Event')
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
@@ -68,7 +68,7 @@ describe 'Service::Events::FindActiveEvents' do
                         start_at: Time.now - 7200,
                         end_at: Time.now - 3600)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
@@ -82,7 +82,7 @@ describe 'Service::Events::FindActiveEvents' do
       account = create_test_account(roles: ['creator'])
       # Don't create any course enrollments
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
@@ -101,7 +101,7 @@ describe 'Service::Events::FindActiveEvents' do
       create_test_event(course1, location1, name: 'Event 1')
       create_test_event(course2, location2, name: 'Event 2')
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
@@ -121,7 +121,7 @@ describe 'Service::Events::FindActiveEvents' do
       location = create_test_location(course)
       create_test_event(course, location)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
@@ -156,7 +156,7 @@ describe 'Service::Events::FindActiveEvents' do
                         start_at: Time.now + 3600,
                         end_at: Time.now + 7200)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
@@ -175,7 +175,7 @@ describe 'Service::Events::FindActiveEvents' do
       location = create_test_location(other_course)
       create_test_event(other_course, location, name: 'Other Event')
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
@@ -199,7 +199,7 @@ describe 'Service::Events::FindActiveEvents' do
         role_id: student_role.id
       )
 
-      requestor = { 'account_id' => student.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: student.id, roles: ['creator'])
       result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
@@ -220,7 +220,7 @@ describe 'Service::Events::FindActiveEvents' do
                         start_at: future_time - 1800,
                         end_at: future_time + 1800)
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
 
       # At current time, no events
       result_now = Tyto::Service::Events::FindActiveEvents.new.call(
@@ -255,7 +255,7 @@ describe 'Service::Events::FindActiveEvents' do
       location = create_test_location(course)
       create_test_event(course, location, name: 'Active Event')
 
-      requestor = { 'account_id' => account.id }
+      requestor = Tyto::Domain::Accounts::Values::Requestor.new(account_id: account.id, roles: ['creator'])
       result = Tyto::Service::Events::FindActiveEvents.new.call(
         requestor:,
         time: Time.now
