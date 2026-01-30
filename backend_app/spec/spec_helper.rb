@@ -13,6 +13,7 @@ require_app
 
 require 'minitest/autorun'
 require 'minitest/spec' # Enable spec-style describe/it blocks
+require 'minitest/mock' # Separate gem since minitest 6.0
 require 'rack/test'
 
 require_relative 'support/test_helpers'

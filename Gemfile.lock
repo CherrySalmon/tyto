@@ -75,7 +75,9 @@ GEM
     logger (1.7.0)
     method_source (1.0.0)
     mini_portile2 (2.8.9)
-    minitest (5.22.3)
+    minitest (6.0.1)
+      prism (~> 1.5)
+    minitest-mock (5.27.0)
     multi_json (1.19.1)
     nio4r (2.7.0)
     openssl (3.3.2)
@@ -85,6 +87,7 @@ GEM
       ast (~> 2.4.1)
       racc
     pg (1.5.6)
+    prism (1.9.0)
     pry (0.14.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
@@ -162,7 +165,8 @@ DEPENDENCIES
   google-id-token
   json_schemer
   logger
-  minitest
+  minitest (~> 6.0)
+  minitest-mock (~> 5.27)
   multi_json
   openssl (~> 3.3)
   ostruct

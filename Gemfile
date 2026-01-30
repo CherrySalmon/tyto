@@ -49,7 +49,8 @@ end
 
 # TESTING
 group :development, :test do
-  gem 'minitest'
+  gem 'minitest', '~>6.0'
+  gem 'minitest-mock', '~>5.27' # extracted from minitest 6.0
   gem 'rack-test'
   gem 'simplecov', require: false
 end
