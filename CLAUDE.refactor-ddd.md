@@ -758,6 +758,15 @@ These God object services will be incrementally replaced by focused use case cla
 - `GeoLocation#distance_to` - For backend attendance proximity validation
 - `TimeRange#overlaps?`, `#contains?` - For scheduling conflict detection
 
+**Future Database Migrations Required:**
+
+- **accounts table**: Add `created_at` and `updated_at` timestamp columns
+  - The Account entity/representer currently omits timestamps because the DB table lacks them
+  - Create migration: `add_column :accounts, :created_at, DateTime` and `updated_at`
+  - Update Account ORM with `plugin :timestamps`
+  - Update repository and representer to include timestamps
+  - **Note**: Requires running migration on production database
+
 ---
 
 ## Reference

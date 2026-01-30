@@ -2,6 +2,10 @@
 
 Planned improvements and features to be addressed in future tasks.
 
+## Database Migrations
+
+- [ ] **Add timestamps to accounts table** - The `accounts` table is missing `created_at` and `updated_at` columns. Create a migration to add these columns, then update the Account ORM with `plugin :timestamps`. The Account entity and representer are already prepared to handle timestamps once available. **Requires production migration.**
+
 ## Infrastructure & DevOps
 
 - [ ] **Automated migrations on deploy** - Add `release: bundle exec rake db:migrate` to Procfile to run migrations automatically before each deploy
