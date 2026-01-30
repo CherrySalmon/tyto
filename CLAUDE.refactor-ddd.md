@@ -26,7 +26,10 @@ backend_app/
 ├── infrastructure/                # External adapters
 │   ├── database/
 │   │   ├── orm/                   # Sequel models (moved from models/)
-│   │   └── repositories/          # Data mappers between ORM and domain
+│   │   ├── repositories/          # Data mappers between ORM and domain
+│   │   ├── migrations/            # Database schema migrations
+│   │   ├── seeds/                 # Seed data
+│   │   └── store/                 # SQLite files (dev/test)
 │   └── auth/                      # SSO/OAuth gateway
 │
 ├── application/                   # Use cases and orchestration
@@ -40,7 +43,6 @@ backend_app/
 │
 ├── controllers/                   # Keep existing Roda routes (thin)
 ├── config/
-├── db/
 └── spec/
 ```
 
@@ -273,5 +275,6 @@ Each phase should:
 ## Notes
 
 - Controllers remain in `controllers/` (thin routing layer)
-- `config/`, `db/`, `lib/` stay in place
+- `config/`, `lib/` stay in place
+- `db/` moved to `infrastructure/database/` (migrations, seeds, store)
 - Specs will need path updates as code moves
