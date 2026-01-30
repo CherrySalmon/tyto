@@ -381,9 +381,15 @@ Rationale: Enrollments are always accessed in the context of a course, and cours
 
 Services currently still use ORM directly. Update to use domain repositories:
 
-- [ ] `EventService` → use `Repository::Events`
+- [x] `EventService` → use `Repository::Events`
+  - Inject events_repository and locations_repository
+  - Replace ORM class methods with repository calls
+  - Add entity_to_hash bridge for API compatibility
+  - Handle type coercion for route parameter IDs
 - [ ] `LocationService` → use `Repository::Locations`
 - [ ] `CourseService` → use aggregate loading methods (`find_with_events`, etc.) where appropriate
+- [ ] `AttendanceService` → use `Repository::Attendances`
+- [ ] `AccountService` → use `Repository::Accounts`
 - [ ] Remove `entity_to_hash` bridge methods once representers are in place
 
 ### 6.1 Railway-oriented error handling (dry-monads)
@@ -454,7 +460,7 @@ The following domain objects and repository methods exist but services haven't b
 
 | Component | Status | Blocked By |
 | --------- | ------ | ---------- |
-| `Repository::Events` | ✅ Built | EventService still uses ORM |
+| `Repository::Events` | ✅ Wired | EventService now uses it |
 | `Repository::Locations` | ✅ Built | LocationService still uses ORM |
 | `Repository::Accounts` | ✅ Built | AccountService still uses ORM |
 | `Repository::Attendances` | ✅ Built | AttendanceService still uses ORM |
