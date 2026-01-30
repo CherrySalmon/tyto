@@ -14,7 +14,7 @@ describe Tyto::EventPolicy do
       course_id: course.id,
       account_email: account.email,
       account_name: account.name,
-      roles:,
+      roles: Tyto::Domain::Courses::Values::CourseRoles.from(roles),
       created_at: nil,
       updated_at: nil
     )

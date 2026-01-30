@@ -96,7 +96,7 @@ describe 'Tyto::Repository::Accounts' do
 
       result = repository.find_id(orm_account.id)
 
-      _(result.roles).must_be_nil
+      _(result.roles).must_be_kind_of Tyto::Domain::Accounts::Values::NullSystemRoles
       _(result.roles_loaded?).must_equal false
     end
 
@@ -128,7 +128,7 @@ describe 'Tyto::Repository::Accounts' do
       result = repository.find_with_roles(orm_account.id)
 
       _(result.roles_loaded?).must_equal true
-      _(result.roles).must_equal []
+      _(result.roles.to_a).must_equal []
     end
 
     it 'returns nil for non-existent account' do

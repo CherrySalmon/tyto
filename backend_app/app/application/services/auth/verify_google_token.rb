@@ -60,14 +60,14 @@ module Tyto
           )
 
           # Preserve existing roles when updating
-          updated_account = @accounts_repo.update(updated_entity, role_names: account.roles)
+          updated_account = @accounts_repo.update(updated_entity, role_names: account.roles.to_a)
           Success(updated_account)
         rescue StandardError => e
           Failure(internal_error("Failed to update account: #{e.message}"))
         end
 
         def generate_credential(account)
-          credential = AuthToken::Mapper.new.from_credentials(account.id, account.roles)
+          credential = AuthToken::Mapper.new.from_credentials(account.id, account.roles.to_a)
           Success(credential)
         rescue StandardError => e
           Failure(internal_error("Failed to generate credential: #{e.message}"))

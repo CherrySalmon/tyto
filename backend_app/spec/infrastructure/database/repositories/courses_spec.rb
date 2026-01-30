@@ -74,7 +74,7 @@ describe 'Tyto::Repository::Courses' do
       enrollment = repository.find_enrollment(account_id: account.id, course_id: result.id)
       _(enrollment).wont_be_nil
       _(enrollment.owner?).must_equal true
-      _(enrollment.roles).must_equal ['owner']
+      _(enrollment.roles.to_a).must_equal ['owner']
     end
 
     it 'returns course entity without enrollment loaded' do
@@ -250,7 +250,7 @@ describe 'Tyto::Repository::Courses' do
 
       _(result.enrollments.length).must_equal 1
       enrollment = result.enrollments.first
-      _(enrollment.roles.length).must_equal 2
+      _(enrollment.roles.count).must_equal 2
       _(enrollment.roles).must_include 'instructor'
       _(enrollment.roles).must_include 'student'
       _(enrollment.account_email).must_equal 'multi@example.com'
@@ -298,7 +298,7 @@ describe 'Tyto::Repository::Courses' do
       _(result.course_id).must_equal orm_course.id
       _(result.account_email).must_equal 'student@example.com'
       _(result.account_name).must_equal 'Student'
-      _(result.roles).must_equal ['student']
+      _(result.roles.to_a).must_equal ['student']
     end
 
     it 'aggregates multiple roles for same account' do
@@ -310,7 +310,7 @@ describe 'Tyto::Repository::Courses' do
 
       result = repository.find_enrollment(account_id: account.id, course_id: orm_course.id)
 
-      _(result.roles.length).must_equal 2
+      _(result.roles.count).must_equal 2
       _(result.roles).must_include 'instructor'
       _(result.roles).must_include 'student'
       _(result.teaching?).must_equal true
@@ -390,7 +390,7 @@ describe 'Tyto::Repository::Courses' do
       )
 
       _(result).must_be_instance_of Tyto::Entity::Enrollment
-      _(result.roles).must_equal ['student']
+      _(result.roles.to_a).must_equal ['student']
     end
 
     it 'removes roles not in the new list' do
@@ -406,7 +406,7 @@ describe 'Tyto::Repository::Courses' do
         roles: ['owner']
       )
 
-      _(result.roles).must_equal ['owner']
+      _(result.roles.to_a).must_equal ['owner']
     end
 
     it 'returns nil for empty roles' do

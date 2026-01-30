@@ -114,7 +114,7 @@ module Tyto
       end
 
       def enroll_identity
-        represented.roles
+        represented.roles.to_a
       end
     end
 

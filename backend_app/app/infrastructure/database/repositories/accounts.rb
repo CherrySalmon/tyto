@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../../../domain/accounts/entities/account'
+require_relative '../../../domain/accounts/values/system_roles'
 
 module Tyto
   module Repository
@@ -149,6 +150,12 @@ module Tyto
       # @param load_roles [Boolean] whether to load roles
       # @return [Entity::Account] the domain entity
       def rebuild_entity(orm_record, load_roles: false)
+        roles = if load_roles
+                  Domain::Accounts::Values::SystemRoles.from(rebuild_role_names(orm_record))
+                else
+                  Domain::Accounts::Values::NullSystemRoles.new
+                end
+
         Entity::Account.new(
           id: orm_record.id,
           name: orm_record.name,
@@ -156,11 +163,11 @@ module Tyto
           access_token: orm_record.access_token,
           refresh_token: orm_record.refresh_token,
           avatar: orm_record.avatar,
-          roles: load_roles ? rebuild_roles(orm_record) : nil
+          roles:
         )
       end
 
-      def rebuild_roles(orm_account)
+      def rebuild_role_names(orm_account)
         orm_account.roles.map(&:name)
       end
     end

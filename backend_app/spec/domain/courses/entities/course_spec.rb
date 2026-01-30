@@ -366,11 +366,14 @@ describe 'Tyto::Entity::Course' do
   end
 
   describe 'enrollment collection' do
+    # Helper to create CourseRoles
+    let(:course_roles) { ->(arr) { Tyto::Domain::Courses::Values::CourseRoles.from(arr) } }
+
     let(:owner_enrollment) do
       Tyto::Entity::Enrollment.new(
         id: 1, account_id: 10, course_id: 1,
         account_email: 'owner@example.com', account_name: 'Owner',
-        roles: ['owner'],
+        roles: course_roles.call(['owner']),
         created_at: now, updated_at: now
       )
     end
@@ -379,7 +382,7 @@ describe 'Tyto::Entity::Course' do
       Tyto::Entity::Enrollment.new(
         id: 2, account_id: 20, course_id: 1,
         account_email: 'instructor@example.com', account_name: 'Instructor',
-        roles: ['instructor'],
+        roles: course_roles.call(['instructor']),
         created_at: now, updated_at: now
       )
     end
@@ -388,7 +391,7 @@ describe 'Tyto::Entity::Course' do
       Tyto::Entity::Enrollment.new(
         id: 3, account_id: 30, course_id: 1,
         account_email: 'student@example.com', account_name: 'Student',
-        roles: ['student'],
+        roles: course_roles.call(['student']),
         created_at: now, updated_at: now
       )
     end
@@ -397,7 +400,7 @@ describe 'Tyto::Entity::Course' do
       Tyto::Entity::Enrollment.new(
         id: 4, account_id: 40, course_id: 1,
         account_email: 'ta@example.com', account_name: 'TA',
-        roles: %w[staff student],
+        roles: course_roles.call(%w[staff student]),
         created_at: now, updated_at: now
       )
     end

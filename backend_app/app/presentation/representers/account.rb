@@ -26,7 +26,9 @@ module Tyto
       property :roles, exec_context: :decorator
 
       def roles
-        represented.respond_to?(:roles) ? represented.roles : []
+        return [] unless represented.respond_to?(:roles)
+
+        represented.roles.respond_to?(:to_a) ? represented.roles.to_a : []
       end
     end
 

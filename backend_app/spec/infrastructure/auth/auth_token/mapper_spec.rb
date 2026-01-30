@@ -43,7 +43,7 @@ describe Tyto::AuthToken::Mapper do
 
       _(result).must_be_kind_of Tyto::Domain::Accounts::Values::AuthCapability
       _(result.account_id).must_equal 42
-      _(result.roles).must_equal ['admin', 'creator']
+      _(result.roles.to_a).must_equal ['admin', 'creator']
     end
 
     it 'raises MappingError for invalid token' do

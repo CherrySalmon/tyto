@@ -67,46 +67,54 @@ describe 'Tyto::Entity::Account' do
   end
 
   describe 'roles' do
+    # Helper to create SystemRoles
+    let(:system_roles) { ->(arr) { Tyto::Domain::Accounts::Values::SystemRoles.from(arr) } }
+
     describe 'default state (not loaded)' do
-      it 'has nil roles by default' do
+      it 'has NullSystemRoles by default' do
         account = Tyto::Entity::Account.new(valid_attributes)
 
-        _(account.roles).must_be_nil
+        _(account.roles).must_be_kind_of Tyto::Domain::Accounts::Values::NullSystemRoles
         _(account.roles_loaded?).must_equal false
       end
     end
 
     describe 'loaded state' do
       it 'can have roles loaded (empty)' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: []))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call([])))
 
-        _(account.roles).must_equal []
+        _(account.roles.to_a).must_equal []
         _(account.roles_loaded?).must_equal true
       end
 
       it 'can have roles loaded (with data)' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: %w[admin creator]))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(%w[admin creator])))
 
-        _(account.roles).must_equal %w[admin creator]
+        _(account.roles.to_a).must_equal %w[admin creator]
         _(account.roles_loaded?).must_equal true
       end
 
       it 'rejects invalid role names' do
-        _ { Tyto::Entity::Account.new(valid_attributes.merge(roles: ['invalid_role'])) }
+        _ { Tyto::Domain::Accounts::Values::SystemRoles.from(['invalid_role']) }
+          .must_raise Dry::Struct::Error
+      end
+
+      it 'rejects raw arrays (must use SystemRoles)' do
+        _ { Tyto::Entity::Account.new(valid_attributes.merge(roles: ['admin'])) }
           .must_raise Dry::Struct::Error
       end
     end
 
     describe '#has_role?' do
       it 'returns true when account has the role' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: %w[admin creator]))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(%w[admin creator])))
 
         _(account.has_role?('admin')).must_equal true
         _(account.has_role?('creator')).must_equal true
       end
 
       it 'returns false when account lacks the role' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: ['member']))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(['member'])))
 
         _(account.has_role?('admin')).must_equal false
       end
@@ -121,13 +129,13 @@ describe 'Tyto::Entity::Account' do
 
     describe '#admin?' do
       it 'returns true for admin accounts' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: ['admin']))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(['admin'])))
 
         _(account.admin?).must_equal true
       end
 
       it 'returns false for non-admin accounts' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: ['member']))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(['member'])))
 
         _(account.admin?).must_equal false
       end
@@ -135,13 +143,13 @@ describe 'Tyto::Entity::Account' do
 
     describe '#creator?' do
       it 'returns true for creator accounts' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: ['creator']))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(['creator'])))
 
         _(account.creator?).must_equal true
       end
 
       it 'returns false for non-creator accounts' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: ['member']))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(['member'])))
 
         _(account.creator?).must_equal false
       end
@@ -149,13 +157,13 @@ describe 'Tyto::Entity::Account' do
 
     describe '#member?' do
       it 'returns true for member accounts' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: ['member']))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(['member'])))
 
         _(account.member?).must_equal true
       end
 
       it 'returns false for non-member accounts' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: ['admin']))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(['admin'])))
 
         _(account.member?).must_equal false
       end
@@ -163,13 +171,13 @@ describe 'Tyto::Entity::Account' do
 
     describe '#role_count' do
       it 'returns count when roles are loaded' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: %w[admin creator]))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call(%w[admin creator])))
 
         _(account.role_count).must_equal 2
       end
 
       it 'returns 0 for empty roles' do
-        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: []))
+        account = Tyto::Entity::Account.new(valid_attributes.merge(roles: system_roles.call([])))
 
         _(account.role_count).must_equal 0
       end

@@ -66,7 +66,7 @@ backend_app/
 ### Accounts (Aggregate Root: Account)
 
 - **Entities**: Account
-- **Values**: Email, Role, AuthCapability (authenticated identity from JWT)
+- **Values**: Email, SystemRoles, NullSystemRoles, AuthCapability (authenticated identity from JWT)
 
 ### Attendance (Aggregate Root: Attendance)
 
@@ -76,7 +76,7 @@ backend_app/
 ### Enrollments (Aggregate Root: Course or separate)
 
 - **Entities**: Enrollment (AccountCourse)
-- **Values**: CourseRole
+- **Values**: CourseRoles (collection value object with role predicates)
 
 ---
 
@@ -335,7 +335,12 @@ Move policies to `application/policies/`:
 
 - [x] System roles defined in `Types::SystemRole` enum: admin, creator, member
 - [x] Course roles defined in `Types::CourseRole` enum: owner, instructor, staff, student
-- [ ] *(Deferred)* Separate Role value object if needed for complex role logic
+- [x] **Role value objects** (2026-01-31):
+  - `SystemRoles` - Collection value object for Account/AuthCapability
+  - `NullSystemRoles` - Null object for unloaded roles (raises on access)
+  - `CourseRoles` - Collection value object for Enrollment
+  - Auto-coercion: entities accept raw arrays and convert to value objects
+  - Predicates delegate to value objects (`account.admin?` → `account.roles.admin?`)
 
 ---
 

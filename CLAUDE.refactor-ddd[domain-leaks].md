@@ -14,6 +14,7 @@ This document tracks domain logic that has leaked outside of `backend_app/app/do
 | 2 | ORM business logic (enrollment, accounts, roles) | `orm/course.rb` | CRITICAL | Complete |
 | 3 | Coordinate validation duplication | `record_attendance.rb`, `create_location.rb` | HIGH | Complete |
 | 4 | Time range logic in ORM | `orm/event.rb` | HIGH | Complete |
+| 5 | Role array inspection duplication | Account, Enrollment, AuthCapability | MEDIUM | Complete |
 
 ---
 
@@ -94,6 +95,34 @@ This document tracks domain logic that has leaked outside of `backend_app/app/do
 
 ---
 
+## Leak #5: Role Array Inspection Duplication — COMPLETE
+
+**Problem**: Role checking logic (`has_role?`, `admin?`, `owner?`, etc.) was duplicated across 3 entities with identical `roles.include?(role_name)` implementation.
+
+**Solution**:
+
+- Created `SystemRoles` value object for Account and AuthCapability
+- Created `NullSystemRoles` null object for unloaded roles
+- Created `CourseRoles` value object for Enrollment
+- Added type coercion so entities accept raw arrays and auto-convert
+- Predicates delegate to value objects
+
+**Usage**:
+
+```ruby
+# Before: entity inspects array directly
+account.roles.include?('admin')
+enrollment.roles.include?('owner')
+
+# After: value object encapsulates logic
+account.roles.has?(:admin)   # or account.admin?
+enrollment.roles.has?(:owner) # or enrollment.owner?
+```
+
+**Completed**: 2026-01-31 | **Tests**: 698 pass | **Coverage**: 97.69%
+
+---
+
 ## Completed Work Log
 
 ### 2026-01-31: Leak #4 Complete
@@ -167,6 +196,58 @@ This document tracks domain logic that has leaked outside of `backend_app/app/do
 - Remaining `attributes` and `get_enroll_identity` removed in Leak #4
 
 **Tests added**: 10 new tests for repository methods
+
+### 2026-01-31: Leak #5 Complete
+
+**Problem**: Role checking logic (`has_role?`, `admin?`, `owner?`, etc.) was duplicated across 3 entities, each with identical `roles.include?(role_name)` implementation.
+
+**Affected entities**:
+
+- `Account` - `has_role?`, `admin?`, `creator?`, `member?`
+- `Enrollment` - `has_role?`, `owner?`, `instructor?`, `staff?`, `student?`, `teaching?`
+- `AuthCapability` - `has_role?`, `admin?`, `creator?`, `member?`
+
+**Solution**: Extract role collections into value objects
+
+**New value objects**:
+
+- `domain/accounts/values/system_roles.rb`:
+  - `SystemRoles` - Collection with `has?`, `admin?`, `creator?`, `member?`, `any?`, `empty?`, `count`, `to_a`
+  - `NullSystemRoles` - Null object for unloaded roles (all methods raise `NotLoadedError`)
+  - `SystemRoles.from(array)` - Factory method for construction
+
+- `domain/courses/values/course_roles.rb`:
+  - `CourseRoles` - Collection with `has?`, `owner?`, `instructor?`, `staff?`, `student?`, `teaching?`
+  - `CourseRoles.from(array)` - Factory method for construction
+
+**Entity changes**:
+
+- Added type coercion so entities accept raw arrays and auto-convert to value objects
+- Predicates now delegate to value objects (`account.admin?` → `account.roles.admin?`)
+- Added `include?` alias for backward compatibility with existing code
+
+**Files created**:
+
+- `app/domain/accounts/values/system_roles.rb`
+- `app/domain/courses/values/course_roles.rb`
+- `spec/domain/accounts/values/system_roles_spec.rb` (26 tests)
+- `spec/domain/courses/values/course_roles_spec.rb` (21 tests)
+
+**Files modified**:
+
+- `app/domain/accounts/entities/account.rb` - Uses `SystemRoles`/`NullSystemRoles`
+- `app/domain/courses/entities/enrollment.rb` - Uses `CourseRoles`
+- `app/domain/accounts/values/auth_capability.rb` - Uses `SystemRoles`
+- `app/infrastructure/database/repositories/accounts.rb` - Constructs value objects
+- `app/infrastructure/database/repositories/courses.rb` - Constructs value objects
+- `app/infrastructure/auth/auth_token/mapper.rb` - Converts to/from value objects
+- `app/application/services/auth/verify_google_token.rb` - Uses `.to_a` when passing to APIs
+- `app/presentation/representers/account.rb` - Uses `.to_a` for JSON
+- `app/presentation/representers/course.rb` - Uses `.to_a` for JSON
+
+**Completed**: 2026-01-31 | **Tests**: 698 pass | **Coverage**: 97.69%
+
+---
 
 ### 2026-01-30: Leak #1 Complete
 

@@ -8,7 +8,7 @@ describe Tyto::Domain::Accounts::Values::AuthCapability do
       capability = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: 42, roles: ['admin', 'creator'])
 
       _(capability.account_id).must_equal 42
-      _(capability.roles).must_equal ['admin', 'creator']
+      _(capability.roles.to_a).must_equal ['admin', 'creator']
     end
 
     it 'requires account_id' do
@@ -25,12 +25,12 @@ describe Tyto::Domain::Accounts::Values::AuthCapability do
 
     it 'accepts system roles' do
       capability = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: 1, roles: ['admin', 'creator', 'member'])
-      _(capability.roles).must_equal ['admin', 'creator', 'member']
+      _(capability.roles.to_a).must_equal ['admin', 'creator', 'member']
     end
 
     it 'accepts course roles' do
       capability = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: 1, roles: ['owner', 'instructor', 'staff', 'student'])
-      _(capability.roles).must_equal ['owner', 'instructor', 'staff', 'student']
+      _(capability.roles.to_a).must_equal ['owner', 'instructor', 'staff', 'student']
     end
   end
 

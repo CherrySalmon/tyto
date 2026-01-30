@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require_relative '../../../domain/accounts/values/system_roles'
 
 module Tyto
   module AuthToken
@@ -17,7 +18,7 @@ module Tyto
       def to_token(capability)
         raise MappingError, 'AuthCapability cannot be nil' if capability.nil?
 
-        payload = { account_id: capability.account_id, roles: capability.roles }.to_json
+        payload = { account_id: capability.account_id, roles: capability.roles.to_a }.to_json
         @gateway.encrypt(payload)
       end
 
@@ -28,7 +29,7 @@ module Tyto
 
         capability = Domain::Accounts::Values::AuthCapability.new(
           account_id: account_id.to_i,
-          roles:
+          roles: Domain::Accounts::Values::SystemRoles.from(roles)
         )
         to_token(capability)
       end
@@ -45,7 +46,7 @@ module Tyto
 
         Domain::Accounts::Values::AuthCapability.new(
           account_id: parsed[:account_id],
-          roles: parsed[:roles]
+          roles: Domain::Accounts::Values::SystemRoles.from(parsed[:roles])
         )
       rescue Gateway::EncryptionError, JSON::ParserError => e
         raise MappingError, "Token parsing failed: #{e.message}"

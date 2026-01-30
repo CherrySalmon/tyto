@@ -4,6 +4,7 @@ require_relative '../../../domain/courses/entities/course'
 require_relative '../../../domain/courses/entities/event'
 require_relative '../../../domain/courses/entities/location'
 require_relative '../../../domain/courses/entities/enrollment'
+require_relative '../../../domain/courses/values/course_roles'
 
 module Tyto
   module Repository
@@ -82,7 +83,7 @@ module Tyto
         return nil if account_courses.empty?
 
         account = account_courses.first.account
-        roles = account_courses.map { |ac| ac.role.name }.uniq
+        role_names = account_courses.map { |ac| ac.role.name }.uniq
 
         Entity::Enrollment.new(
           id: account_courses.min_by(&:id).id,
@@ -90,7 +91,7 @@ module Tyto
           course_id:,
           account_email: account.email,
           account_name: account.name,
-          roles:,
+          roles: Domain::Courses::Values::CourseRoles.from(role_names),
           created_at: nil,
           updated_at: nil
         )
@@ -297,7 +298,7 @@ module Tyto
         # Build enrollment for each account
         grouped.map do |account_id, records|
           account = records.first.account
-          roles = records.map { |r| r.role.name }.uniq
+          role_names = records.map { |r| r.role.name }.uniq
           first_record = records.min_by(&:id)
 
           Entity::Enrollment.new(
@@ -306,7 +307,7 @@ module Tyto
             course_id: orm_course.id,
             account_email: account.email,
             account_name: account.name,
-            roles:,
+            roles: Domain::Courses::Values::CourseRoles.from(role_names),
             created_at: nil, # account_course_roles table has no timestamps
             updated_at: nil
           )
