@@ -85,18 +85,21 @@ describe 'Todo::Entity::Course' do
       _(course.time_range).must_be_instance_of Todo::Value::TimeRange
       _(course.time_range.start_at).must_equal course.start_at
       _(course.time_range.end_at).must_equal course.end_at
+      _(course.time_range.present?).must_equal true
     end
 
-    it 'returns nil when start_at is missing' do
+    it 'returns NullTimeRange when start_at is missing' do
       course = Todo::Entity::Course.new(valid_attributes.merge(start_at: nil))
 
-      _(course.time_range).must_be_nil
+      _(course.time_range).must_be_instance_of Todo::Value::NullTimeRange
+      _(course.time_range.null?).must_equal true
     end
 
-    it 'returns nil when end_at is missing' do
+    it 'returns NullTimeRange when end_at is missing' do
       course = Todo::Entity::Course.new(valid_attributes.merge(end_at: nil))
 
-      _(course.time_range).must_be_nil
+      _(course.time_range).must_be_instance_of Todo::Value::NullTimeRange
+      _(course.time_range.null?).must_equal true
     end
   end
 
@@ -107,10 +110,10 @@ describe 'Todo::Entity::Course' do
       _(course.duration).must_equal 30 * one_day
     end
 
-    it 'returns nil when time_range is nil' do
+    it 'returns 0 when dates are missing (via NullTimeRange)' do
       course = Todo::Entity::Course.new(valid_attributes.merge(start_at: nil))
 
-      _(course.duration).must_be_nil
+      _(course.duration).must_equal 0
     end
   end
 
@@ -137,7 +140,7 @@ describe 'Todo::Entity::Course' do
       _(course.active?).must_equal false
     end
 
-    it 'returns false when time_range is nil' do
+    it 'returns false when dates are missing (via NullTimeRange)' do
       course = Todo::Entity::Course.new(valid_attributes.merge(start_at: nil))
 
       _(course.active?).must_equal false
@@ -167,7 +170,7 @@ describe 'Todo::Entity::Course' do
       _(course.upcoming?).must_equal false
     end
 
-    it 'returns false when time_range is nil' do
+    it 'returns false when dates are missing (via NullTimeRange)' do
       course = Todo::Entity::Course.new(valid_attributes.merge(start_at: nil))
 
       _(course.upcoming?).must_equal false
@@ -197,7 +200,7 @@ describe 'Todo::Entity::Course' do
       _(course.ended?).must_equal false
     end
 
-    it 'returns false when time_range is nil' do
+    it 'returns false when dates are missing (via NullTimeRange)' do
       course = Todo::Entity::Course.new(valid_attributes.merge(start_at: nil))
 
       _(course.ended?).must_equal false

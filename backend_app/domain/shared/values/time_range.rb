@@ -53,6 +53,10 @@ module Todo
       def contains?(time)
         time >= start_at && time <= end_at
       end
+
+      # Interface parity with NullTimeRange
+      def null? = false
+      def present? = true
     end
   end
 end

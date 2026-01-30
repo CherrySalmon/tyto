@@ -115,6 +115,7 @@ puma config.ru -t 1:5 -p 9292
 - Frozen string literals enabled at file top
 - Module namespacing: `Todo::Api`, `Todo::Routes::*`
 - RuboCop for linting
+- **Avoid `nil` as state**: Use Null Object pattern instead of returning `nil` for missing/empty states. This eliminates guard clauses and follows "Tell, Don't Ask" principle. Example: `NullTimeRange` instead of `nil` for courses without dates.
 
 ### Vue/JavaScript
 - Vue Single File Components (.vue)

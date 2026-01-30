@@ -2,6 +2,7 @@
 
 require_relative '../../types'
 require_relative '../../shared/values/time_range'
+require_relative '../../shared/values/null_time_range'
 
 module Todo
   module Entity
@@ -17,38 +18,19 @@ module Todo
       attribute :created_at, Types::Time.optional
       attribute :updated_at, Types::Time.optional
 
-      # Returns a TimeRange value object if both start and end times exist
+      # Returns a TimeRange value object, or NullTimeRange if dates are missing.
+      # Uses Null Object pattern to eliminate nil checks in delegating methods.
       def time_range
-        return nil unless start_at && end_at
+        return Value::NullTimeRange.new unless start_at && end_at
 
         Value::TimeRange.new(start_at:, end_at:)
       end
 
-      # Duration in seconds (delegates to time_range)
-      def duration
-        time_range&.duration
-      end
-
-      # Is the course currently active?
-      def active?(at: Time.now)
-        return false unless time_range
-
-        time_range.active?(at:)
-      end
-
-      # Is the course in the future?
-      def upcoming?(at: Time.now)
-        return false unless time_range
-
-        time_range.upcoming?(at:)
-      end
-
-      # Has the course ended?
-      def ended?(at: Time.now)
-        return false unless time_range
-
-        time_range.ended?(at:)
-      end
+      # Delegates to time_range (no guards needed - Null Object handles it)
+      def duration = time_range.duration
+      def active?(at: Time.now) = time_range.active?(at:)
+      def upcoming?(at: Time.now) = time_range.upcoming?(at:)
+      def ended?(at: Time.now) = time_range.ended?(at:)
 
       # Is this a new (unpersisted) course?
       def new_record?
