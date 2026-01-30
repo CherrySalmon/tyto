@@ -295,3 +295,39 @@ end
 ```ruby
 def new_record? = id.nil?
 ```
+
+## Future: Railway-Oriented Programming (dry-monads)
+
+When refactoring services, consider replacing exception-based error handling with railway-oriented programming:
+
+```ruby
+# CURRENT: Exception-based (verbose rescue blocks)
+class CourseService
+  class ForbiddenError < StandardError; end
+
+  def self.find(id)
+    course = Course[id] || raise(NotFoundError)
+    course
+  end
+end
+
+# FUTURE: Railway-oriented (Success/Failure returns)
+class CourseService
+  include Dry::Monads::Result::Mixin
+
+  def self.find(id)
+    course = repository.find_id(id)
+    return Failure(:not_found) unless course
+    Success(course)
+  end
+end
+```
+
+**Benefits:**
+
+- Explicit error handling as return values
+- Controllers pattern-match instead of rescue blocks
+- Easier to compose multi-step operations
+- Type-safe error propagation
+
+**When to adopt:** Phase 6 (Application Layer Refactoring), after domain extraction is complete.

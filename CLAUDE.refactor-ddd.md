@@ -335,10 +335,23 @@ Move policies to `application/policies/`:
 
 ## Phase 6: Application Layer Refactoring
 
-### 6.1 Service refactoring
+### 6.1 Railway-oriented error handling (dry-monads)
 
-- [ ] Use Dry::Transaction for railway-oriented flow
-- [ ] Services return domain entities, not hashes
+**Current state**: Exception-based error handling with 50+ rescue blocks scattered across controllers. Each service defines its own error classes (`ForbiddenError`, `NotFoundError`, etc.).
+
+**Target state**: Railway-oriented programming with `Success`/`Failure` returns.
+
+- [ ] Add `dry-monads` to Gemfile
+- [ ] Add `Dry::Monads::Result::Mixin` to services
+- [ ] Replace `raise ForbiddenError` with `Failure(ApiResult.forbidden(...))`
+- [ ] Replace `return course` with `Success(course)`
+- [ ] Update controllers to pattern-match on results instead of rescue blocks
+- [ ] Consider `dry-transaction` for multi-step service composition
+
+### 6.2 Service refactoring
+
+- [ ] Services return domain entities wrapped in Success, not hashes
+- [ ] Remove exception-based error classes from services
 
 ### 6.2 Contracts and Response objects
 
@@ -396,3 +409,4 @@ Each phase should:
 - **Types in domain layer**: Domain types (`domain/types.rb`) are imported by application contracts. Dependencies flow inward (application → domain).
 - **Shared constrained types**: Avoid duplication between dry-struct and dry-validation by defining constrained types once in domain layer.
 - **Immutable updates**: dry-struct `new()` method re-enforces type constraints (raises `Dry::Struct::Error` on violation). Note that custom invariant checks in class-level `new` overrides only apply on initial construction, not instance updates.
+- **dry-monads analysis**: Reference project (api-codepraise) uses dry-transaction and Dry::Monads::Result for railway-oriented flow. Tyto currently has 50+ rescue blocks in controllers. Migration to dry-monads is deferred to Phase 6 to avoid scope creep during domain extraction.
