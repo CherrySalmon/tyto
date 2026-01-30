@@ -7,10 +7,33 @@ module Tyto
     # GeoLocation value object representing longitude/latitude coordinates.
     # Immutable and validated via type constraints.
     class GeoLocation < Dry::Struct
+      # Raised when coordinates fail validation
+      class InvalidCoordinatesError < StandardError; end
+
       EARTH_RADIUS_KM = 6371.0
 
       attribute :longitude, Types::Float.constrained(gteq: -180.0, lteq: 180.0)
       attribute :latitude, Types::Float.constrained(gteq: -90.0, lteq: 90.0)
+
+      # Factory method that converts constraint errors to friendly messages.
+      # @param longitude [Numeric] longitude coordinate
+      # @param latitude [Numeric] latitude coordinate
+      # @return [GeoLocation] valid GeoLocation instance
+      # @raise [InvalidCoordinatesError] if coordinates are out of range
+      def self.build(longitude:, latitude:)
+        new(longitude: longitude.to_f, latitude: latitude.to_f)
+      rescue Dry::Struct::Error => e
+        raise InvalidCoordinatesError, friendly_message(e)
+      end
+
+      def self.friendly_message(error)
+        msg = error.message.downcase
+        return 'Longitude must be between -180 and 180' if msg.include?('longitude')
+        return 'Latitude must be between -90 and 90' if msg.include?('latitude')
+
+        'Invalid coordinates'
+      end
+      private_class_method :friendly_message
 
       # Haversine formula for distance in kilometers
       # @param other [GeoLocation, NullGeoLocation] the other location

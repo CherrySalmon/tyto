@@ -3,6 +3,7 @@
 require_relative '../../../infrastructure/database/repositories/locations'
 require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
+require_relative '../concerns/coordinate_validation'
 
 module Tyto
   module Service
@@ -10,6 +11,7 @@ module Tyto
       # Service: Create a new location for a course
       # Returns Success(ApiResult) with created location or Failure(ApiResult) with error
       class CreateLocation < ApplicationOperation
+        include CoordinateValidation
         def initialize(locations_repo: Repository::Locations.new, courses_repo: Repository::Courses.new)
           @locations_repo = locations_repo
           @courses_repo = courses_repo
@@ -70,25 +72,6 @@ module Tyto
           return Failure(bad_request('Location name is required')) if name.nil? || name.to_s.strip.empty?
 
           Success(name.strip)
-        end
-
-        def validate_coordinates(longitude, latitude)
-          # Coordinates are optional
-          return Success(longitude: nil, latitude: nil) if longitude.nil? && latitude.nil?
-
-          # If one is provided, both must be provided
-          if (longitude.nil? && !latitude.nil?) || (!longitude.nil? && latitude.nil?)
-            return Failure(bad_request('Both longitude and latitude must be provided together'))
-          end
-
-          lng = longitude.to_f
-          lat = latitude.to_f
-
-          # Validate ranges
-          return Failure(bad_request('Longitude must be between -180 and 180')) unless lng.between?(-180, 180)
-          return Failure(bad_request('Latitude must be between -90 and 90')) unless lat.between?(-90, 90)
-
-          Success(longitude: lng, latitude: lat)
         end
 
         def persist_location(validated)

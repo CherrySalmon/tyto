@@ -3,6 +3,7 @@
 require_relative '../../../infrastructure/database/repositories/locations'
 require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
+require_relative '../concerns/coordinate_validation'
 
 module Tyto
   module Service
@@ -10,6 +11,7 @@ module Tyto
       # Service: Update an existing location
       # Returns Success(ApiResult) with updated location or Failure(ApiResult) with error
       class UpdateLocation < ApplicationOperation
+        include CoordinateValidation
         def initialize(locations_repo: Repository::Locations.new, courses_repo: Repository::Courses.new)
           @locations_repo = locations_repo
           @courses_repo = courses_repo
@@ -72,7 +74,9 @@ module Tyto
           name = validate_name(location_data['name'], existing.name)
           return name if name.failure?
 
-          coordinates = validate_coordinates(location_data, existing)
+          # Resolve coordinates (merge with existing values if not provided)
+          longitude, latitude = resolve_coordinates(location_data, existing)
+          coordinates = validate_coordinates(longitude, latitude)
           return coordinates if coordinates.failure?
 
           Success(
@@ -89,26 +93,10 @@ module Tyto
           Success(name.strip)
         end
 
-        def validate_coordinates(location_data, existing)
-          # Use existing values as defaults
+        def resolve_coordinates(location_data, existing)
           longitude = location_data.key?('longitude') ? location_data['longitude'] : existing.longitude
           latitude = location_data.key?('latitude') ? location_data['latitude'] : existing.latitude
-
-          # Allow clearing coordinates (both nil)
-          return Success(longitude: nil, latitude: nil) if longitude.nil? && latitude.nil?
-
-          # If one is provided, both must be provided
-          if (longitude.nil? && !latitude.nil?) || (!longitude.nil? && latitude.nil?)
-            return Failure(bad_request('Both longitude and latitude must be provided together'))
-          end
-
-          lng = longitude.to_f
-          lat = latitude.to_f
-
-          return Failure(bad_request('Longitude must be between -180 and 180')) unless lng.between?(-180, 180)
-          return Failure(bad_request('Latitude must be between -90 and 90')) unless lat.between?(-90, 90)
-
-          Success(longitude: lng, latitude: lat)
+          [longitude, latitude]
         end
 
         def persist_update(existing, validated)

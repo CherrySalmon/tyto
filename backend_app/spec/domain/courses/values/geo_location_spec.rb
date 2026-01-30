@@ -111,4 +111,55 @@ describe 'Tyto::Value::GeoLocation' do
       _(taipei.present?).must_equal true
     end
   end
+
+  describe '.build factory method' do
+    it 'creates a valid geo location from numeric values' do
+      geo = Tyto::Value::GeoLocation.build(longitude: 121.5654, latitude: 25.0330)
+
+      _(geo.longitude).must_equal 121.5654
+      _(geo.latitude).must_equal 25.0330
+    end
+
+    it 'converts string values to floats' do
+      geo = Tyto::Value::GeoLocation.build(longitude: '121.5654', latitude: '25.0330')
+
+      _(geo.longitude).must_equal 121.5654
+      _(geo.latitude).must_equal 25.0330
+    end
+
+    it 'raises InvalidCoordinatesError for longitude below -180' do
+      error = _ { Tyto::Value::GeoLocation.build(longitude: -181.0, latitude: 0.0) }
+              .must_raise Tyto::Value::GeoLocation::InvalidCoordinatesError
+
+      _(error.message).must_equal 'Longitude must be between -180 and 180'
+    end
+
+    it 'raises InvalidCoordinatesError for longitude above 180' do
+      error = _ { Tyto::Value::GeoLocation.build(longitude: 181.0, latitude: 0.0) }
+              .must_raise Tyto::Value::GeoLocation::InvalidCoordinatesError
+
+      _(error.message).must_equal 'Longitude must be between -180 and 180'
+    end
+
+    it 'raises InvalidCoordinatesError for latitude below -90' do
+      error = _ { Tyto::Value::GeoLocation.build(longitude: 0.0, latitude: -91.0) }
+              .must_raise Tyto::Value::GeoLocation::InvalidCoordinatesError
+
+      _(error.message).must_equal 'Latitude must be between -90 and 90'
+    end
+
+    it 'raises InvalidCoordinatesError for latitude above 90' do
+      error = _ { Tyto::Value::GeoLocation.build(longitude: 0.0, latitude: 91.0) }
+              .must_raise Tyto::Value::GeoLocation::InvalidCoordinatesError
+
+      _(error.message).must_equal 'Latitude must be between -90 and 90'
+    end
+
+    it 'accepts boundary values' do
+      geo = Tyto::Value::GeoLocation.build(longitude: -180.0, latitude: -90.0)
+
+      _(geo.longitude).must_equal(-180.0)
+      _(geo.latitude).must_equal(-90.0)
+    end
+  end
 end

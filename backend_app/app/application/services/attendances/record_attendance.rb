@@ -4,6 +4,7 @@ require_relative '../../../infrastructure/database/repositories/attendances'
 require_relative '../../../infrastructure/database/repositories/events'
 require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
+require_relative '../concerns/coordinate_validation'
 
 module Tyto
   module Service
@@ -11,6 +12,7 @@ module Tyto
       # Service: Record attendance (check-in) for an event
       # Returns Success(ApiResult) with created attendance or Failure(ApiResult) with error
       class RecordAttendance < ApplicationOperation
+        include CoordinateValidation
         def initialize(attendances_repo: Repository::Attendances.new, events_repo: Repository::Events.new,
                        courses_repo: Repository::Courses.new)
           @attendances_repo = attendances_repo
@@ -90,24 +92,6 @@ module Tyto
           return Failure(bad_request('Invalid event ID')) if id.zero?
 
           Success(id)
-        end
-
-        def validate_coordinates(longitude, latitude)
-          # Coordinates are optional for attendance
-          return Success(longitude: nil, latitude: nil) if longitude.nil? && latitude.nil?
-
-          # If one is provided, both must be provided
-          if (longitude.nil? && !latitude.nil?) || (!longitude.nil? && latitude.nil?)
-            return Failure(bad_request('Both longitude and latitude must be provided together'))
-          end
-
-          lng = longitude.to_f
-          lat = latitude.to_f
-
-          return Failure(bad_request('Longitude must be between -180 and 180')) unless lng.between?(-180, 180)
-          return Failure(bad_request('Latitude must be between -90 and 90')) unless lat.between?(-90, 90)
-
-          Success(longitude: lng, latitude: lat)
         end
 
         def persist_attendance(validated)
