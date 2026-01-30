@@ -21,7 +21,8 @@ gem 'openssl', '~>3.3'
 gem 'rack-ssl-enforcer'
 gem 'rbnacl'
 
-# VALIDATION
+# VALIDATION AND DOMAIN TYPES
+gem 'dry-struct', '~>1.6'
 gem 'dry-validation', '~>1.10'
 gem 'json_schemer'
 
