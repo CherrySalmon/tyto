@@ -36,6 +36,7 @@ module Todo
         role_id: student_role,
         course_id: course_id, # Assuming you also directly relate attendances to courses
         event_id: attendance_details['event_id'],
+        # Auto-generate name from event if not provided
         name: attendance_details['name'] || (event&.name ? "#{event.name} Attendance" : 'Attendance'),
         latitude: attendance_details['latitude'],
         longitude: attendance_details['longitude']

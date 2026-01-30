@@ -20,10 +20,9 @@ module Todo
     # Lists one locations based on the id, if authorized
     def self.get(requestor, location_id)
       location = Location.first(id: location_id) || raise(LocationNotFoundError, "Location with ID #{location_id} not found")
-      verify_policy(requestor, :view, location.course_id)
+      verify_policy(requestor, :view, location.course_id) # Must verify course enrollment
       location.attributes
     end
-
 
     # Creates a new location, if authorized
     def self.create(requestor, location_data, course_id)

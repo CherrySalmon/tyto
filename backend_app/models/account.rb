@@ -20,7 +20,7 @@ module Todo
 
     # Add a new account with the specified data
     def self.add_account(user_data)
-      data = user_data.transform_keys(&:to_sym)
+      data = user_data.transform_keys(&:to_sym) # JSON.parse returns string keys
       account = Account.create(
         name: data[:name],
         email: data[:email],
