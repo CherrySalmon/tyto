@@ -138,9 +138,13 @@ Move policies to `application/policies/`:
 
 ## Phase 1: Foundation - Domain Layer Setup
 
+**Testing approach**: Write unit tests immediately after creating entities/values. Run existing integration tests after service changes.
+
 ### 1.1 Add DDD dependencies
 
 - [ ] Add `dry-struct` and `dry-types` to Gemfile
+- [ ] `bundle install`
+- [ ] Run existing tests (sanity check)
 - [ ] Create `backend_app/domain/` folder structure
 - [ ] Create loader/initializer for domain layer
 
@@ -152,6 +156,9 @@ Move policies to `application/policies/`:
   - Type-safe attributes: id, name, logo, start_at, end_at
   - Computed methods: `duration`, `active?`, `upcoming?`
 - [ ] Create `domain/shared/values/time_range.rb` (start_at/end_at pair)
+- [ ] Write unit tests for Course entity (`spec/domain/courses/entities/course_spec.rb`)
+- [ ] Write unit tests for TimeRange value (`spec/domain/shared/values/time_range_spec.rb`)
+- [ ] Run new unit tests
 
 ### 1.3 Create Course repository
 
@@ -161,11 +168,15 @@ Move policies to `application/policies/`:
   - `create(course_entity)` → persists and returns entity
   - `rebuild_entity(orm_record)` → private mapper method
 - [ ] ORM remains in `orm/course.rb` (already moved in Phase 0)
+- [ ] Write integration tests for repository (`spec/infrastructure/database/repositories/courses_spec.rb`)
+- [ ] Run repository tests
 
 ### 1.4 Update CourseService to use repository
 
 - [ ] Inject repository instead of direct ORM access
 - [ ] Return domain entities instead of raw attributes
+- [ ] Run ALL tests (existing + new) to verify integration
+- [ ] Commit Phase 1
 
 ---
 
