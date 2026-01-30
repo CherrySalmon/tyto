@@ -22,9 +22,15 @@ gem 'rack-ssl-enforcer'
 gem 'rbnacl'
 
 # VALIDATION AND DOMAIN TYPES
+gem 'dry-monads', '~>1.6'
+gem 'dry-operation', '~>1.0'
 gem 'dry-struct', '~>1.6'
 gem 'dry-validation', '~>1.10'
 gem 'json_schemer'
+
+# PRESENTATION
+gem 'multi_json'
+gem 'roar', '~>1.2'
 
 # INFRASTRUCTURE
 gem 'foreman', '~>0.0'

@@ -434,124 +434,324 @@ application/services/
     └── delete_account.rb
 ```
 
-### 6.0 Refactor EventService (First)
+### Vertical Slice Approach
 
-Start with EventService as the pattern. Break into focused use case classes:
+**Strategy change:** Instead of refactoring layer-by-layer (all services, then all representers), we implement each use case as a **complete vertical slice**:
 
-- [ ] Create `application/services/events/` folder
-- [ ] `ListEvents` - list events for a course
-  - Uses `Repository::Events.find_by_course`
-  - Returns `Success(events)` or `Failure(error)`
-- [ ] `CreateEvent` - create a new event
-  - Uses `Repository::Events.create`
-  - Validates with contract before creating entity
-- [ ] `UpdateEvent` - update existing event
-- [ ] `DeleteEvent` - delete an event
-- [ ] `FindActiveEvents` - find events active at given time
-- [ ] Update controllers to use new service classes
-- [ ] Delete old `EventService` once all methods migrated
-- [ ] Run integration tests to verify controllers work
+```
+Service + Representer + Controller update + Tests
+```
 
-### 6.1 Refactor LocationService
+This avoids writing code we won't need and ensures each endpoint works end-to-end before moving on.
 
-- [ ] Create `application/services/locations/` folder
-- [ ] `ListLocations`, `GetLocation`, `CreateLocation`, `UpdateLocation`, `DeleteLocation`
-- [ ] Update controllers
-- [ ] Delete old `LocationService`
+**Each use case includes:**
+1. Railway service class (dry-monads Success/Failure)
+2. Representer for JSON output (if new entity type)
+3. Controller updated to pattern-match on result
+4. Unit tests for service
+5. Integration tests pass
 
-### 6.2 Refactor AttendanceService
+### Foundation (Complete)
 
-- [ ] Create `application/services/attendances/` folder
-- [ ] `ListAttendances`, `ListAttendancesByEvent`, `ListUserAttendances`, `RecordAttendance`
-- [ ] Update controllers
-- [ ] Delete old `AttendanceService`
+- [x] Add `dry-monads` gem to Gemfile
+- [x] Add `dry-operation` gem to Gemfile (modern replacement for dry-transaction)
+- [x] Add `roar` + `multi_json` gems for representers
+- [x] Create `application/responses/api_result.rb` - standardized response object
+- [x] Create `application/services/application_operation.rb` - base class with response helpers
+- [x] Create `presentation/representers/` folder
 
-### 6.3 Refactor CourseService
+### Input Handling Philosophy
 
-- [ ] Create `application/services/courses/` folder
-- [ ] `ListAllCourses`, `ListUserCourses`, `GetCourse`, `CreateCourse`, `UpdateCourse`, `DeleteCourse`
-- [ ] Create `application/services/courses/enrollments/` subfolder
-- [ ] `ListEnrollments`, `AddEnrollment`, `UpdateEnrollment`, `RemoveEnrollment`
-- [ ] Update controllers
-- [ ] Delete old `CourseService`
+**Keep validation in services. Avoid premature abstraction.**
 
-### 6.4 Refactor AccountService
+We deliberately avoid:
+- **dry-validation contracts** - Add indirection without clear benefit for simple inputs
+- **Request objects** - Solve a problem we don't have (computed derived values)
 
-- [ ] Create `application/services/accounts/` folder
-- [ ] `ListAccounts`, `CreateAccount`, `UpdateAccount`, `DeleteAccount`
-- [ ] Update controllers
-- [ ] Delete old `AccountService`
+**Why validation belongs in services:**
 
-### 6.5 Railway-oriented error handling (dry-monads)
+1. **Cohesion** - Service IS the use case. Validation is part of that use case. One file to understand complete flow.
+2. **YAGNI** - No proven need for reusable validation. CreateEvent and UpdateEvent validation will differ.
+3. **Visibility** - Validation steps are explicit in the railway flow, not hidden in separate classes.
 
-Add after service restructuring is complete:
+**Controller responsibility is minimal:**
+- Parse JSON (or return 400 on parse error)
+- Call service with parsed data
+- Pattern match on result
 
-- [ ] Add `dry-monads` and `dry-transaction` to Gemfile
-- [ ] Each service class includes `Dry::Transaction`
-- [ ] Define steps for multi-step operations
-- [ ] Return `Success(result)` or `Failure(ApiResult.new(...))`
-- [ ] Update controllers to pattern-match on results
-- [ ] Remove rescue blocks from controllers
+**When to revisit:**
+- Multiple services share complex validation logic
+- You need computed derived values (cache keys, slugs)
+- Validation rules become genuinely complex (nested objects, conditional fields)
 
-### 6.6 Contracts and Response objects
+### ApplicationOperation Base Class
 
-- [ ] Create `application/contracts/` folder
-- [ ] Create contracts importing domain types:
-  - `CreateEventContract`, `UpdateEventContract`
-  - `CreateCourseContract`, `CreateAccountContract`
-  - `EnrollmentContract`
-- [ ] Services validate with contracts before creating entities
-- [ ] Create `application/responses/api_result.rb` for standardized responses
+All services inherit from `Service::ApplicationOperation` which provides response helpers:
 
----
+```ruby
+# application/services/application_operation.rb
+class ApplicationOperation < Dry::Operation
+  private
 
-## Phase 7: Presentation Layer
+  def ok(message) = Response::ApiResult.new(status: :ok, message:)
+  def created(message) = Response::ApiResult.new(status: :created, message:)
+  def bad_request(message) = Response::ApiResult.new(status: :bad_request, message:)
+  def not_found(message) = Response::ApiResult.new(status: :not_found, message:)
+  def forbidden(message) = Response::ApiResult.new(status: :forbidden, message:)
+  def internal_error(message) = Response::ApiResult.new(status: :internal_error, message:)
+end
+```
 
-### 7.1 Representers
+### Service Pattern
 
-- [ ] Add Roar gem (or similar representer pattern)
-- [ ] Create representers for JSON/API serialization of domain entities
-- [ ] Create persistence mappers (entity ↔ ORM hash) - currently inline in repositories
-- [ ] Remove `attributes` methods from ORM models
-- [ ] Domain entities remain pure - no `to_hash`, `to_json`, or persistence methods
+Services inherit from `ApplicationOperation` and use `step` for railway-oriented flow:
+
+```ruby
+class CreateEvent < ApplicationOperation
+  def initialize(events_repo: Repository::Events.new)
+    @events_repo = events_repo
+    super()  # Required after setting instance variables
+  end
+
+  def call(requestor:, course_id:, event_data:)
+    course_id = step validate_course_id(course_id)
+    step verify_course_exists(course_id)
+    step authorize(requestor, course_id)
+    validated = step validate_input(event_data, course_id)  # Validation HERE
+    event = step persist_event(validated)
+
+    created(event)  # Uses helper from base class
+  end
+
+  private
+
+  def validate_course_id(course_id)
+    id = course_id.to_i
+    return Failure(bad_request('Invalid course ID')) if id.zero?
+    Success(id)
+  end
+
+  def validate_input(event_data, course_id)
+    # Validation lives in service steps, NOT in separate contracts
+    name = event_data['name']
+    return Failure(bad_request('Name is required')) if name.nil? || name.strip.empty?
+    Success(name: name.strip, course_id:)
+  end
+end
+```
+
+Each step returns `Success(value)` or `Failure(ApiResult)`. The final return is auto-wrapped in `Success`.
+
+### Controller Pattern Matching
+
+Controllers use Ruby pattern matching on service results:
+
+```ruby
+require 'dry/monads'
+
+class Courses < Roda
+  include Dry::Monads[:result]  # Required for Success/Failure constants
+
+  route do |r|
+    # GET api/course/:course_id/event
+    r.get do
+      case Service::Events::ListEvents.new.call(requestor:, course_id:)
+      in Success(api_result)
+        response.status = api_result.http_status_code
+        { success: true, data: Representer::EventsList.from_entities(api_result.message).to_array }.to_json
+      in Failure(api_result)
+        response.status = api_result.http_status_code
+        api_result.to_json
+      end
+    end
+  end
+end
+```
+
+**Key points:**
+- Include `Dry::Monads[:result]` in controller class for `Success`/`Failure` constants
+- Use `case/in` pattern matching (Ruby 3.0+)
+- `in Success(api_result)` destructures the wrapped value
+- HTTP status flows from `ApiResult`
+
+### 6.0 Events
+
+| Use Case | Status | Notes |
+|----------|--------|-------|
+| `ListEvents` | ✅ Complete | Full DDD pattern established |
+| `CreateEvent` | ✅ Complete | Validation in service, representer integration |
+| `UpdateEvent` | ✅ Complete | Partial updates, cross-field time validation |
+| `DeleteEvent` | ✅ Complete | Course ownership validation |
+| `FindActiveEvents` | ✅ Complete | Used by `/api/current_event` |
+
+**Cleanup:** EventService can now be deleted - all methods migrated ✅
+
+### 6.1 Locations
+
+| Use Case | Status | Notes |
+|----------|--------|-------|
+| `ListLocations` | ✅ Complete | Created Location representer |
+| `GetLocation` | ✅ Complete | Auth via course enrollment |
+| `CreateLocation` | ✅ Complete | Coordinate validation |
+| `UpdateLocation` | ✅ Complete | Partial updates supported |
+| `DeleteLocation` | ✅ Complete | Prevents deletion with associated events |
+
+**Cleanup:** LocationService can now be deleted - all methods migrated ✅
+
+### 6.2 Attendances
+
+| Use Case | Status | Notes |
+|----------|--------|-------|
+| `ListAllAttendances` | ✅ Complete | Created Attendance representer, for teaching staff |
+| `ListAttendancesByEvent` | ✅ Complete | Filter by event within course |
+| `ListUserAttendances` | ✅ Complete | Student's own attendance records |
+| `RecordAttendance` | ✅ Complete | Auto-generated name, coordinate validation |
+
+**Cleanup:** AttendanceService can now be deleted - all methods migrated ✅
+
+### 6.3 Courses
+
+| Use Case | Status | Notes |
+|----------|--------|-------|
+| `ListAllCourses` | ✅ Complete | Created Course, CoursesList representers |
+| `ListUserCourses` | ✅ Complete | CourseWithEnrollment representer |
+| `GetCourse` | ✅ Complete | Returns course with enrollment identity |
+| `CreateCourse` | ✅ Complete | Creates owner enrollment automatically |
+| `UpdateCourse` | ✅ Complete | Partial updates supported |
+| `DeleteCourse` | ✅ Complete | Admin/owner authorization |
+
+**Enrollments (Course sub-resource):**
+
+| Use Case | Status | Notes |
+|----------|--------|-------|
+| `GetEnrollments` | ✅ Complete | Created Enrollment, EnrollmentsList representers |
+| `UpdateEnrollments` | ✅ Complete | Bulk enrollment add/update |
+| `UpdateEnrollment` | ✅ Complete | Single account enrollment update |
+| `RemoveEnrollment` | ✅ Complete | Remove account from course |
+
+**Cleanup:** CourseService can now be deleted - all methods migrated ✅
+
+### 6.4 Accounts
+
+| Use Case | Status | Notes |
+|----------|--------|-------|
+| `ListAllAccounts` | ✅ Complete | Created Account, AccountsList representers |
+| `CreateAccount` | ✅ Complete | Email validation, role assignment |
+| `UpdateAccount` | ✅ Complete | Self or admin can update |
+| `DeleteAccount` | ✅ Complete | Self or admin can delete |
+
+**Cleanup:** AccountService can now be deleted - all methods migrated ✅
+
+### Validation Approach
+
+**Validation lives in service steps, not separate contracts.** This keeps the use case cohesive and avoids premature abstraction.
+
+Each service validates its own input inline:
+
+```ruby
+def validate_input(event_data, course_id)
+  name = event_data['name']
+  return Failure(bad_request('Name is required')) if name.nil? || name.strip.empty?
+  # ... more validation ...
+  Success(validated_data)
+end
+```
+
+If validation becomes complex or needs sharing across services, extract to dry-validation contracts at that point (YAGNI).
 
 ---
 
 ## Migration Strategy
 
-Each phase should:
+**Vertical slice approach:** Implement each use case fully before moving to the next.
 
-1. Create new structure alongside existing code when possible
-2. Move/update code incrementally
-3. Verify tests pass after each step
-4. Only remove old code after new code is proven
+For each use case:
+
+1. Create railway service class with dry-monads Success/Failure
+2. Create/update representer if needed for the entity type
+3. Update controller to pattern-match on service result
+4. Write unit tests for service (success and failure paths)
+5. Run integration tests to verify controller behavior
+6. Only delete old service method once new service is proven
+
+**Benefits:**
+
+- Each endpoint works end-to-end before moving on
+- Avoids writing code that might not be needed
+- Easy to pause and resume - each slice is self-contained
+- Tests validate the complete flow immediately
 
 ---
 
 ## Current Status
 
-**Phase**: 6 - Application Layer Refactoring (In Progress)
-**Completed**: Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅
-**Next**: Phase 6.0 - Refactor EventService into focused use case classes
+**Phase**: 6 - Application Layer Refactoring ✅ **COMPLETE**
+**Completed**: Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅
+**Approach**: Vertical slices - each use case fully implemented before moving to next
+**Next**: All legacy services migrated! Consider deleting old service files.
 
-### Built but Not Yet Wired (Phase 6 will address)
+### Completed Use Cases
 
-The following domain objects and repository methods exist but services haven't been updated to use them:
+| Use Case | Service | Representer | Controller | Tests |
+|----------|---------|-------------|------------|-------|
+| ListEvents | ✅ | ✅ Event, EventsList | ✅ | ✅ |
+| CreateEvent | ✅ | ✅ Event | ✅ | ✅ |
+| UpdateEvent | ✅ | ✅ Event | ✅ | ✅ |
+| DeleteEvent | ✅ | N/A (string message) | ✅ | ✅ |
+| FindActiveEvents | ✅ | ✅ EventsList | ✅ | ✅ |
+| ListLocations | ✅ | ✅ Location, LocationsList | ✅ | ✅ |
+| GetLocation | ✅ | ✅ Location | ✅ | ✅ |
+| CreateLocation | ✅ | ✅ Location | ✅ | ✅ |
+| UpdateLocation | ✅ | ✅ Location | ✅ | ✅ |
+| DeleteLocation | ✅ | N/A (string message) | ✅ | ✅ |
+| ListAllAttendances | ✅ | ✅ Attendance, AttendancesList | ✅ | ✅ |
+| ListAttendancesByEvent | ✅ | ✅ AttendancesList | ✅ | ✅ |
+| ListUserAttendances | ✅ | ✅ AttendancesList | ✅ | ✅ |
+| RecordAttendance | ✅ | ✅ Attendance | ✅ | ✅ |
+| ListAllCourses | ✅ | ✅ Course, CoursesList | ✅ | ✅ |
+| ListUserCourses | ✅ | ✅ CourseWithEnrollment | ✅ | ✅ |
+| GetCourse | ✅ | ✅ CourseWithEnrollment | ✅ | ✅ |
+| CreateCourse | ✅ | ✅ CourseWithEnrollment | ✅ | ✅ |
+| UpdateCourse | ✅ | N/A (string message) | ✅ | ✅ |
+| DeleteCourse | ✅ | N/A (string message) | ✅ | ✅ |
+| GetEnrollments | ✅ | ✅ Enrollment, EnrollmentsList | ✅ | ✅ |
+| UpdateEnrollments | ✅ | N/A (string message) | ✅ | ✅ |
+| UpdateEnrollment | ✅ | N/A (string message) | ✅ | ✅ |
+| RemoveEnrollment | ✅ | N/A (string message) | ✅ | ✅ |
+| ListAllAccounts | ✅ | ✅ Account, AccountsList | ✅ | ✅ |
+| CreateAccount | ✅ | ✅ Account | ✅ | ✅ |
+| UpdateAccount | ✅ | N/A (string message) | ✅ | ✅ |
+| DeleteAccount | ✅ | N/A (string message) | ✅ | ✅ |
 
-| Component | Status | Blocked By |
-| --------- | ------ | ---------- |
-| `Repository::Events` | ✅ Wired | EventService uses it (will be restructured) |
-| `Repository::Locations` | ✅ Built | LocationService still uses ORM |
-| `Repository::Accounts` | ✅ Built | AccountService still uses ORM |
-| `Repository::Attendances` | ✅ Built | AttendanceService still uses ORM |
-| `Course#find_event`, `#find_location` | ✅ Built | Services need aggregate loading |
-| `Course#find_enrollment`, `#teaching_staff`, `#students` | ✅ Built | Services need aggregate loading |
-| `Courses#find_with_events`, `#find_with_enrollments`, etc. | ✅ Built | Services need refactoring |
-| `Account#admin?`, `#creator?`, etc. | ✅ Built | Services need refactoring |
-| `Attendance#within_range?`, etc. | ✅ Built | AttendanceService needs refactoring |
-| `Enrollment#owner?`, `#teaching?`, etc. | ✅ Built | CourseService needs refactoring |
+### Infrastructure Ready (Built in earlier phases)
 
-**Note**: God object services (e.g., `CourseService` with 10+ methods) will be broken into focused use case classes following `api-codepraise` patterns.
+Repositories and domain entities are ready - services will use them as each use case is implemented:
+
+| Repository | Domain Entities | Ready |
+|------------|-----------------|-------|
+| `Repository::Events` | Event | ✅ (used by ListEvents) |
+| `Repository::Locations` | Location, GeoLocation | ✅ Built |
+| `Repository::Courses` | Course, TimeRange, Enrollment | ✅ Built |
+| `Repository::Accounts` | Account | ✅ Built |
+| `Repository::Attendances` | Attendance | ✅ Built |
+
+### Legacy Services (To be replaced)
+
+These God object services will be incrementally replaced by focused use case classes:
+
+| Service | Methods | Migrated | Remaining |
+|---------|---------|----------|-----------|
+| `EventService` | 6 | 6 ✅ **COMPLETE** | 0 |
+| `LocationService` | 5 | 5 ✅ **COMPLETE** | 0 |
+| `AttendanceService` | 4 | 4 ✅ **COMPLETE** | 0 |
+| `CourseService` | 10 | 10 ✅ **COMPLETE** | 0 |
+| `AccountService` | 4 | 4 ✅ **COMPLETE** | 0 |
+
+**All legacy God Object services have been migrated to focused use case classes!**
+
+**Cleanup completed:**
+- Deleted all 5 legacy service files (EventService, LocationService, AttendanceService, CourseService, AccountService)
+- Added unit tests for new services in `backend_app/spec/application/services/`
 
 **Not part of this refactoring** (see `doc/future-work.md`):
 
@@ -563,7 +763,8 @@ The following domain objects and repository methods exist but services haven't b
 ## Reference
 
 - Pattern source: `~/ossdev/projects/codepraise/api-codepraise`
-- Key gems: dry-struct, dry-types (transitive via dry-validation), roar (for representers)
+- Key gems: dry-struct, dry-types, dry-operation (v1.0+), roar (for representers)
+- dry-operation docs: https://dry-rb.org/gems/dry-operation/1.0/
 - dry-rb community discussions:
   - [Best practices for dry-types, dry-struct, dry-validation](https://discourse.dry-rb.org/t/best-practices-for-using-dry-types-dry-schema-dry-validation-and-dry-struct-together-in-our-apps/1821)
   - [Validation approach for Domain Objects](https://discourse.dry-rb.org/t/validation-approach-for-domain-objects/73)

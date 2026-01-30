@@ -2,6 +2,36 @@
 
 Guidelines for refactoring code into Domain-Driven Design architecture in this Ruby codebase.
 
+## Migration Strategy: Vertical Slices
+
+**Implement each use case as a complete vertical slice**, not layer-by-layer.
+
+```text
+❌ Horizontal (avoid):          ✅ Vertical (preferred):
+   All services first             ListEvents (complete)
+   Then all representers          CreateEvent (complete)
+   Then all contracts             UpdateEvent (complete)
+   Then wire controllers          ...
+```
+
+**Each vertical slice includes:**
+
+1. Service class inheriting from `Service::ApplicationOperation`
+2. Representer for JSON output (create if new entity type)
+3. Controller updated with pattern matching on result
+4. Unit tests for service
+5. Integration tests pass
+
+**Workflow:**
+
+1. Pick next use case from legacy God object service
+2. Create focused service class inheriting from `ApplicationOperation`
+3. Create/update representer if needed
+4. Update controller route with pattern matching
+5. Write/update tests
+6. Verify all tests pass
+7. Repeat until legacy service is empty, then delete it
+
 ## Architecture Layers
 
 ```text
@@ -9,7 +39,7 @@ domain/                     # Pure domain (no framework dependencies)
 ├── types.rb               # Shared constrained types
 ├── <context>/
 │   ├── entities/          # Aggregate roots and entities (dry-struct)
-│   └── values/            # Value objects (dry-struct or plain Ruby)
+│   └── values/            # Value objects
 
 infrastructure/
 ├── database/
@@ -17,418 +47,288 @@ infrastructure/
 │   └── repositories/      # Maps ORM ↔ domain entities
 
 application/
-├── services/              # Use cases, orchestration
-├── contracts/             # Input validation (dry-validation)
+├── services/              # Use cases (dry-operation)
+│   └── application_operation.rb  # Base class with response helpers
+├── responses/             # Response DTOs (ApiResult)
 └── policies/              # Authorization rules
+
+presentation/
+└── representers/          # JSON serialization (roar)
 ```
 
-## Dependency Rules (Critical)
+## Input Handling Philosophy
 
-**Dependencies flow inward only.** The domain layer is at the center and knows nothing about outer layers.
+**Keep validation in services. Avoid premature abstraction.**
 
-```text
-┌─────────────────────────────────────────────┐
-│  Presentation (controllers)                 │
-│  ┌───────────────────────────────────────┐  │
-│  │  Application (services, contracts)    │  │
-│  │  ┌─────────────────────────────────┐  │  │
-│  │  │  Infrastructure (repositories)  │  │  │
-│  │  │  ┌───────────────────────────┐  │  │  │
-│  │  │  │      Domain (entities)    │  │  │  │
-│  │  │  │                           │  │  │  │
-│  │  │  └───────────────────────────┘  │  │  │
-│  │  └─────────────────────────────────┘  │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
-         arrows point INWARD only →
+We deliberately avoid:
+- **dry-validation contracts** - Add indirection without clear benefit for simple inputs
+- **Request objects** - Solve a problem we don't have (computed derived values)
+
+**Why validation belongs in services:**
+
+1. **Cohesion** - Service IS the use case. Validation is part of that use case. One file to understand complete flow.
+2. **YAGNI** - No proven need for reusable validation. CreateEvent and UpdateEvent validation will differ.
+3. **Visibility** - Validation steps are explicit in the railway flow, not hidden in separate classes.
+
+**Controller responsibility is minimal:**
+- Parse JSON (or return 400 on parse error)
+- Call service with parsed data
+- Pattern match on result
+
+```ruby
+r.post do
+  request_body = JSON.parse(r.body.read)
+
+  case Service::Events::CreateEvent.new.call(requestor:, course_id:, event_data: request_body)
+  in Success(api_result) then ...
+  in Failure(api_result) then ...
+  end
+rescue JSON::ParserError => e
+  response.status = 400
+  { error: 'Invalid JSON', details: e.message }.to_json
+end
 ```
+
+**When to revisit this decision:**
+- Multiple services share complex validation logic
+- You need computed derived values (cache keys, slugs)
+- Validation rules become genuinely complex (nested objects, conditional fields)
+
+## Dependency Rules
+
+**Dependencies flow inward only.** Domain is at center, knows nothing about outer layers.
 
 **Allowed:**
-
-- `infrastructure/repositories/` → imports `domain/entities/`
-- `application/services/` → imports `domain/entities/`, `infrastructure/repositories/`
-- `application/contracts/` → imports `domain/types.rb`
-- `controllers/` → imports `application/services/`
+- `repositories/` → imports `domain/entities/`
+- `services/` → imports `domain/`, `repositories/`, `policies/`
+- `controllers/` → imports `services/`
 
 **Forbidden:**
+- `domain/` → NEVER imports from infrastructure, application, or controllers
 
-- `domain/` → NEVER imports from `infrastructure/`, `application/`, or `controllers/`
-- Domain entities must have NO knowledge of ORM, database, or framework
+## ApplicationOperation Base Class
 
-**Why this matters:**
+All services inherit from `Service::ApplicationOperation` which provides response helpers:
 
-- Domain stays testable without database/framework
-- Domain can be reused in different contexts
-- Changes to infrastructure don't ripple into domain
+```ruby
+# application/services/application_operation.rb
+module Todo
+  module Service
+    class ApplicationOperation < Dry::Operation
+      private
 
-## Domain Types (domain/types.rb)
+      def ok(message) = Response::ApiResult.new(status: :ok, message:)
+      def created(message) = Response::ApiResult.new(status: :created, message:)
+      def bad_request(message) = Response::ApiResult.new(status: :bad_request, message:)
+      def not_found(message) = Response::ApiResult.new(status: :not_found, message:)
+      def forbidden(message) = Response::ApiResult.new(status: :forbidden, message:)
+      def internal_error(message) = Response::ApiResult.new(status: :internal_error, message:)
+    end
+  end
+end
+```
 
-Define constrained types in the **domain layer**. Application contracts import these (dependency flows inward).
+## Service Pattern
+
+Services inherit from `ApplicationOperation` and use `step` for railway-oriented flow:
 
 ```ruby
 module Todo
-  module Types
-    include Dry.Types()
+  module Service
+    module Events
+      class CreateEvent < ApplicationOperation
+        def initialize(events_repo: Repository::Events.new)
+          @events_repo = events_repo
+          super()  # Required after setting instance variables
+        end
 
-    # Constrained types - shared by entities AND contracts
-    CourseName = Types::String.constrained(min_size: 1, max_size: 200)
-    Email = Types::String.constrained(
-      format: /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
-    )
-    CourseRole = Types::String.enum('owner', 'instructor', 'staff', 'student')
-  end
-end
-```
+        def call(requestor:, course_id:, event_data:)
+          course_id = step validate_course_id(course_id)
+          step verify_course_exists(course_id)
+          step authorize(requestor, course_id)
+          validated = step validate_input(event_data, course_id)
+          event = step persist_event(validated)
 
-## Domain Entities (dry-struct)
+          created(event)  # Uses helper from base class
+        end
 
-Use `Dry::Struct` for immutable, type-safe entities:
+        private
 
-```ruby
-class Course < Dry::Struct
-  attribute :id, Types::Integer.optional
-  attribute :name, Types::CourseName          # Uses shared constrained type
-  attribute :start_at, Types::Time.optional
-  attribute :end_at, Types::Time.optional
+        def validate_course_id(course_id)
+          id = course_id.to_i
+          return Failure(bad_request('Invalid course ID')) if id.zero?
+          Success(id)
+        end
 
-  # Delegate to value objects
-  def duration = time_range.duration
-  def active?(at: Time.now) = time_range.active?(at:)
-end
-```
+        def validate_input(event_data, course_id)
+          # Validation lives HERE in the service, not in separate contracts
+          name = event_data['name']
+          return Failure(bad_request('Name is required')) if name.nil? || name.strip.empty?
 
-**Key behaviors:**
+          location_id = event_data['location_id']
+          return Failure(bad_request('Location ID is required')) if location_id.nil?
 
-- Type constraints enforced on construction AND `new()` updates
-- Raises `Dry::Struct::Error` on constraint violations
-- Use Ruby 3.1+ hash shorthand: `{ name:, logo: }` not `{ name: name }`
+          Success(name: name.strip, location_id: location_id.to_i, course_id:)
+        end
 
-**Entity purity (critical):**
-
-Domain entities must have NO knowledge of persistence or serialization. Never add these methods to entities:
-
-- `to_hash`, `to_h` (use representers for API output)
-- `to_json`, `as_json` (use representers)
-- `to_persistence_hash` (mapping logic belongs in repositories)
-- `attributes` (ORM concern)
-
-Serialization/mapping responsibilities:
-
-| Concern | Where it belongs |
-|---------|-----------------|
-| ORM ↔ Entity mapping | Repository (`rebuild_entity`, inline mapping) |
-| Entity → JSON for API | Representer (`presentation/representers/`) |
-| Params → Entity | Contract + Service layer |
-
-## Null Object Pattern (Avoid nil)
-
-Never return `nil` for missing/empty states. Use Null Objects instead:
-
-```ruby
-# BAD - requires guard clauses everywhere
-def time_range
-  return nil unless start_at && end_at
-  Value::TimeRange.new(start_at:, end_at:)
-end
-
-def active?(at: Time.now)
-  return false unless time_range  # Guard needed
-  time_range.active?(at:)
-end
-
-# GOOD - Null Object handles it
-def time_range
-  return Value::NullTimeRange.new unless start_at && end_at
-  Value::TimeRange.new(start_at:, end_at:)
-end
-
-def active?(at: Time.now) = time_range.active?(at:)  # No guard needed
-```
-
-**Null Object template:**
-
-```ruby
-class NullTimeRange
-  def duration = 0
-  def active?(**) = false
-  def upcoming?(**) = false
-  def null? = true
-  def present? = false
-end
-```
-
-## Value Objects
-
-Immutable objects representing domain concepts:
-
-```ruby
-class TimeRange < Dry::Struct
-  attribute :start_at, Types::Time
-  attribute :end_at, Types::Time
-
-  # Invariant checked on construction only (dry-struct limitation)
-  def self.new(attributes)
-    if attributes[:end_at] <= attributes[:start_at]
-      raise ArgumentError, 'end_at must be after start_at'
+        def authorize(requestor, course_id)
+          # ... policy check ...
+          policy.can_create? ? Success(true) : Failure(forbidden('Access denied'))
+        end
+      end
     end
-    super
   end
-
-  def duration = end_at - start_at
-  def active?(at: Time.now) = at >= start_at && at <= end_at
-
-  # Interface parity with Null Object
-  def null? = false
-  def present? = true
 end
 ```
 
-**Note:** Custom `self.new` overrides only run on initial construction, NOT on `instance.new()` updates. Cross-field validation should happen at contract level.
+**Key patterns:**
 
-## Repositories
+- Inherit from `ApplicationOperation` (not directly from `Dry::Operation`)
+- Call `super()` in initialize after setting instance variables
+- Use `step` to chain operations (auto short-circuits on Failure)
+- Each step returns `Success(value)` or `Failure(ApiResult)`
+- Use response helpers: `ok()`, `created()`, `bad_request()`, `not_found()`, `forbidden()`, `internal_error()`
+- Validation is inline in service steps, not in separate contract classes
 
-Map between ORM and domain entities. **All mapping logic lives here**, not in entities:
+## Controller Pattern Matching
+
+Controllers use Ruby pattern matching on service results:
 
 ```ruby
-class Courses
-  def find_id(id)
-    orm_record = Todo::Course[id]
-    return nil unless orm_record
-    rebuild_entity(orm_record)
-  end
+require 'dry/monads'
 
-  def create(entity)
-    # Mapping from entity → ORM happens HERE (not in entity)
-    orm_record = Todo::Course.create(
-      name: entity.name,
-      logo: entity.logo,
-      start_at: entity.start_at,
-      end_at: entity.end_at
-    )
-    rebuild_entity(orm_record)
-  end
+class Courses < Roda
+  include Dry::Monads[:result]  # Required for Success/Failure constants
 
-  private
+  route do |r|
+    r.on 'event' do
+      # GET api/course/:course_id/event
+      r.get do
+        case Service::Events::ListEvents.new.call(requestor:, course_id:)
+        in Success(api_result)
+          response.status = api_result.http_status_code
+          { success: true, data: Representer::EventsList.from_entities(api_result.message).to_array }.to_json
+        in Failure(api_result)
+          response.status = api_result.http_status_code
+          api_result.to_json
+        end
+      end
 
-  # Mapping from ORM → entity
-  def rebuild_entity(orm_record)
-    Entity::Course.new(
-      id: orm_record.id,
-      name: orm_record.name,
-      logo: orm_record.logo,
-      start_at: orm_record.start_at,
-      end_at: orm_record.end_at
-    )
-  end
-end
-```
+      # POST api/course/:course_id/event
+      r.post do
+        request_body = JSON.parse(r.body.read)
 
-## Application Contracts (dry-validation)
-
-Import domain types for validation. Contracts handle:
-
-- Input coercion (strings → proper types)
-- Business rules (cross-field validation)
-- Error messages
-
-```ruby
-class CreateCourseContract < Dry::Validation::Contract
-  params do
-    required(:name).filled(Todo::Types::CourseName)  # Reuse domain type
-    required(:start_at).filled(:time)
-    required(:end_at).filled(:time)
-  end
-
-  # Cross-field rules stay in contracts
-  rule(:start_at, :end_at) do
-    key(:end_at).failure('must be after start_at') if values[:end_at] <= values[:start_at]
+        case Service::Events::CreateEvent.new.call(requestor:, course_id:, event_data: request_body)
+        in Success(api_result)
+          response.status = api_result.http_status_code
+          { success: true, message: 'Event created', event_info: Representer::Event.new(api_result.message).to_hash }.to_json
+        in Failure(api_result)
+          response.status = api_result.http_status_code
+          api_result.to_json
+        end
+      rescue JSON::ParserError => e
+        response.status = 400
+        { error: 'Invalid JSON', details: e.message }.to_json
+      end
+    end
   end
 end
 ```
 
-## Service Layer Pattern
+**Key points:**
 
-Services use repositories and return domain entities:
-
-```ruby
-class CourseService
-  def self.repository
-    @repository ||= Repository::Courses.new
-  end
-
-  def self.list_all(requestor)
-    verify_policy(requestor, :view_all)
-    repository.find_all
-  end
-
-  def self.create(requestor, params)
-    verify_policy(requestor, :create)
-
-    result = CreateCourseContract.new.call(params)
-    return Failure(result.errors) if result.failure?
-
-    entity = Entity::Course.new(result.to_h.merge(id: nil))
-    repository.create(entity)
-  end
-end
-```
-
-## Migration Strategy
-
-1. **Move first, transform later** - Reorganize files before adding abstractions
-2. **Incremental migration** - Keep ORM for complex queries during transition
-3. **Test after each step** - All tests must pass before proceeding
-4. **Bridge methods** - `entity_to_hash` for API compatibility during migration
-
-## Checklist for New Entities
-
-- [ ] Define constrained types in `domain/types.rb`
-- [ ] Create entity class extending `Dry::Struct`
-- [ ] Create Null Object if entity has optional associations
-- [ ] Create representer in `presentation/representers/` for API output
-- [ ] Create repository with `find_id`, `find_all`, `create`, `update`, `delete`
-- [ ] Write unit tests for entity (including constraint enforcement on `new()`)
-- [ ] Write unit tests for Null Object
-- [ ] Write integration tests for repository
-- [ ] Update service to use repository
-- [ ] Run full test suite
-
-**Important:** Create representers immediately when creating entities. This prevents the temptation to add `to_hash`/`to_json` methods to entities.
+- Include `Dry::Monads[:result]` in controller class for `Success`/`Failure` constants
+- Use `case/in` pattern matching (Ruby 3.0+)
+- `in Success(api_result)` destructures the wrapped value
+- HTTP status flows from `ApiResult`
+- JSON parsing errors handled with rescue, not in service
 
 ## Representers (Presentation Layer)
 
-Representers handle entity → JSON serialization. Create these in `presentation/representers/` alongside entities to avoid polluting domain objects:
+Use Roar decorators for JSON serialization:
 
 ```ruby
-# presentation/representers/course_representer.rb
-require 'roar/decorator'
-require 'roar/json'
+module Todo
+  module Representer
+    class Event < Roar::Decorator
+      include Roar::JSON
 
-module Representer
-  class Course < Roar::Decorator
-    include Roar::JSON
+      property :id
+      property :name
+      property :start_at, exec_context: :decorator
+      property :longitude
+      property :latitude
 
-    property :id
-    property :name
-    property :logo
-    property :start_at
-    property :end_at
-
-    # Computed properties
-    property :active, exec_context: :decorator
-
-    def active
-      represented.active?
+      def start_at
+        represented.start_at&.utc&.iso8601
+      end
     end
   end
 end
 ```
 
-**Usage in controllers:**
+## Data Enrichment Pattern
+
+When combining data from multiple sources, use OpenStruct:
 
 ```ruby
-# Return single entity
-course = CourseService.find(id)
-Representer::Course.new(course).to_json
-
-# Return collection
-courses = CourseService.list_all(requestor)
-courses.map { |c| Representer::Course.new(c).to_hash }
-```
-
-**Alternative:** Simple hash-based representers without Roar gem:
-
-```ruby
-module Representer
-  class Course
-    def initialize(entity)
-      @entity = entity
-    end
-
-    def to_hash
-      {
-        id: @entity.id,
-        name: @entity.name,
-        logo: @entity.logo,
-        start_at: @entity.start_at&.iso8601,
-        end_at: @entity.end_at&.iso8601,
-        active: @entity.active?
-      }
-    end
-
-    def to_json(*) = to_hash.to_json
-  end
+def enrich_with_location(event)
+  location = @locations_repo.find_id(event.location_id)
+  OpenStruct.new(
+    id: event.id,
+    name: event.name,
+    start_at: event.start_at,
+    longitude: location&.longitude,
+    latitude: location&.latitude
+  )
 end
 ```
 
-## Common Patterns
+## Complete Flow
 
-### Predicate methods with delegation
-
-```ruby
-def active?(at: Time.now) = time_range.active?(at:)
+```text
+Request → Controller parses JSON
+              ↓
+          Service.call()
+              ↓
+          step validate_input (validation HERE, not in contracts)
+              ↓
+          step authorize
+              ↓
+          step persist/fetch
+              ↓
+          ok(data) or created(data)
+              ↓
+          Success(ApiResult) or Failure(ApiResult)
+              ↓
+          Controller pattern matches: case/in
+              ↓
+          Representer.to_json for success data
+              ↓
+Response ← JSON with HTTP status from ApiResult
 ```
 
-### Optional attributes
+## Gems Required
 
 ```ruby
-attribute :logo, Types::String.optional
+gem 'dry-monads', '~>1.6'
+gem 'dry-operation', '~>1.0'
+gem 'dry-struct', '~>1.6'
+gem 'roar', '~>1.2'
+gem 'multi_json'
 ```
 
-### New record check
+## Checklist for New Vertical Slices
 
-```ruby
-def new_record? = id.nil?
-```
-
-## Future: Railway-Oriented Programming (dry-monads)
-
-When refactoring services, consider replacing exception-based error handling with railway-oriented programming:
-
-```ruby
-# CURRENT: Exception-based (verbose rescue blocks)
-class CourseService
-  class ForbiddenError < StandardError; end
-
-  def self.find(id)
-    course = Course[id] || raise(NotFoundError)
-    course
-  end
-end
-
-# FUTURE: Railway-oriented (Success/Failure returns)
-class CourseService
-  include Dry::Monads::Result::Mixin
-
-  def self.find(id)
-    course = repository.find_id(id)
-    return Failure(:not_found) unless course
-    Success(course)
-  end
-end
-```
-
-**Benefits:**
-
-- Explicit error handling as return values
-- Controllers pattern-match instead of rescue blocks
-- Easier to compose multi-step operations
-- Type-safe error propagation
-
-**Infrastructure layer:** Repositories and external adapters can also use monads to protect against outside errors (database failures, API timeouts, network errors). This keeps external failure handling explicit at the boundary:
-
-```ruby
-class Courses
-  include Dry::Monads::Result::Mixin
-
-  def find_id(id)
-    orm_record = Todo::Course[id]
-    return Failure(:not_found) unless orm_record
-    Success(rebuild_entity(orm_record))
-  rescue Sequel::DatabaseError => e
-    Failure(:database_error, e.message)
-  end
-end
-```
-
-**When to adopt:** Phase 6 (Application Layer Refactoring), after domain extraction is complete.
+- [ ] Create service in `application/services/<context>/<use_case>.rb`
+- [ ] Inherit from `Service::ApplicationOperation`
+- [ ] Call `super()` in initialize after setting instance variables
+- [ ] Inject repository dependencies via constructor
+- [ ] Validation in service steps (NOT in separate contracts)
+- [ ] Each step returns `Success(value)` or `Failure(response_helper(msg))`
+- [ ] Use response helpers: `ok`, `created`, `bad_request`, `not_found`, `forbidden`
+- [ ] Create/update representer for entity serialization
+- [ ] Controller includes `Dry::Monads[:result]`
+- [ ] Controller uses `case/in` pattern matching
+- [ ] Write unit tests for service (success and failure paths)
+- [ ] Run integration tests to verify controller behavior

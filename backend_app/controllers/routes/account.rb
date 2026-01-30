@@ -1,78 +1,90 @@
-# routes/account.rb
+# frozen_string_literal: true
 
 require 'json'
+require 'dry/monads'
 
 module Todo
   module Routes
-    class Accounts < Roda # rubocop:disable Style/Documentation
+    # Account routes for user management
+    class Accounts < Roda
+      include Dry::Monads[:result]
+
       plugin :all_verbs
       plugin :request_headers
-      route do |r| # rubocop:disable Metrics/BlockLength
-        r.on do # rubocop:disable Metrics/BlockLength
+
+      route do |r|
+        r.on do
           auth_header = r.headers['Authorization']
           requestor = JWTCredential.decode_jwt(auth_header)
 
+          r.on String do |account_id|
+            # PUT api/account/:id
+            r.put do
+              request_body = JSON.parse(r.body.read)
+
+              case Service::Accounts::UpdateAccount.new.call(
+                requestor:, account_id:, account_data: request_body
+              )
+              in Success(api_result)
+                response.status = api_result.http_status_code
+                { success: true, message: api_result.message }.to_json
+              in Failure(api_result)
+                response.status = api_result.http_status_code
+                api_result.to_json
+              end
+            rescue JSON::ParserError => e
+              response.status = 400
+              { error: 'Invalid JSON', details: e.message }.to_json
+            end
+
+            # DELETE api/account/:id
+            r.delete do
+              case Service::Accounts::DeleteAccount.new.call(requestor:, account_id:)
+              in Success(api_result)
+                response.status = api_result.http_status_code
+                { success: true, message: api_result.message }.to_json
+              in Failure(api_result)
+                response.status = api_result.http_status_code
+                api_result.to_json
+              end
+            end
+          end
+
           # GET api/account
           r.get do
-            accounts = AccountService.list_all(requestor)
-            response.status = 200
-            { success: true, data: accounts }.to_json
-          rescue AccountService::ForbiddenError => e
-            response.status = 403
-            { error: 'Forbidden', details: e.message }.to_json
+            case Service::Accounts::ListAllAccounts.new.call(requestor:)
+            in Success(api_result)
+              response.status = api_result.http_status_code
+              { success: true, data: Representer::AccountsList.from_entities(api_result.message).to_array }.to_json
+            in Failure(api_result)
+              response.status = api_result.http_status_code
+              api_result.to_json
+            end
           end
 
           # POST api/account
           r.post do
             request_body = JSON.parse(r.body.read)
-            account = AccountService.create(requestor, request_body)
-            response.status = 201
-            { success: true, message: 'Account created', user_info: account.attributes }.to_json
-          rescue JSON::ParserError => e
-            response.status = 400
-            { error: 'Fail to create account', details: e.message }.to_json
-          rescue AccountService::ForbiddenError => e
-            response.status = 403
-            { error: 'Forbidden', details: e.message }.to_json
-          end
 
-          # PUT api/account/:id
-          r.put String do |target_id|
-            request_body = JSON.parse(r.body.read)
-            AccountService.update(requestor, target_id, request_body)
-            response.status = 200
-            { success: true, message: 'Account updated'}.to_json
-          rescue AccountService::AccountNotFoundError => e
-            response.status = 404
-            { error: 'Forbidden', details: e.message }.to_json
-          rescue AccountService::ForbiddenError => e
-            response.status = 403
-            { error: 'Forbidden', details: e.message }.to_json
-          end
-
-          # DELETE api/account/:id
-          r.delete String do |target_id|
-            AccountService.remove(requestor, target_id)
-            response.status = 200
-            { success: true, message: 'User deleted' }.to_json
-          rescue AccountService::ForbiddenError => e
-            response.status = 403 # Forbidden status code
-            { error: 'Forbidden', details: e.message }.to_json
+            case Service::Accounts::CreateAccount.new.call(requestor:, account_data: request_body)
+            in Success(api_result)
+              response.status = api_result.http_status_code
+              { success: true, message: 'Account created',
+                user_info: Representer::Account.new(api_result.message).to_hash }.to_json
+            in Failure(api_result)
+              response.status = api_result.http_status_code
+              api_result.to_json
+            end
           rescue JSON::ParserError => e
             response.status = 400
             { error: 'Invalid JSON', details: e.message }.to_json
-          rescue Sequel::NoMatchingRow => e # Catch if Account.first(id: target_id) returns nil
-            response.status = 404
-            { error: 'User not found', details: e.message }.to_json
           end
         rescue JWTCredential::ArgumentError => e
-          # Handle missing token or decoding issues
-          response.status = 400 # Bad Request for missing token or invalid format
+          response.status = 400
           response.write({ error: 'Token error', details: e.message }.to_json)
-          r.halt # Stop further processing of the request
-        rescue => e
-          # Handle any other unexpected errors
-          response.status = 500 # Internal Server Error for unforeseen issues
+          r.halt
+        rescue StandardError => e
+          response.status = 500
           response.write({ error: 'Internal server error', details: e.message }.to_json)
           r.halt
         end

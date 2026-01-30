@@ -527,8 +527,8 @@ describe 'Course Routes' do
 
         delete "/api/course/#{course.id}/location/#{location.id}", nil, auth
 
-        # Should fail because location has events
-        _(last_response.status).must_equal 404
+        # Should fail because location has events (400 - business rule violation)
+        _(last_response.status).must_equal 400
       end
     end
   end
