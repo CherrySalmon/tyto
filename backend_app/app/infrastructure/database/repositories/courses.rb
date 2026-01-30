@@ -110,6 +110,31 @@ module Tyto
         rebuild_entity(orm_record)
       end
 
+      # Create a new course and assign owner role to the creator
+      # @param entity [Entity::Course] the domain entity to persist
+      # @param owner_account_id [Integer] the account ID of the course creator
+      # @return [Entity::Course] the persisted entity with ID
+      # @raise [RuntimeError] if owner role is not found
+      def create_with_owner(entity, owner_account_id:)
+        orm_record = Tyto::Course.create(
+          name: entity.name,
+          logo: entity.logo,
+          start_at: entity.start_at,
+          end_at: entity.end_at
+        )
+
+        owner_role = Tyto::Role.first(name: 'owner')
+        raise 'Owner role not found in database' unless owner_role
+
+        Tyto::AccountCourse.create(
+          account_id: owner_account_id,
+          course_id: orm_record.id,
+          role_id: owner_role.id
+        )
+
+        rebuild_entity(orm_record)
+      end
+
       # Update an existing course from a domain entity
       # @param entity [Entity::Course] the domain entity with updates
       # @return [Entity::Course] the updated entity
@@ -136,6 +161,60 @@ module Tyto
 
         orm_record.destroy
         true
+      end
+
+      # Set enrollment roles for an account in a course
+      # Syncs roles: removes roles not in the list, adds roles in the list
+      # @param course_id [Integer] the course ID
+      # @param account_id [Integer] the account ID
+      # @param roles [Array<String>] the role names to set
+      # @return [Entity::Enrollment, nil] the updated enrollment or nil if invalid
+      def set_enrollment_roles(course_id:, account_id:, roles:)
+        return nil if roles.nil? || roles.empty?
+
+        # Get existing AccountCourse records for this account/course
+        existing_records = Tyto::AccountCourse.where(account_id:, course_id:).all
+        existing_role_names = existing_records.map { |r| r.role.name }
+
+        # Remove roles not in the new list
+        roles_to_remove = existing_role_names - roles
+        roles_to_remove.each do |role_name|
+          role = Tyto::Role.first(name: role_name)
+          next unless role
+
+          Tyto::AccountCourse.where(account_id:, course_id:, role_id: role.id).delete
+        end
+
+        # Add new roles
+        roles_to_add = roles - existing_role_names
+        roles_to_add.each do |role_name|
+          role = Tyto::Role.first(name: role_name)
+          next unless role
+
+          Tyto::AccountCourse.find_or_create(account_id:, course_id:, role_id: role.id)
+        end
+
+        # Return the updated enrollment
+        find_enrollment(account_id:, course_id:)
+      end
+
+      # Add an enrollment for an account in a course with specified roles
+      # Creates AccountCourse records for each role
+      # @param course_id [Integer] the course ID
+      # @param account_id [Integer] the account ID
+      # @param roles [Array<String>] the role names to assign
+      # @return [Entity::Enrollment, nil] the created enrollment or nil if invalid
+      def add_enrollment(course_id:, account_id:, roles:)
+        return nil if roles.nil? || roles.empty?
+
+        roles.each do |role_name|
+          role = Tyto::Role.first(name: role_name)
+          next unless role
+
+          Tyto::AccountCourse.find_or_create(account_id:, course_id:, role_id: role.id)
+        end
+
+        find_enrollment(account_id:, course_id:)
       end
 
       private

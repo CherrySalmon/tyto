@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../../../infrastructure/database/repositories/courses'
+require_relative '../../../domain/courses/entities/course'
 require_relative '../application_operation'
 
 module Tyto
@@ -45,8 +46,19 @@ module Tyto
         end
 
         def persist_course(validated, requestor)
-          # Create the course using ORM (which handles owner role assignment)
-          course = Course.create_course(requestor.account_id, validated)
+          # Build domain entity from validated input
+          course_entity = Entity::Course.new(
+            id: nil,
+            name: validated[:name],
+            logo: validated[:logo],
+            start_at: validated[:start_at],
+            end_at: validated[:end_at],
+            created_at: nil,
+            updated_at: nil
+          )
+
+          # Create course and assign owner role via repository
+          course = @courses_repo.create_with_owner(course_entity, owner_account_id: requestor.account_id)
 
           # Build response with enrollment info
           result = OpenStruct.new(

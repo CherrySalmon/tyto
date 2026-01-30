@@ -126,6 +126,22 @@ module Tyto
         true
       end
 
+      # Find an account by email, or create with 'member' role if not found
+      # Domain rule: new accounts always get 'member' role
+      # @param email [String] the email address
+      # @return [Entity::Account] the found or created account entity
+      def find_or_create_by_email(email)
+        orm_record = Tyto::Account.first(email: email)
+
+        unless orm_record
+          orm_record = Tyto::Account.create(email: email)
+          member_role = Tyto::Role.first(name: 'member')
+          orm_record.add_role(member_role) if member_role
+        end
+
+        rebuild_entity(orm_record)
+      end
+
       private
 
       # Rebuild a domain entity from an ORM record

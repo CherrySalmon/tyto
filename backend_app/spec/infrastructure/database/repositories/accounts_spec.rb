@@ -293,6 +293,41 @@ describe 'Tyto::Repository::Accounts' do
     end
   end
 
+  describe '#find_or_create_by_email' do
+    let(:member_role) { Tyto::Role.first(name: 'member') }
+
+    it 'returns existing account when email exists' do
+      existing = Tyto::Account.create(email: 'existing@example.com', name: 'Existing User')
+
+      result = repository.find_or_create_by_email('existing@example.com')
+
+      _(result).must_be_instance_of Tyto::Entity::Account
+      _(result.id).must_equal existing.id
+      _(result.email).must_equal 'existing@example.com'
+      _(result.name).must_equal 'Existing User'
+    end
+
+    it 'creates new account with member role when email does not exist' do
+      result = repository.find_or_create_by_email('newuser@example.com')
+
+      _(result).must_be_instance_of Tyto::Entity::Account
+      _(result.id).wont_be_nil
+      _(result.email).must_equal 'newuser@example.com'
+
+      # Verify member role was assigned
+      orm_account = Tyto::Account[result.id]
+      _(orm_account.roles.map(&:name)).must_include 'member'
+    end
+
+    it 'does not duplicate account on multiple calls' do
+      result1 = repository.find_or_create_by_email('unique@example.com')
+      result2 = repository.find_or_create_by_email('unique@example.com')
+
+      _(result1.id).must_equal result2.id
+      _(Tyto::Account.where(email: 'unique@example.com').count).must_equal 1
+    end
+  end
+
   describe 'round-trip' do
     it 'maintains data integrity through create -> find -> update -> find cycle' do
       # Create
