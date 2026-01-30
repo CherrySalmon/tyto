@@ -22,6 +22,45 @@ application/
 └── policies/              # Authorization rules
 ```
 
+## Dependency Rules (Critical)
+
+**Dependencies flow inward only.** The domain layer is at the center and knows nothing about outer layers.
+
+```text
+┌─────────────────────────────────────────────┐
+│  Presentation (controllers)                 │
+│  ┌───────────────────────────────────────┐  │
+│  │  Application (services, contracts)    │  │
+│  │  ┌─────────────────────────────────┐  │  │
+│  │  │  Infrastructure (repositories)  │  │  │
+│  │  │  ┌───────────────────────────┐  │  │  │
+│  │  │  │      Domain (entities)    │  │  │  │
+│  │  │  │                           │  │  │  │
+│  │  │  └───────────────────────────┘  │  │  │
+│  │  └─────────────────────────────────┘  │  │
+│  └───────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
+         arrows point INWARD only →
+```
+
+**Allowed:**
+
+- `infrastructure/repositories/` → imports `domain/entities/`
+- `application/services/` → imports `domain/entities/`, `infrastructure/repositories/`
+- `application/contracts/` → imports `domain/types.rb`
+- `controllers/` → imports `application/services/`
+
+**Forbidden:**
+
+- `domain/` → NEVER imports from `infrastructure/`, `application/`, or `controllers/`
+- Domain entities must have NO knowledge of ORM, database, or framework
+
+**Why this matters:**
+
+- Domain stays testable without database/framework
+- Domain can be reused in different contexts
+- Changes to infrastructure don't ripple into domain
+
 ## Domain Types (domain/types.rb)
 
 Define constrained types in the **domain layer**. Application contracts import these (dependency flows inward).
