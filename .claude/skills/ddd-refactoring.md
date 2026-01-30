@@ -45,6 +45,9 @@ infrastructure/
 ├── database/
 │   ├── orm/               # Sequel models (thin, no business logic)
 │   └── repositories/      # Maps ORM ↔ domain entities
+├── auth/
+│   ├── auth_token/        # JWT handling
+│   └── sso_auth/          # Google OAuth
 
 application/
 ├── services/              # Use cases (dry-operation)
@@ -93,6 +96,69 @@ end
 - Multiple services share complex validation logic
 - You need computed derived values (cache keys, slugs)
 - Validation rules become genuinely complex (nested objects, conditional fields)
+
+## Gateway/Mapper Pattern for External APIs
+
+External API integrations use a **Gateway + Mapper** pattern:
+
+- **Gateway**: Handles raw I/O (HTTP requests, encryption). Returns `Success`/`Failure` with raw data.
+- **Mapper**: Transforms external data to domain-friendly structures. Isolates external field names.
+
+```ruby
+# infrastructure/auth/sso_auth/gateway.rb
+class Gateway
+  def fetch_user_info(access_token)
+    # HTTP request to Google API
+    # Returns Success(raw_hash) or Failure(error_string)
+  end
+end
+
+# infrastructure/auth/sso_auth/mapper.rb
+class Mapper
+  def initialize(gateway: Gateway.new)
+    @gateway = gateway
+  end
+
+  def load(access_token)
+    @gateway.fetch_user_info(access_token).fmap { |data| DataMapper.new(data).to_hash }
+  end
+
+  class DataMapper
+    def initialize(data)
+      @data = data
+    end
+
+    def to_hash
+      {
+        email: @data['email'],
+        name: @data['name'],
+        avatar: @data['picture']  # Google → domain field name
+      }
+    end
+  end
+end
+```
+
+**Services inject the Mapper**, not the Gateway:
+
+```ruby
+class VerifyGoogleToken < ApplicationOperation
+  def initialize(sso_mapper: SSOAuth::Mapper.new)
+    @sso_mapper = sso_mapper
+    super()
+  end
+
+  def call(access_token:)
+    google_user = step fetch_google_user_info(access_token)
+    # google_user[:avatar] - domain vocabulary, not google_user['picture']
+  end
+end
+```
+
+**Benefits:**
+- External API field changes isolated to Mapper
+- Service uses domain vocabulary
+- Gateway testable with HTTP stubs, Mapper testable with mock Gateway
 
 ## Dependency Rules
 

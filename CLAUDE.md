@@ -64,7 +64,9 @@ All runtime code lives in `app/`:
 **Infrastructure Layer** (`app/infrastructure/`):
 - **database/orm/**: Sequel ORM models (thin, no business logic)
 - **database/repositories/**: Maps ORM ↔ domain entities
-- **auth/**: Authentication boundary adapters (AuthToken::Gateway/Mapper for JWT, SSOAuth for Google OAuth)
+- **auth/**: Authentication boundary adapters
+  - `auth_token/` - JWT handling (Gateway for encryption, Mapper for AuthCapability ↔ token)
+  - `sso_auth/` - Google OAuth (Gateway for HTTP, Mapper for Google data → domain fields)
 
 **Application Layer** (`app/application/`):
 - **controllers/routes/**: API route handlers (Roda). Routes are under `/api/` namespace

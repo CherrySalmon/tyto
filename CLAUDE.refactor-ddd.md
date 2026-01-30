@@ -750,6 +750,39 @@ For each use case:
   - Added: Unit tests for AuthCapability, AuthToken::Gateway, AuthToken::Mapper
   - All 561 tests pass ✅
 
+- [x] **Refactor authentication routes to use application services** (2026-01-30)
+  - **Problem**: `authentication.rb` controller violates DDD patterns:
+    1. Direct ORM access (`Account.first`, `account.update`) bypasses repository layer
+    2. Business logic in controller (account lookup, update, JWT generation)
+    3. No application service - all logic inline
+    4. Manual response formatting instead of representers
+    5. Uses ORM `.attributes` hash instead of domain entities
+  - **Solution**: Create vertical slice with Gateway + Mapper pattern (matching `AuthToken`):
+    - `SSOAuth::Gateway` - Raw HTTP to Google API
+      - `fetch_user_info(access_token)` → `Success(raw_hash)` or `Failure(error)`
+    - `SSOAuth::Mapper` - Transforms Google data → domain fields
+      - `load(access_token)` → `Success({email:, name:, avatar:, ...})` or `Failure`
+      - Inner `DataMapper` class maps `picture` → `avatar`
+    - `Service::Auth::VerifyGoogleToken` - Railway service
+      - Injects `SSOAuth::Mapper` (not Gateway directly)
+      - Uses domain field names (`google_user[:avatar]` not `google_user['picture']`)
+    - `Representer::AuthenticatedAccount` - Account with credential for login response
+    - Thin controller with pattern matching on service result
+  - **Files created**:
+    - `app/infrastructure/auth/sso_auth/gateway.rb`
+    - `app/infrastructure/auth/sso_auth/mapper.rb`
+    - `app/application/services/auth/verify_google_token.rb`
+    - `app/presentation/representers/authenticated_account.rb`
+  - **Files updated**:
+    - `app/application/controllers/routes/authentication.rb`
+  - **Files deleted**:
+    - `app/infrastructure/auth/sso_auth.rb` (replaced by gateway + mapper)
+  - **Tests**:
+    - `spec/routes/authentication_route_spec.rb` (8 integration tests)
+    - `spec/application/services/auth/verify_google_token_spec.rb` (7 unit tests)
+    - `spec/infrastructure/auth/sso_auth_spec.rb` (10 tests for Gateway + Mapper)
+  - All 584 tests pass ✅
+
 ### Completed Use Cases
 
 | Use Case | Service | Representer | Controller | Tests |
@@ -782,6 +815,7 @@ For each use case:
 | CreateAccount | ✅ | ✅ Account | ✅ | ✅ |
 | UpdateAccount | ✅ | N/A (string message) | ✅ | ✅ |
 | DeleteAccount | ✅ | N/A (string message) | ✅ | ✅ |
+| VerifyGoogleToken | ✅ | ✅ AuthenticatedAccount | ✅ | ✅ |
 
 ### Infrastructure Ready (Built in earlier phases)
 
