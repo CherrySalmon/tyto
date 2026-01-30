@@ -102,7 +102,7 @@ end
 
 ### Domain Entities (dry-struct)
 
-Entities use shared types for structure. Constraints are enforced on construction AND immutable updates:
+Entities use shared types for structure. **Type constraints are enforced on construction AND immutable updates**:
 
 ```ruby
 # domain/courses/entities/course.rb
@@ -115,9 +115,11 @@ class Course < Dry::Struct
   def active? = Time.now.between?(start_at, end_at)
 end
 
-# Constraints enforced on immutable updates:
-course.new(name: "")  # ❌ Raises Dry::Types::ConstraintError
+# Type constraints enforced on immutable updates:
+course.new(name: "")  # ❌ Raises Dry::Struct::Error
 ```
+
+**Note on custom invariants**: Custom class-level `new` overrides (e.g., for cross-field validation like "end_at must be after start_at") are only invoked on initial construction, not on instance `new()` updates. This is a dry-struct limitation. Cross-field invariants should be enforced at the contract/service layer.
 
 ### Application Contracts (dry-validation)
 
@@ -393,4 +395,4 @@ Each phase should:
 - Specs will need path updates as code moves
 - **Types in domain layer**: Domain types (`domain/types.rb`) are imported by application contracts. Dependencies flow inward (application → domain).
 - **Shared constrained types**: Avoid duplication between dry-struct and dry-validation by defining constrained types once in domain layer.
-- **Immutable updates**: dry-struct `new()` method re-enforces type constraints, ensuring entities remain valid after changes.
+- **Immutable updates**: dry-struct `new()` method re-enforces type constraints (raises `Dry::Struct::Error` on violation). Note that custom invariant checks in class-level `new` overrides only apply on initial construction, not instance updates.
