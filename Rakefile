@@ -61,7 +61,7 @@ namespace :db do
     Sequel.extension :migration
 
     # Set up the migration path
-    migration_path = File.expand_path('backend_app/infrastructure/database/migrations', __dir__)
+    migration_path = File.expand_path('backend_app/db/migrations', __dir__)
 
     # Run the migrations
     Dir.glob("#{migration_path}/*.rb").each { |file| require file }
@@ -70,7 +70,7 @@ namespace :db do
 
   desc 'Seed the database with default data'
   task seed: [:config] do
-    seed_path = File.expand_path('backend_app/infrastructure/database/seeds/account_seeds.rb')
+    seed_path = File.expand_path('backend_app/db/seeds/account_seeds.rb')
 
     # Load and execute the seed script
     load(seed_path)
@@ -85,7 +85,7 @@ namespace :db do
       return
     end
 
-    db_filename = "backend_app/infrastructure/database/store/#{@app.environment}.db"
+    db_filename = "backend_app/db/store/#{@app.environment}.db"
     FileUtils.rm(db_filename) if File.exist?(db_filename)
     puts "Deleted #{db_filename}"
   end

@@ -10,40 +10,45 @@ This document tracks the incremental extraction of domain code into a clean DDD 
 
 ```text
 backend_app/
-├── domain/                        # Pure domain layer (no framework dependencies)
-│   ├── types.rb                   # Shared constrained types (CourseName, Email, etc.)
-│   ├── courses/                   # Course bounded context
-│   │   ├── entities/
-│   │   └── values/
-│   ├── accounts/                  # Account bounded context
-│   │   ├── entities/
-│   │   └── values/
-│   ├── attendance/                # Attendance bounded context
-│   │   ├── entities/
-│   │   └── values/
-│   └── shared/                    # Shared kernel (cross-context values)
-│       └── values/
+├── app/                           # All runtime code
+│   ├── domain/                    # Pure domain layer (no framework dependencies)
+│   │   ├── types.rb               # Shared constrained types (CourseName, Email, etc.)
+│   │   ├── courses/               # Course bounded context
+│   │   │   ├── entities/
+│   │   │   └── values/
+│   │   ├── accounts/              # Account bounded context
+│   │   │   ├── entities/
+│   │   │   └── values/
+│   │   ├── attendance/            # Attendance bounded context
+│   │   │   ├── entities/
+│   │   │   └── values/
+│   │   └── shared/                # Shared kernel (cross-context values)
+│   │       └── values/
+│   │
+│   ├── infrastructure/            # External adapters
+│   │   ├── database/
+│   │   │   ├── orm/               # Sequel models
+│   │   │   └── repositories/      # Data mappers between ORM and domain
+│   │   └── auth/                  # SSO/OAuth gateway
+│   │
+│   ├── application/               # Use cases and orchestration
+│   │   ├── controllers/           # Roda routes (thin HTTP layer)
+│   │   ├── services/              # Use case classes
+│   │   ├── policies/              # Authorization
+│   │   ├── contracts/             # Input validation (dry-validation, imports domain types)
+│   │   └── responses/             # Response DTOs
+│   │
+│   ├── presentation/              # API responses
+│   │   └── representers/          # JSON serialization
+│   │
+│   └── lib/                       # Cross-cutting utilities (jwt_credential.rb)
 │
-├── infrastructure/                # External adapters
-│   ├── database/
-│   │   ├── orm/                   # Sequel models (moved from models/)
-│   │   ├── repositories/          # Data mappers between ORM and domain
-│   │   ├── migrations/            # Database schema migrations
-│   │   ├── seeds/                 # Seed data
-│   │   └── store/                 # SQLite files (dev/test)
-│   └── auth/                      # SSO/OAuth gateway
-│
-├── application/                   # Use cases and orchestration
-│   ├── services/                  # Refactored from services/
-│   ├── policies/                  # Authorization (moved from policies/)
-│   ├── contracts/                 # Input validation (dry-validation, imports domain types)
-│   └── responses/                 # Response DTOs
-│
-├── presentation/                  # API responses
-│   └── representers/              # JSON serialization
-│
-├── controllers/                   # Keep existing Roda routes (thin)
 ├── config/
+├── db/                            # Database tooling (not auto-loaded)
+│   ├── migrations/                # Sequel migrations
+│   ├── seeds/                     # Seed data
+│   └── store/                     # SQLite files (dev/test)
+│
 └── spec/
 ```
 
@@ -685,10 +690,31 @@ For each use case:
 
 ## Current Status
 
-**Phase**: 6 - Application Layer Refactoring ✅ **COMPLETE**
-**Completed**: Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅
-**Approach**: Vertical slices - each use case fully implemented before moving to next
-**Next**: All legacy services migrated! Consider deleting old service files.
+**Phase**: Post-Refactoring Cleanup ✅ **IN PROGRESS**
+**Completed**: Phase 0 ✅, Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅, Phase 5 ✅, Phase 6 ✅
+
+### Post-Refactoring Tasks
+
+- [x] **Move controllers to application layer** (2026-01-30)
+  - Moved `backend_app/controllers/` → `backend_app/application/controllers/`
+  - Updated controller internal require paths (`./routes/` instead of `../controllers/routes/`)
+  - All 539 tests pass ✅
+
+- [x] **Simplify require_app and reorganize database tooling** (2026-01-30)
+  - Moved database tooling: `infrastructure/database/{migrations,seeds,store}` → `backend_app/db/`
+  - Simplified `require_app.rb` to load only top-level directories: `domain config infrastructure application presentation lib`
+  - Deleted dead code `course_scopes.rb` (defined conflicting `Todo::CoursePolicy` that shadowed the real policy)
+  - Removed redundant `require_relative` for policies from services (auto-loaded now)
+  - Updated paths in Rakefile and config files
+  - Result: Clean separation of runtime code vs database tooling; no skips or exceptions in require_app
+  - All 539 tests pass ✅
+
+- [x] **Consolidate runtime code into app/ folder** (2026-01-30)
+  - Moved `domain/`, `infrastructure/`, `application/`, `presentation/`, `lib/` into `backend_app/app/`
+  - Result: Only 4 top-level folders: `app/`, `config/`, `db/`, `spec/`
+  - `lib/` contains cross-cutting utilities (jwt_credential.rb) - no external I/O, just crypto helpers
+  - Updated `require_app.rb` to load config first, then app/ subdirectories
+  - All 539 tests pass ✅
 
 ### Completed Use Cases
 
@@ -780,9 +806,10 @@ These God object services will be incrementally replaced by focused use case cla
 
 ## Notes
 
-- Controllers remain in `controllers/` (thin routing layer)
-- `config/`, `lib/` stay in place
-- `db/` moved to `infrastructure/database/` (migrations, seeds, store)
+- All runtime code lives in `app/` folder: `domain/`, `infrastructure/`, `application/`, `presentation/`, `lib/`
+- `lib/` contains cross-cutting utilities (jwt_credential.rb) that don't fit DDD layers but are runtime code
+- `config/` stays at top level (loaded before app code)
+- `db/` contains database tooling (migrations, seeds, store) - not auto-loaded
 - Specs will need path updates as code moves
 - **Types in domain layer**: Domain types (`domain/types.rb`) are imported by application contracts. Dependencies flow inward (application → domain).
 - **Shared constrained types**: Avoid duplication between dry-struct and dry-validation by defining constrained types once in domain layer.
