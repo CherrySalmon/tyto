@@ -11,6 +11,7 @@ This document tracks the incremental extraction of domain code into a clean DDD 
 ```text
 backend_app/
 ├── domain/                        # Pure domain layer (no framework dependencies)
+│   ├── types.rb                   # Shared constrained types (CourseName, Email, etc.)
 │   ├── courses/                   # Course bounded context
 │   │   ├── entities/
 │   │   └── values/
@@ -35,7 +36,7 @@ backend_app/
 ├── application/                   # Use cases and orchestration
 │   ├── services/                  # Refactored from services/
 │   ├── policies/                  # Authorization (moved from policies/)
-│   ├── requests/                  # Input validation
+│   ├── contracts/                 # Input validation (dry-validation, imports domain types)
 │   └── responses/                 # Response DTOs
 │
 ├── presentation/                  # API responses
@@ -67,6 +68,91 @@ backend_app/
 
 - **Entities**: Enrollment (AccountCourse)
 - **Values**: CourseRole
+
+---
+
+## Type System and Validation Strategy
+
+We use **dry-struct** for domain entities and **dry-validation** for input contracts, with **shared constrained types** to avoid duplication.
+
+### Layered Responsibilities
+
+| Layer | Tool | Responsibility |
+|-------|------|----------------|
+| **Domain** | dry-struct + shared Types | Structure, type safety, immutable updates |
+| **Application** | dry-validation contracts | Business rules, input coercion, cross-field validation |
+
+### Shared Types (domain/types.rb)
+
+Types live in the **domain layer** because they express domain vocabulary. Application contracts import from domain (dependency flows inward).
+
+```ruby
+# domain/types.rb
+module Todo
+  module Types
+    include Dry.Types()
+
+    # Constrained types - shared by entities AND contracts
+    CourseName = Types::String.constrained(min_size: 1, max_size: 200)
+    Email = Types::String.constrained(format: /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z]+)*\.[a-z]+\z/i)
+    CourseRole = Types::String.enum('owner', 'instructor', 'staff', 'student')
+  end
+end
+```
+
+### Domain Entities (dry-struct)
+
+Entities use shared types for structure. Constraints are enforced on construction AND immutable updates:
+
+```ruby
+# domain/courses/entities/course.rb
+class Course < Dry::Struct
+  attribute :id, Types::Integer.optional
+  attribute :name, Types::CourseName        # Constrained type
+  attribute :start_at, Types::Time
+  attribute :end_at, Types::Time
+
+  def active? = Time.now.between?(start_at, end_at)
+end
+
+# Constraints enforced on immutable updates:
+course.new(name: "")  # ❌ Raises Dry::Types::ConstraintError
+```
+
+### Application Contracts (dry-validation)
+
+Contracts handle input validation and complex business rules, importing domain types:
+
+```ruby
+# application/contracts/create_course_contract.rb
+require_relative '../../domain/types'
+
+class CreateCourseContract < Dry::Validation::Contract
+  params do
+    required(:name).filled(Todo::Types::CourseName)  # Reuse domain type
+    required(:start_at).filled(:time)
+    required(:end_at).filled(:time)
+  end
+
+  # Business rules stay in contracts
+  rule(:start_at, :end_at) do
+    key(:end_at).failure('must be after start_at') if values[:end_at] <= values[:start_at]
+  end
+end
+```
+
+### Workflow
+
+1. **Validate input** with contract (coerces strings, checks business rules)
+2. **Create entity** from validated data (type-safe, immutable)
+3. **Entity updates** via `new()` re-enforce constraints
+
+```ruby
+result = CreateCourseContract.new.call(params)
+return Failure(result.errors) if result.failure?
+
+course = Course.new(result.to_h)  # Safe - already validated
+```
 
 ---
 
@@ -142,21 +228,29 @@ Move policies to `application/policies/`:
 
 ### 1.1 Add DDD dependencies
 
-- [ ] Add `dry-struct` and `dry-types` to Gemfile
+- [ ] Add `dry-struct` to Gemfile (dry-types comes as dependency)
 - [ ] `bundle install`
 - [ ] Run existing tests (sanity check)
 - [ ] Create `backend_app/domain/` folder structure
+- [ ] Create `domain/types.rb` with shared constrained types:
+  - `Types::CourseName` (string, min 1 char)
+  - `Types::Email` (string, email format)
+  - `Types::CourseRole` (enum: owner, instructor, staff, student)
+  - `Types::SystemRole` (enum: admin, creator, member)
 - [ ] Create loader/initializer for domain layer
+- [ ] Write unit tests for constrained types (`spec/domain/types_spec.rb`)
 
 ### 1.2 Extract first entity: Course
 
 - [ ] Create `domain/courses/entities/course.rb`
   - Pure Ruby class using Dry::Struct
   - No Sequel dependencies
+  - Uses `Types::CourseName` for name attribute
   - Type-safe attributes: id, name, logo, start_at, end_at
   - Computed methods: `duration`, `active?`, `upcoming?`
 - [ ] Create `domain/shared/values/time_range.rb` (start_at/end_at pair)
 - [ ] Write unit tests for Course entity (`spec/domain/courses/entities/course_spec.rb`)
+  - Include tests for constraint enforcement on `new()` updates
 - [ ] Write unit tests for TimeRange value (`spec/domain/shared/values/time_range_spec.rb`)
 - [ ] Run new unit tests
 
@@ -244,9 +338,14 @@ Move policies to `application/policies/`:
 - [ ] Use Dry::Transaction for railway-oriented flow
 - [ ] Services return domain entities, not hashes
 
-### 6.2 Request/Response objects
+### 6.2 Contracts and Response objects
 
-- [ ] Create request objects for input validation
+- [ ] Create `application/contracts/` folder
+- [ ] Create contracts importing domain types:
+  - `CreateCourseContract` - uses `Types::CourseName`
+  - `CreateAccountContract` - uses `Types::Email`
+  - `EnrollmentContract` - uses `Types::CourseRole`
+- [ ] Services validate with contracts before creating entities
 - [ ] Create response DTOs for API output
 
 ---
@@ -274,14 +373,17 @@ Each phase should:
 ## Current Status
 
 **Phase**: 1 - Foundation (Domain Layer Setup)
-**Next Task**: Add dry-struct and dry-types to Gemfile
+**Next Task**: Add dry-struct to Gemfile (dry-types is already a transitive dependency via dry-validation)
 
 ---
 
 ## Reference
 
 - Pattern source: `~/ossdev/projects/codepraise/api-codepraise`
-- Key gems: dry-struct, dry-types, roar (for representers)
+- Key gems: dry-struct, dry-types (transitive via dry-validation), roar (for representers)
+- dry-rb community discussions:
+  - [Best practices for dry-types, dry-struct, dry-validation](https://discourse.dry-rb.org/t/best-practices-for-using-dry-types-dry-schema-dry-validation-and-dry-struct-together-in-our-apps/1821)
+  - [Validation approach for Domain Objects](https://discourse.dry-rb.org/t/validation-approach-for-domain-objects/73)
 
 ## Notes
 
@@ -289,3 +391,6 @@ Each phase should:
 - `config/`, `lib/` stay in place
 - `db/` moved to `infrastructure/database/` (migrations, seeds, store)
 - Specs will need path updates as code moves
+- **Types in domain layer**: Domain types (`domain/types.rb`) are imported by application contracts. Dependencies flow inward (application → domain).
+- **Shared constrained types**: Avoid duplication between dry-struct and dry-validation by defining constrained types once in domain layer.
+- **Immutable updates**: dry-struct `new()` method re-enforces type constraints, ensuring entities remain valid after changes.
