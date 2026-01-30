@@ -44,6 +44,7 @@ end
 group :development, :test do
   gem 'minitest'
   gem 'rack-test'
+  gem 'simplecov', require: false
 end
 
 # DEBUGGING
