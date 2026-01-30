@@ -21,7 +21,7 @@ module Todo
       def time_range
         return nil unless start_at && end_at
 
-        Value::TimeRange.new(start_at: start_at, end_at: end_at)
+        Value::TimeRange.new(start_at:, end_at:)
       end
 
       # Duration in seconds (delegates to time_range)
@@ -31,17 +31,23 @@ module Todo
 
       # Is the course currently active?
       def active?(at: Time.now)
-        time_range&.active?(at: at) || false
+        return false unless time_range
+
+        time_range.active?(at:)
       end
 
       # Is the course in the future?
       def upcoming?(at: Time.now)
-        time_range&.upcoming?(at: at) || false
+        return false unless time_range
+
+        time_range.upcoming?(at:)
       end
 
       # Has the course ended?
       def ended?(at: Time.now)
-        time_range&.ended?(at: at) || false
+        return false unless time_range
+
+        time_range.ended?(at:)
       end
 
       # Is this a new (unpersisted) course?
@@ -51,12 +57,7 @@ module Todo
 
       # Convert to hash suitable for persistence (excludes nil id for new records)
       def to_persistence_hash
-        hash = {
-          name: name,
-          logo: logo,
-          start_at: start_at,
-          end_at: end_at
-        }
+        hash = { name:, logo:, start_at:, end_at: }
         hash[:id] = id unless new_record?
         hash
       end
