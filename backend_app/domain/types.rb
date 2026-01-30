@@ -16,6 +16,14 @@ module Todo
     # Course types
     CourseName = Types::String.constrained(min_size: 1, max_size: 200)
 
+    # Event types
+    EventName = Types::String.constrained(min_size: 1, max_size: 200)
+
+    # Location types
+    LocationName = Types::String.constrained(min_size: 1, max_size: 200)
+    Longitude = Types::Float.constrained(gteq: -180.0, lteq: 180.0).optional
+    Latitude = Types::Float.constrained(gteq: -90.0, lteq: 90.0).optional
+
     # Account types
     Email = Types::String.constrained(
       format: /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i

@@ -280,20 +280,31 @@ Move policies to `application/policies/`:
 
 ### 2.1 Event entity
 
-- [ ] Create `domain/courses/entities/event.rb`
-- [ ] Create `infrastructure/database/repositories/events.rb`
+- [x] Add `Types::EventName` to `domain/types.rb`
+- [x] Add `Types::LocationName`, `Types::Longitude`, `Types::Latitude` to `domain/types.rb`
+- [x] Create `domain/courses/entities/event.rb`
+- [x] Write unit tests for Event entity (`spec/domain/courses/entities/event_spec.rb`)
+- [x] Create `infrastructure/database/repositories/events.rb`
+- [x] Write integration tests for Events repository (`spec/infrastructure/database/repositories/events_spec.rb`)
 
 ### 2.2 Location entity and GeoLocation value
 
-- [ ] Create `domain/courses/entities/location.rb`
-- [ ] Create `domain/courses/values/geo_location.rb`
-- [ ] Create repository
+- [x] Create `domain/courses/values/geo_location.rb`
+- [x] Create `domain/courses/values/null_geo_location.rb`
+- [x] Write unit tests for GeoLocation and NullGeoLocation
+- [x] Create `domain/courses/entities/location.rb`
+- [x] Write unit tests for Location entity
+- [x] Create `infrastructure/database/repositories/locations.rb`
+- [x] Write integration tests for Locations repository
 
 ### 2.3 Course as Aggregate Root
 
-- [ ] Course entity owns: events, locations, enrollments
-- [ ] Course repository loads full aggregate
-- [ ] Child entities only accessed through Course
+- [x] Course entity has optional `events` and `locations` collections
+- [x] Loading convention: `nil` = not loaded, `[]` = loaded but empty
+- [x] Entity raises `ChildrenNotLoadedError` if business logic requires unloaded children
+- [x] Repository methods: `find_id` (no children), `find_with_events`, `find_with_locations`, `find_full`
+- [x] Write unit tests for Course aggregate behavior
+- [x] Write integration tests for repository loading methods
 
 ---
 
@@ -335,6 +346,15 @@ Move policies to `application/policies/`:
 
 ## Phase 6: Application Layer Refactoring
 
+### 6.0 Update services to use repositories
+
+Services currently still use ORM directly. Update to use domain repositories:
+
+- [ ] `EventService` → use `Repository::Events`
+- [ ] `LocationService` → use `Repository::Locations`
+- [ ] `CourseService` → use aggregate loading methods (`find_with_events`, etc.) where appropriate
+- [ ] Remove `entity_to_hash` bridge methods once representers are in place
+
 ### 6.1 Railway-oriented error handling (dry-monads)
 
 **Current state**: Exception-based error handling with 50+ rescue blocks scattered across controllers. Each service defines its own error classes (`ForbiddenError`, `NotFoundError`, etc.).
@@ -372,9 +392,11 @@ Move policies to `application/policies/`:
 
 ### 7.1 Representers
 
-- [ ] Add Roar gem
-- [ ] Create representers for JSON serialization
-- [ ] Remove `attributes` methods from domain entities
+- [ ] Add Roar gem (or similar representer pattern)
+- [ ] Create representers for JSON/API serialization of domain entities
+- [ ] Create persistence mappers (entity ↔ ORM hash) - currently inline in repositories
+- [ ] Remove `attributes` methods from ORM models
+- [ ] Domain entities remain pure - no `to_hash`, `to_json`, or persistence methods
 
 ---
 
@@ -391,8 +413,25 @@ Each phase should:
 
 ## Current Status
 
-**Phase**: 1 - Foundation (Domain Layer Setup) ✅ COMPLETE
-**Next Phase**: 2 - Complete Courses Context (Event entity, Location entity, Aggregate Root)
+**Phase**: 2 - Complete Courses Context ✅
+**Completed**: Phase 2.1 - Event entity ✅, Phase 2.2 - Location entity ✅, Phase 2.3 - Course as Aggregate Root ✅
+**Next**: Phase 3 - Accounts Context
+
+### Built but Not Yet Wired (Phase 6 will address)
+
+The following domain objects and repository methods exist but services haven't been updated to use them:
+
+| Component | Status | Blocked By |
+| --------- | ------ | ---------- |
+| `Repository::Events` | ✅ Built | EventService still uses ORM |
+| `Repository::Locations` | ✅ Built | LocationService still uses ORM |
+| `Course#find_event`, `#find_location` | ✅ Built | Services need aggregate loading |
+| `Courses#find_with_events`, etc. | ✅ Built | Services need refactoring |
+
+**Not part of this refactoring** (see `doc/future-work.md`):
+
+- `GeoLocation#distance_to` - For backend attendance proximity validation
+- `TimeRange#overlaps?`, `#contains?` - For scheduling conflict detection
 
 ---
 
@@ -413,4 +452,5 @@ Each phase should:
 - **Types in domain layer**: Domain types (`domain/types.rb`) are imported by application contracts. Dependencies flow inward (application → domain).
 - **Shared constrained types**: Avoid duplication between dry-struct and dry-validation by defining constrained types once in domain layer.
 - **Immutable updates**: dry-struct `new()` method re-enforces type constraints (raises `Dry::Struct::Error` on violation). Note that custom invariant checks in class-level `new` overrides only apply on initial construction, not instance updates.
+- **Entity purity**: Domain entities must have NO persistence or serialization methods (`to_hash`, `to_json`, `to_persistence_hash`, `attributes`). ORM ↔ entity mapping belongs in repositories; entity → JSON mapping belongs in representers (`presentation/representers/`). Create representers early to avoid polluting entities.
 - **dry-monads analysis**: Reference project (api-codepraise) uses dry-transaction and Dry::Monads::Result for railway-oriented flow. Tyto currently has 50+ rescue blocks in controllers. Migration to dry-monads is deferred to Phase 6 to avoid scope creep during domain extraction.

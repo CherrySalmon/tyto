@@ -103,6 +103,23 @@ end
 - Raises `Dry::Struct::Error` on constraint violations
 - Use Ruby 3.1+ hash shorthand: `{ name:, logo: }` not `{ name: name }`
 
+**Entity purity (critical):**
+
+Domain entities must have NO knowledge of persistence or serialization. Never add these methods to entities:
+
+- `to_hash`, `to_h` (use representers for API output)
+- `to_json`, `as_json` (use representers)
+- `to_persistence_hash` (mapping logic belongs in repositories)
+- `attributes` (ORM concern)
+
+Serialization/mapping responsibilities:
+
+| Concern | Where it belongs |
+|---------|-----------------|
+| ORM ↔ Entity mapping | Repository (`rebuild_entity`, inline mapping) |
+| Entity → JSON for API | Representer (`presentation/representers/`) |
+| Params → Entity | Contract + Service layer |
+
 ## Null Object Pattern (Avoid nil)
 
 Never return `nil` for missing/empty states. Use Null Objects instead:
@@ -170,7 +187,7 @@ end
 
 ## Repositories
 
-Map between ORM and domain entities:
+Map between ORM and domain entities. **All mapping logic lives here**, not in entities:
 
 ```ruby
 class Courses
@@ -181,17 +198,26 @@ class Courses
   end
 
   def create(entity)
-    orm_record = Todo::Course.create(entity.to_persistence_hash)
+    # Mapping from entity → ORM happens HERE (not in entity)
+    orm_record = Todo::Course.create(
+      name: entity.name,
+      logo: entity.logo,
+      start_at: entity.start_at,
+      end_at: entity.end_at
+    )
     rebuild_entity(orm_record)
   end
 
   private
 
+  # Mapping from ORM → entity
   def rebuild_entity(orm_record)
     Entity::Course.new(
       id: orm_record.id,
       name: orm_record.name,
-      # ... map all attributes
+      logo: orm_record.logo,
+      start_at: orm_record.start_at,
+      end_at: orm_record.end_at
     )
   end
 end
@@ -259,12 +285,81 @@ end
 - [ ] Define constrained types in `domain/types.rb`
 - [ ] Create entity class extending `Dry::Struct`
 - [ ] Create Null Object if entity has optional associations
+- [ ] Create representer in `presentation/representers/` for API output
 - [ ] Create repository with `find_id`, `find_all`, `create`, `update`, `delete`
 - [ ] Write unit tests for entity (including constraint enforcement on `new()`)
 - [ ] Write unit tests for Null Object
 - [ ] Write integration tests for repository
 - [ ] Update service to use repository
 - [ ] Run full test suite
+
+**Important:** Create representers immediately when creating entities. This prevents the temptation to add `to_hash`/`to_json` methods to entities.
+
+## Representers (Presentation Layer)
+
+Representers handle entity → JSON serialization. Create these in `presentation/representers/` alongside entities to avoid polluting domain objects:
+
+```ruby
+# presentation/representers/course_representer.rb
+require 'roar/decorator'
+require 'roar/json'
+
+module Representer
+  class Course < Roar::Decorator
+    include Roar::JSON
+
+    property :id
+    property :name
+    property :logo
+    property :start_at
+    property :end_at
+
+    # Computed properties
+    property :active, exec_context: :decorator
+
+    def active
+      represented.active?
+    end
+  end
+end
+```
+
+**Usage in controllers:**
+
+```ruby
+# Return single entity
+course = CourseService.find(id)
+Representer::Course.new(course).to_json
+
+# Return collection
+courses = CourseService.list_all(requestor)
+courses.map { |c| Representer::Course.new(c).to_hash }
+```
+
+**Alternative:** Simple hash-based representers without Roar gem:
+
+```ruby
+module Representer
+  class Course
+    def initialize(entity)
+      @entity = entity
+    end
+
+    def to_hash
+      {
+        id: @entity.id,
+        name: @entity.name,
+        logo: @entity.logo,
+        start_at: @entity.start_at&.iso8601,
+        end_at: @entity.end_at&.iso8601,
+        active: @entity.active?
+      }
+    end
+
+    def to_json(*) = to_hash.to_json
+  end
+end
+```
 
 ## Common Patterns
 
@@ -278,16 +373,6 @@ def active?(at: Time.now) = time_range.active?(at:)
 
 ```ruby
 attribute :logo, Types::String.optional
-```
-
-### Persistence hash (excludes id for new records)
-
-```ruby
-def to_persistence_hash
-  hash = { name:, logo:, start_at:, end_at: }
-  hash[:id] = id unless new_record?
-  hash
-end
 ```
 
 ### New record check

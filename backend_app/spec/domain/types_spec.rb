@@ -136,4 +136,89 @@ describe 'Todo::Types' do
       _ { Todo::Types::Role['invalid'] }.must_raise Dry::Types::ConstraintError
     end
   end
+
+  describe 'EventName' do
+    it 'accepts valid event names' do
+      _(Todo::Types::EventName['Lecture 1']).must_equal 'Lecture 1'
+    end
+
+    it 'accepts single character names' do
+      _(Todo::Types::EventName['X']).must_equal 'X'
+    end
+
+    it 'accepts names up to 200 characters' do
+      long_name = 'A' * 200
+      _(Todo::Types::EventName[long_name]).must_equal long_name
+    end
+
+    it 'rejects empty names' do
+      _ { Todo::Types::EventName[''] }.must_raise Dry::Types::ConstraintError
+    end
+
+    it 'rejects names over 200 characters' do
+      too_long = 'A' * 201
+      _ { Todo::Types::EventName[too_long] }.must_raise Dry::Types::ConstraintError
+    end
+  end
+
+  describe 'LocationName' do
+    it 'accepts valid location names' do
+      _(Todo::Types::LocationName['Room 101']).must_equal 'Room 101'
+    end
+
+    it 'rejects empty names' do
+      _ { Todo::Types::LocationName[''] }.must_raise Dry::Types::ConstraintError
+    end
+
+    it 'rejects names over 200 characters' do
+      too_long = 'A' * 201
+      _ { Todo::Types::LocationName[too_long] }.must_raise Dry::Types::ConstraintError
+    end
+  end
+
+  describe 'Longitude' do
+    it 'accepts valid longitude values' do
+      _(Todo::Types::Longitude[121.5654]).must_equal 121.5654
+    end
+
+    it 'accepts nil (optional)' do
+      _(Todo::Types::Longitude[nil]).must_be_nil
+    end
+
+    it 'accepts boundary values' do
+      _(Todo::Types::Longitude[-180.0]).must_equal(-180.0)
+      _(Todo::Types::Longitude[180.0]).must_equal 180.0
+    end
+
+    it 'rejects values below -180' do
+      _ { Todo::Types::Longitude[-180.1] }.must_raise Dry::Types::ConstraintError
+    end
+
+    it 'rejects values above 180' do
+      _ { Todo::Types::Longitude[180.1] }.must_raise Dry::Types::ConstraintError
+    end
+  end
+
+  describe 'Latitude' do
+    it 'accepts valid latitude values' do
+      _(Todo::Types::Latitude[25.0330]).must_equal 25.0330
+    end
+
+    it 'accepts nil (optional)' do
+      _(Todo::Types::Latitude[nil]).must_be_nil
+    end
+
+    it 'accepts boundary values' do
+      _(Todo::Types::Latitude[-90.0]).must_equal(-90.0)
+      _(Todo::Types::Latitude[90.0]).must_equal 90.0
+    end
+
+    it 'rejects values below -90' do
+      _ { Todo::Types::Latitude[-90.1] }.must_raise Dry::Types::ConstraintError
+    end
+
+    it 'rejects values above 90' do
+      _ { Todo::Types::Latitude[90.1] }.must_raise Dry::Types::ConstraintError
+    end
+  end
 end

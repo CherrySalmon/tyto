@@ -141,6 +141,7 @@ puma config.ru -t 1:5 -p 9292
 - Element Plus components auto-imported via unplugin-vue-components
 
 ### Git Commits
+- **Always ask for manual review before making commits** - do not commit automatically
 - Never use "Generated with Claude" line in commit messages
 - User is primary committer; use `Co-Authored-By: Claude <noreply@anthropic.com>`
 

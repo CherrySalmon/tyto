@@ -67,10 +67,129 @@ describe 'Todo::Repository::Courses' do
       _(result.logo).must_equal 'test.png'
     end
 
+    it 'returns course with children not loaded (nil)' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+      Todo::Location.create(course_id: orm_course.id, name: 'Room A')
+      Todo::Event.create(course_id: orm_course.id, location_id: 1, name: 'Event 1')
+
+      result = repository.find_id(orm_course.id)
+
+      _(result.events).must_be_nil
+      _(result.locations).must_be_nil
+      _(result.events_loaded?).must_equal false
+      _(result.locations_loaded?).must_equal false
+    end
+
     it 'returns nil for non-existent course' do
       result = repository.find_id(999_999)
 
       _(result).must_be_nil
+    end
+  end
+
+  describe '#find_with_events' do
+    it 'returns course with events loaded' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
+      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 2')
+
+      result = repository.find_with_events(orm_course.id)
+
+      _(result.events_loaded?).must_equal true
+      _(result.events.length).must_equal 2
+      _(result.events.map(&:name)).must_include 'Event 1'
+      _(result.events.map(&:name)).must_include 'Event 2'
+    end
+
+    it 'returns empty array for course with no events' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+
+      result = repository.find_with_events(orm_course.id)
+
+      _(result.events_loaded?).must_equal true
+      _(result.events).must_equal []
+    end
+
+    it 'does not load locations' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+      Todo::Location.create(course_id: orm_course.id, name: 'Room A')
+
+      result = repository.find_with_events(orm_course.id)
+
+      _(result.locations).must_be_nil
+      _(result.locations_loaded?).must_equal false
+    end
+
+    it 'returns nil for non-existent course' do
+      _(repository.find_with_events(999_999)).must_be_nil
+    end
+  end
+
+  describe '#find_with_locations' do
+    it 'returns course with locations loaded' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+      Todo::Location.create(course_id: orm_course.id, name: 'Room A')
+      Todo::Location.create(course_id: orm_course.id, name: 'Room B')
+
+      result = repository.find_with_locations(orm_course.id)
+
+      _(result.locations_loaded?).must_equal true
+      _(result.locations.length).must_equal 2
+      _(result.locations.map(&:name)).must_include 'Room A'
+      _(result.locations.map(&:name)).must_include 'Room B'
+    end
+
+    it 'returns empty array for course with no locations' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+
+      result = repository.find_with_locations(orm_course.id)
+
+      _(result.locations_loaded?).must_equal true
+      _(result.locations).must_equal []
+    end
+
+    it 'does not load events' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
+      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+
+      result = repository.find_with_locations(orm_course.id)
+
+      _(result.events).must_be_nil
+      _(result.events_loaded?).must_equal false
+    end
+
+    it 'returns nil for non-existent course' do
+      _(repository.find_with_locations(999_999)).must_be_nil
+    end
+  end
+
+  describe '#find_full' do
+    it 'returns course with both events and locations loaded' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
+      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+
+      result = repository.find_full(orm_course.id)
+
+      _(result.events_loaded?).must_equal true
+      _(result.locations_loaded?).must_equal true
+      _(result.events.length).must_equal 1
+      _(result.locations.length).must_equal 1
+    end
+
+    it 'returns empty arrays for course with no children' do
+      orm_course = Todo::Course.create(name: 'Test Course')
+
+      result = repository.find_full(orm_course.id)
+
+      _(result.events).must_equal []
+      _(result.locations).must_equal []
+    end
+
+    it 'returns nil for non-existent course' do
+      _(repository.find_full(999_999)).must_be_nil
     end
   end
 

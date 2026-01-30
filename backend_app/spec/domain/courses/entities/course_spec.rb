@@ -207,44 +207,161 @@ describe 'Todo::Entity::Course' do
     end
   end
 
-  describe '#new_record?' do
-    it 'returns true when id is nil' do
-      course = Todo::Entity::Course.new(valid_attributes.merge(id: nil))
-
-      _(course.new_record?).must_equal true
+  describe 'child collections' do
+    let(:event1) do
+      Todo::Entity::Event.new(
+        id: 1, course_id: 1, location_id: 1, name: 'Event 1',
+        start_at: now, end_at: now + one_hour,
+        created_at: now, updated_at: now
+      )
     end
 
-    it 'returns false when id exists' do
-      course = Todo::Entity::Course.new(valid_attributes)
-
-      _(course.new_record?).must_equal false
-    end
-  end
-
-  describe '#to_persistence_hash' do
-    it 'includes id for existing records' do
-      course = Todo::Entity::Course.new(valid_attributes)
-      hash = course.to_persistence_hash
-
-      _(hash[:id]).must_equal 1
-      _(hash[:name]).must_equal 'Ruby Programming'
-      _(hash[:logo]).must_equal 'ruby.png'
+    let(:event2) do
+      Todo::Entity::Event.new(
+        id: 2, course_id: 1, location_id: 1, name: 'Event 2',
+        start_at: now + one_hour, end_at: now + 2 * one_hour,
+        created_at: now, updated_at: now
+      )
     end
 
-    it 'excludes id for new records' do
-      course = Todo::Entity::Course.new(valid_attributes.merge(id: nil))
-      hash = course.to_persistence_hash
-
-      _(hash.key?(:id)).must_equal false
-      _(hash[:name]).must_equal 'Ruby Programming'
+    let(:location1) do
+      Todo::Entity::Location.new(
+        id: 1, course_id: 1, name: 'Room A',
+        longitude: 121.5654, latitude: 25.0330,
+        created_at: now, updated_at: now
+      )
     end
 
-    it 'excludes timestamps' do
-      course = Todo::Entity::Course.new(valid_attributes)
-      hash = course.to_persistence_hash
+    describe 'default state (not loaded)' do
+      it 'has nil events by default' do
+        course = Todo::Entity::Course.new(valid_attributes)
 
-      _(hash.key?(:created_at)).must_equal false
-      _(hash.key?(:updated_at)).must_equal false
+        _(course.events).must_be_nil
+        _(course.events_loaded?).must_equal false
+      end
+
+      it 'has nil locations by default' do
+        course = Todo::Entity::Course.new(valid_attributes)
+
+        _(course.locations).must_be_nil
+        _(course.locations_loaded?).must_equal false
+      end
+    end
+
+    describe 'loaded state' do
+      it 'can have events loaded (empty)' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(events: []))
+
+        _(course.events).must_equal []
+        _(course.events_loaded?).must_equal true
+      end
+
+      it 'can have events loaded (with data)' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(events: [event1, event2]))
+
+        _(course.events.length).must_equal 2
+        _(course.events_loaded?).must_equal true
+      end
+
+      it 'can have locations loaded (empty)' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(locations: []))
+
+        _(course.locations).must_equal []
+        _(course.locations_loaded?).must_equal true
+      end
+
+      it 'can have locations loaded (with data)' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(locations: [location1]))
+
+        _(course.locations.length).must_equal 1
+        _(course.locations_loaded?).must_equal true
+      end
+    end
+
+    describe '#find_event' do
+      it 'finds event by ID when events are loaded' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(events: [event1, event2]))
+
+        found = course.find_event(2)
+        _(found.name).must_equal 'Event 2'
+      end
+
+      it 'returns nil when event not found' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(events: [event1]))
+
+        _(course.find_event(999)).must_be_nil
+      end
+
+      it 'raises ChildrenNotLoadedError when events not loaded' do
+        course = Todo::Entity::Course.new(valid_attributes)
+
+        _ { course.find_event(1) }
+          .must_raise Todo::Entity::Course::ChildrenNotLoadedError
+      end
+    end
+
+    describe '#find_location' do
+      it 'finds location by ID when locations are loaded' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(locations: [location1]))
+
+        found = course.find_location(1)
+        _(found.name).must_equal 'Room A'
+      end
+
+      it 'returns nil when location not found' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(locations: [location1]))
+
+        _(course.find_location(999)).must_be_nil
+      end
+
+      it 'raises ChildrenNotLoadedError when locations not loaded' do
+        course = Todo::Entity::Course.new(valid_attributes)
+
+        _ { course.find_location(1) }
+          .must_raise Todo::Entity::Course::ChildrenNotLoadedError
+      end
+    end
+
+    describe '#event_count' do
+      it 'returns count when events are loaded' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(events: [event1, event2]))
+
+        _(course.event_count).must_equal 2
+      end
+
+      it 'returns 0 for empty events' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(events: []))
+
+        _(course.event_count).must_equal 0
+      end
+
+      it 'raises ChildrenNotLoadedError when events not loaded' do
+        course = Todo::Entity::Course.new(valid_attributes)
+
+        _ { course.event_count }
+          .must_raise Todo::Entity::Course::ChildrenNotLoadedError
+      end
+    end
+
+    describe '#location_count' do
+      it 'returns count when locations are loaded' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(locations: [location1]))
+
+        _(course.location_count).must_equal 1
+      end
+
+      it 'returns 0 for empty locations' do
+        course = Todo::Entity::Course.new(valid_attributes.merge(locations: []))
+
+        _(course.location_count).must_equal 0
+      end
+
+      it 'raises ChildrenNotLoadedError when locations not loaded' do
+        course = Todo::Entity::Course.new(valid_attributes)
+
+        _ { course.location_count }
+          .must_raise Todo::Entity::Course::ChildrenNotLoadedError
+      end
     end
   end
 end
