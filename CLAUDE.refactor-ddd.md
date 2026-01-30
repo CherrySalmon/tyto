@@ -312,15 +312,21 @@ Move policies to `application/policies/`:
 
 ### 3.1 Account entity
 
-- [ ] Create `domain/accounts/entities/account.rb`
-- [ ] Create `domain/accounts/values/email.rb` (validated email)
-- [ ] Create repository
+- [x] Create `domain/accounts/entities/account.rb`
+- [x] Email validation via `Types::Email` (already in types.rb)
+- [x] Roles as optional array with loading convention (nil = not loaded)
+- [x] Role predicate methods: `admin?`, `creator?`, `member?`, `has_role?`
+- [x] `RolesNotLoadedError` for fail-fast when roles required
+- [x] Create `infrastructure/database/repositories/accounts.rb`
+- [x] Repository methods: `find_with_roles`, `find_by_email`, `find_by_email_with_roles`
+- [x] Write unit tests for Account entity
+- [x] Write integration tests for Accounts repository
 
 ### 3.2 Role handling
 
-- [ ] Create `domain/shared/values/role.rb` (enum-like)
-- [ ] System roles: admin, creator, member
-- [ ] Course roles: owner, instructor, staff, student
+- [x] System roles defined in `Types::SystemRole` enum: admin, creator, member
+- [x] Course roles defined in `Types::CourseRole` enum: owner, instructor, staff, student
+- [ ] *(Deferred)* Separate Role value object if needed for complex role logic
 
 ---
 
@@ -328,9 +334,18 @@ Move policies to `application/policies/`:
 
 ### 4.1 Attendance entity
 
-- [ ] Create `domain/attendance/entities/attendance.rb`
-- [ ] Create `domain/attendance/values/check_in_data.rb`
-- [ ] Repository with event-scoped queries
+- [x] Create `domain/attendance/entities/attendance.rb`
+  - `check_in_location` returns GeoLocation or NullGeoLocation
+  - `distance_to_event(location)` calculates distance from check-in to event
+  - `within_range?(location, max_distance_km:)` for proximity validation
+  - `has_coordinates?` predicate
+- [x] Repository with event-scoped queries
+  - `find_by_course(course_id)`
+  - `find_by_event(event_id)`
+  - `find_by_account_course(account_id, course_id)`
+  - `find_by_account_event(account_id, event_id)`
+- [x] Write unit tests for Attendance entity
+- [x] Write integration tests for Attendances repository
 
 ---
 
@@ -413,9 +428,9 @@ Each phase should:
 
 ## Current Status
 
-**Phase**: 2 - Complete Courses Context ✅
-**Completed**: Phase 2.1 - Event entity ✅, Phase 2.2 - Location entity ✅, Phase 2.3 - Course as Aggregate Root ✅
-**Next**: Phase 3 - Accounts Context
+**Phase**: 4 - Attendance Context ✅
+**Completed**: Phase 2 ✅, Phase 3 ✅, Phase 4 ✅
+**Next**: Phase 5 - Enrollments
 
 ### Built but Not Yet Wired (Phase 6 will address)
 
@@ -425,8 +440,12 @@ The following domain objects and repository methods exist but services haven't b
 | --------- | ------ | ---------- |
 | `Repository::Events` | ✅ Built | EventService still uses ORM |
 | `Repository::Locations` | ✅ Built | LocationService still uses ORM |
+| `Repository::Accounts` | ✅ Built | AccountService still uses ORM |
+| `Repository::Attendances` | ✅ Built | AttendanceService still uses ORM |
 | `Course#find_event`, `#find_location` | ✅ Built | Services need aggregate loading |
 | `Courses#find_with_events`, etc. | ✅ Built | Services need refactoring |
+| `Account#admin?`, `#creator?`, etc. | ✅ Built | Services need refactoring |
+| `Attendance#within_range?`, etc. | ✅ Built | AttendanceService needs refactoring |
 
 **Not part of this refactoring** (see `doc/future-work.md`):
 
