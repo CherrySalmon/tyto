@@ -77,10 +77,10 @@ We use **dry-struct** for domain entities and **dry-validation** for input contr
 
 ### Layered Responsibilities
 
-| Layer | Tool | Responsibility |
-|-------|------|----------------|
-| **Domain** | dry-struct + shared Types | Structure, type safety, immutable updates |
-| **Application** | dry-validation contracts | Business rules, input coercion, cross-field validation |
+| Layer           | Tool                      | Responsibility                                         |
+|-----------------|---------------------------|--------------------------------------------------------|
+| **Domain**      | dry-struct + shared Types | Structure, type safety, immutable updates              |
+| **Application** | dry-validation contracts  | Business rules, input coercion, cross-field validation |
 
 ### Shared Types (domain/types.rb)
 
@@ -347,13 +347,16 @@ Move policies to `application/policies/`:
 - [ ] Replace `return course` with `Success(course)`
 - [ ] Update controllers to pattern-match on results instead of rescue blocks
 - [ ] Consider `dry-transaction` for multi-step service composition
+- [ ] Update repositories to return `Success`/`Failure` for database error handling
+
+**Note:** Infrastructure adapters (repositories, external gateways) should also use monads to handle external failures explicitly at the boundary (database errors, API timeouts, network failures).
 
 ### 6.2 Service refactoring
 
 - [ ] Services return domain entities wrapped in Success, not hashes
 - [ ] Remove exception-based error classes from services
 
-### 6.2 Contracts and Response objects
+### 6.3 Contracts and Response objects
 
 - [ ] Create `application/contracts/` folder
 - [ ] Create contracts importing domain types:
@@ -378,6 +381,7 @@ Move policies to `application/policies/`:
 ## Migration Strategy
 
 Each phase should:
+
 1. Create new structure alongside existing code when possible
 2. Move/update code incrementally
 3. Verify tests pass after each step

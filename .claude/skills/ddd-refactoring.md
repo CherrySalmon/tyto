@@ -330,4 +330,20 @@ end
 - Easier to compose multi-step operations
 - Type-safe error propagation
 
+**Infrastructure layer:** Repositories and external adapters can also use monads to protect against outside errors (database failures, API timeouts, network errors). This keeps external failure handling explicit at the boundary:
+
+```ruby
+class Courses
+  include Dry::Monads::Result::Mixin
+
+  def find_id(id)
+    orm_record = Todo::Course[id]
+    return Failure(:not_found) unless orm_record
+    Success(rebuild_entity(orm_record))
+  rescue Sequel::DatabaseError => e
+    Failure(:database_error, e.message)
+  end
+end
+```
+
 **When to adopt:** Phase 6 (Application Layer Refactoring), after domain extraction is complete.
