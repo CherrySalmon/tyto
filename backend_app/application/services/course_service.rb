@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../policies/course_policy'
+require_relative '../../infrastructure/database/repositories/courses'
 
 module Todo
   # Manages course requests
@@ -9,11 +10,21 @@ module Todo
     class ForbiddenError < StandardError; end
     class CourseNotFoundError < StandardError; end
 
+    # Repository instance (can be injected for testing)
+    def self.repository
+      @repository ||= Repository::Courses.new
+    end
+
+    def self.repository=(repo)
+      @repository = repo
+    end
+
     # Lists all courses, if authorized
+    # Returns domain entities converted to hashes for API compatibility
     def self.list_all(requestor)
       verify_policy(requestor, :view_all)
-      courses = Course.all.map(&:attributes)
-      courses || raise(ForbiddenError, 'You have no access to list courses.')
+      entities = repository.find_all
+      entities.map { |entity| entity_to_hash(entity) }
     end
 
     # Lists all joined courses, if authorized
@@ -88,6 +99,28 @@ module Todo
       raise(ForbiddenError, 'You have no access to perform this action.') unless action_check
 
       requestor
+    end
+
+    # Convert domain entity to hash for API compatibility
+    # Note: This is a temporary bridge during migration. Eventually,
+    # representers will handle serialization in the presentation layer.
+    def self.entity_to_hash(entity, account_id: nil)
+      {
+        id: entity.id,
+        name: entity.name,
+        created_at: entity.created_at&.utc&.iso8601,
+        updated_at: entity.updated_at&.utc&.iso8601,
+        logo: entity.logo,
+        start_at: entity.start_at&.utc&.iso8601,
+        end_at: entity.end_at&.utc&.iso8601,
+        enroll_identity: account_id ? get_enroll_identity(account_id, entity.id) : {}
+      }
+    end
+
+    def self.get_enroll_identity(account_id, course_id)
+      AccountCourse.where(account_id: account_id, course_id: course_id).map do |role|
+        role.role.name
+      end
     end
   end
 end
