@@ -230,49 +230,49 @@ Move policies to `application/policies/`:
 
 ### 1.1 Add DDD dependencies
 
-- [ ] Add `dry-struct` to Gemfile (dry-types comes as dependency)
-- [ ] `bundle install`
-- [ ] Run existing tests (sanity check)
-- [ ] Create `backend_app/domain/` folder structure
-- [ ] Create `domain/types.rb` with shared constrained types:
+- [x] Add `dry-struct` to Gemfile (dry-types comes as dependency)
+- [x] `bundle install`
+- [x] Run existing tests (sanity check)
+- [x] Create `backend_app/domain/` folder structure
+- [x] Create `domain/types.rb` with shared constrained types:
   - `Types::CourseName` (string, min 1 char)
   - `Types::Email` (string, email format)
   - `Types::CourseRole` (enum: owner, instructor, staff, student)
   - `Types::SystemRole` (enum: admin, creator, member)
-- [ ] Create loader/initializer for domain layer
-- [ ] Write unit tests for constrained types (`spec/domain/types_spec.rb`)
+- [x] Create loader/initializer for domain layer
+- [x] Write unit tests for constrained types (`spec/domain/types_spec.rb`)
 
 ### 1.2 Extract first entity: Course
 
-- [ ] Create `domain/courses/entities/course.rb`
+- [x] Create `domain/courses/entities/course.rb`
   - Pure Ruby class using Dry::Struct
   - No Sequel dependencies
   - Uses `Types::CourseName` for name attribute
   - Type-safe attributes: id, name, logo, start_at, end_at
   - Computed methods: `duration`, `active?`, `upcoming?`
-- [ ] Create `domain/shared/values/time_range.rb` (start_at/end_at pair)
-- [ ] Write unit tests for Course entity (`spec/domain/courses/entities/course_spec.rb`)
+- [x] Create `domain/shared/values/time_range.rb` (start_at/end_at pair)
+- [x] Write unit tests for Course entity (`spec/domain/courses/entities/course_spec.rb`)
   - Include tests for constraint enforcement on `new()` updates
-- [ ] Write unit tests for TimeRange value (`spec/domain/shared/values/time_range_spec.rb`)
-- [ ] Run new unit tests
+- [x] Write unit tests for TimeRange value (`spec/domain/shared/values/time_range_spec.rb`)
+- [x] Run new unit tests
 
 ### 1.3 Create Course repository
 
-- [ ] Create `infrastructure/database/repositories/courses.rb`
+- [x] Create `infrastructure/database/repositories/courses.rb`
   - `find_id(id)` → returns Domain::Entity::Course
   - `find_all` → returns array of Domain::Entity::Course
   - `create(course_entity)` → persists and returns entity
   - `rebuild_entity(orm_record)` → private mapper method
-- [ ] ORM remains in `orm/course.rb` (already moved in Phase 0)
-- [ ] Write integration tests for repository (`spec/infrastructure/database/repositories/courses_spec.rb`)
-- [ ] Run repository tests
+- [x] ORM remains in `orm/course.rb` (already moved in Phase 0)
+- [x] Write integration tests for repository (`spec/infrastructure/database/repositories/courses_spec.rb`)
+- [x] Run repository tests
 
 ### 1.4 Update CourseService to use repository
 
-- [ ] Inject repository instead of direct ORM access
-- [ ] Return domain entities instead of raw attributes
-- [ ] Run ALL tests (existing + new) to verify integration
-- [ ] Commit Phase 1
+- [x] Inject repository instead of direct ORM access (incremental: list_all uses repository)
+- [x] Add entity_to_hash bridge for API compatibility
+- [x] Run ALL tests (existing + new) to verify integration
+- [x] Commit Phase 1
 
 ---
 
@@ -374,8 +374,8 @@ Each phase should:
 
 ## Current Status
 
-**Phase**: 1 - Foundation (Domain Layer Setup)
-**Next Task**: Add dry-struct to Gemfile (dry-types is already a transitive dependency via dry-validation)
+**Phase**: 1 - Foundation (Domain Layer Setup) ✅ COMPLETE
+**Next Phase**: 2 - Complete Courses Context (Event entity, Location entity, Aggregate Root)
 
 ---
 
