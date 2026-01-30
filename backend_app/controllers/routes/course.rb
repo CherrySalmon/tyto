@@ -148,7 +148,7 @@ module Todo
                 request_body = JSON.parse(r.body.read)
                 event = EventService.create(requestor, request_body, course_id)
                 response.status = 201
-                { success: true, message: 'Event created', event_info: event.attributes }.to_json
+                { success: true, message: 'Event created', event_info: event }.to_json
                 rescue JSON::ParserError => e
                   response.status = 400
                   { error: 'Invalid JSON', details: e.message }.to_json

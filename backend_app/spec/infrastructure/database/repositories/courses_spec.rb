@@ -69,8 +69,8 @@ describe 'Todo::Repository::Courses' do
 
     it 'returns course with children not loaded (nil)' do
       orm_course = Todo::Course.create(name: 'Test Course')
-      Todo::Location.create(course_id: orm_course.id, name: 'Room A')
-      Todo::Event.create(course_id: orm_course.id, location_id: 1, name: 'Event 1')
+      orm_location = Todo::Location.create(course_id: orm_course.id, name: 'Room A')
+      Todo::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
 
       result = repository.find_id(orm_course.id)
 
