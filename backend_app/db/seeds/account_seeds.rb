@@ -1,7 +1,7 @@
 # db/seeds/account_seeds.rb
 
-require_relative '../../infrastructure/database/orm/role'
-require_relative '../../infrastructure/database/orm/account'
+require_relative '../../app/infrastructure/database/orm/role'
+require_relative '../../app/infrastructure/database/orm/account'
 
 # Define the role descriptions
 role_descriptions = ['admin', 'creator', 'member', 'owner', 'instructor', 'staff', 'student']
