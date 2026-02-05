@@ -1,6 +1,6 @@
-# DDD Refactoring Skill
+# DDD Skill
 
-Guidelines for refactoring code into Domain-Driven Design architecture in this Ruby codebase.
+Domain-Driven Design architecture patterns and conventions for this Ruby codebase.
 
 ## Migration Strategy: Vertical Slices
 
@@ -58,6 +58,8 @@ application/
 presentation/
 └── representers/          # JSON serialization (roar)
 ```
+
+**Note:** These patterns apply to the backend only. The frontend is a presentation layer — domain logic and authoritative validation live in the backend.
 
 ## Input Handling Philosophy
 
