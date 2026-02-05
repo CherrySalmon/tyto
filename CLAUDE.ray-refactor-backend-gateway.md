@@ -6,7 +6,7 @@
 `ray/refactor-backend-gateway`
 
 ## Goal
-Create a centralized API client (`frontend_app/lib/api.js`) that acts as the frontend's gateway to the backend API. This eliminates duplicated axios calls, auth header logic, and error handling scattered across 106+ locations in Vue components.
+Create a centralized API client (`frontend_app/lib/tyto-api.js`) that acts as the frontend's gateway to the backend API. This eliminates duplicated axios calls, auth header logic, and error handling scattered across 39 calls in 8 Vue components.
 
 ## Why
 - **Single responsibility**: One module handles all HTTP/auth concerns
@@ -16,27 +16,28 @@ Create a centralized API client (`frontend_app/lib/api.js`) that acts as the fro
 - **Matches backend architecture**: Similar to `infrastructure/auth/*/gateway.rb` pattern
 
 ## Current State
-- [ ] Plan created
+- [x] Plan created
 - [ ] API gateway module implemented
-- [ ] Existing components migrated (optional, can be incremental)
+- [ ] Verified working with existing endpoint
+
+## Next Step (Requires Consultation)
+- [ ] Migrate existing 39 axios calls to use gateway — **do not start without discussing scope and approach first**
 
 ## Design
 
 ### File Location
-`frontend_app/lib/api.js`
+`frontend_app/lib/tyto-api.js`
 
 ### Responsibilities
 1. Create axios instance with base URL `/api`
-2. Attach auth header from cookieManager on every request
-3. Handle common errors uniformly:
-   - 401 → redirect to login
-   - 422 → return validation errors
-   - 500 → log and surface error message
-4. Optional: request/response logging for dev mode
+2. Attach `Bearer` auth header from cookieManager on every request
+3. Handle 401 errors: clear cookies and redirect to `/login`
+4. Return full axios response (callers handle 422/500 contextually)
+5. Future: Consider dev-mode request/response logging
 
 ### Interface
 ```javascript
-import api from '@/lib/api'
+import api from '@/lib/tyto-api'
 
 // Usage in components:
 await api.get('/course')
@@ -49,7 +50,6 @@ await api.delete('/course/123')
 ```javascript
 import axios from 'axios'
 import cookieManager from './cookieManager'
-import router from '../router'
 
 const api = axios.create({
   baseURL: '/api'
@@ -59,7 +59,7 @@ const api = axios.create({
 api.interceptors.request.use(config => {
   const account = cookieManager.getAccount()
   if (account?.credential) {
-    config.headers.Authorization = account.credential
+    config.headers.Authorization = `Bearer ${account.credential}`
   }
   return config
 })
@@ -69,9 +69,10 @@ api.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      cookieManager.clearAccount()
-      router.push('/login')
+      cookieManager.onLogout()
+      window.location.href = '/login'
     }
+    // 422/500: Left to callers for contextual handling
     return Promise.reject(error)
   }
 )
@@ -80,22 +81,37 @@ export default api
 ```
 
 ## Migration Strategy
-1. Implement `api.js` without touching existing code
-2. New features use `api.js` exclusively
-3. Optionally migrate existing components incrementally (not required for this branch)
+
+### Phase 1: Gateway Implementation (This Branch)
+1. Implement `tyto-api.js` without touching existing code
+2. Verify it works with an existing endpoint
+3. New features use `tyto-api.js` exclusively
+
+### Phase 2: Migrate Existing Calls (Future — Requires Consultation)
+Existing 39 axios calls across 8 files can continue working as-is. Migration is **not automatic** — discuss before starting:
+- `AllCourse.vue` (9 calls)
+- `SingleCourse.vue` (14 calls)
+- `AttendanceTrack.vue` (6 calls)
+- `ManageAccount.vue` (3 calls)
+- `ManageCourse.vue` (3 calls)
+- `AttendanceEventCard.vue` (2 calls)
+- `Login.vue` (1 call)
+- `FileUpload.vue` (1 call)
 
 ## Questions
 
 > Questions must be crossed off when resolved. Note the decision made.
 
-(none yet)
+- [x] **Q1: Return value convention** — Should `api.get()` return the full axios `response` or unwrap to `response.data`? Current code often does `response.data.data` to get the payload.
+  - **Decision**: Return full response for easier migration. Consider unwrapping as a future enhancement after major refactoring.
+- [x] **Q2: 422/500 handling** — Should the gateway handle these uniformly (e.g., show toast notification) or leave error handling to individual callers?
+  - **Decision**: Leave to callers. Gateway only handles 401 (redirect to login). Components handle validation/server errors contextually.
 
-## Tasks
+## Tasks (Phase 1)
 
-- [ ] Create `frontend_app/lib/api.js`
+- [ ] Create `frontend_app/lib/tyto-api.js`
 - [ ] Verify it works with an existing endpoint
 - [ ] Document usage in this file
-- [ ] Update CLAUDE.md frontend section if needed
 
 ## Completed
 (none yet)
