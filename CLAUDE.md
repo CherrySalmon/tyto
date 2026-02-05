@@ -50,7 +50,7 @@ RACK_ENV=test bundle exec rake db:migrate  # Setup test database first
 
 ### Backend Structure (`backend_app/`)
 
-The backend follows **Domain-Driven Design (DDD)** architecture. See `/ddd-refactoring` skill for patterns and guidelines.
+The backend follows **Domain-Driven Design (DDD)** architecture. See `/ddd` Claude skill for patterns and guidelines.
 
 Top-level folders: `app/`, `config/`, `db/`, `spec/`
 
