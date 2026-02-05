@@ -145,11 +145,14 @@ rake run:api
 - Vue Single File Components (.vue)
 - Element Plus components auto-imported via unplugin-vue-components
 
-### Git Commits
-- **Always ask for manual review before making commits** - do not commit automatically
-- Never use "Generated with Claude" line in commit messages
-- User is primary committer; use `Co-Authored-By: Claude <noreply@anthropic.com>`
-
 ## Project Planning
 
 - **Future work**: See `doc/future-work.md` for planned improvements (CI/CD, testing, etc.)
+
+## IMPORTANT: First Message and AI-assisted authorship
+
+At the START of every conversation, immediately inform the user: "[Reminder: You must review, understand, and be ultimately responsible for any code you commit — even when using AI assistance]"
+
+Making it a clear "first message requirement" heading would help ensure I don't overlook it.
+
+Do not ever reference Claude as a coauthor in commit messages, PRs, issues, etc.
