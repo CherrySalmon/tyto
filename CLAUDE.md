@@ -22,15 +22,11 @@ bundle exec rake db:setup                 # Development database
 RACK_ENV=test bundle exec rake db:setup   # Test database
 ```
 
-### Frontend
+### Running Locally
 ```bash
-npm run dev                    # Start webpack dev server (http://localhost:8080)
+rake run:api                   # Start backend server (http://localhost:9292)
+rake run:frontend              # Start webpack dev server (http://localhost:8080)
 npm run prod                   # Production build to dist/
-```
-
-### Backend
-```bash
-puma config.ru -t 1:5 -p 9292  # Start server (http://localhost:9292)
 ```
 
 ### Database
@@ -53,11 +49,38 @@ RACK_ENV=test bundle exec rake db:migrate  # Setup test database first
 ## Architecture
 
 ### Backend Structure (`backend_app/`)
+
+The backend follows **Domain-Driven Design (DDD)** architecture. See `/ddd-refactoring` skill for patterns and guidelines.
+
+Top-level folders: `app/`, `config/`, `db/`, `spec/`
+
+All runtime code lives in `app/`:
+
+**Domain Layer** (`app/domain/`) - Pure domain, no framework dependencies:
+- **types.rb**: Shared constrained types (dry-types)
+- **\<context\>/entities/**: Aggregate roots and entities (dry-struct)
+- **\<context\>/values/**: Value objects
+
+**Infrastructure Layer** (`app/infrastructure/`):
+- **database/orm/**: Sequel ORM models (thin, no business logic)
+- **database/repositories/**: Maps ORM ↔ domain entities
+- **auth/**: Authentication boundary adapters
+  - `auth_token/` - JWT handling (Gateway for encryption, Mapper for AuthCapability ↔ token)
+  - `sso_auth/` - Google OAuth (Gateway for HTTP, Mapper for Google data → domain fields)
+
+**Application Layer** (`app/application/`):
 - **controllers/routes/**: API route handlers (Roda). Routes are under `/api/` namespace
-- **services/**: Business logic + authorization checks (CourseService, AccountService, etc.)
+- **services/**: Use cases, orchestration
 - **policies/**: Authorization rules (role-based access control)
-- **models/**: Sequel ORM models with associations
-- **lib/jwt_credential.rb**: JWT generation/validation using RbNaCl SecretBox
+- **contracts/**: Input validation (dry-validation, imports domain types)
+
+**Presentation Layer** (`app/presentation/`):
+- **representers/**: JSON serialization (Roar)
+
+**Cross-cutting Utilities** (`app/lib/`):
+- Currently empty (JWT handling moved to `infrastructure/auth/` and `domain/accounts/values/`)
+
+**Refactoring status**: See `CLAUDE.refactor-ddd.md` for current progress.
 
 ### Frontend Structure (`frontend_app/`)
 - **pages/**: Full-page Vue components (Login, ManageCourse, course/, etc.)
@@ -92,6 +115,7 @@ Policies check roles (admin, creator, instructor, staff, owner) and course enrol
 ### Database
 - Development: SQLite at `backend_app/db/store/development.db`
 - Production: PostgreSQL (set in DATABASE_URL)
+- Migrations: `backend_app/db/migrations/`
 
 ## Development
 
@@ -101,10 +125,10 @@ Open in VS Code and use "Reopen in Container" for a pre-configured Ruby 3.4 + No
 ### Running Both Servers
 ```bash
 # Terminal 1: Frontend (webpack dev server with hot reload)
-npm run dev
+rake run:frontend
 
 # Terminal 2: Backend
-puma config.ru -t 1:5 -p 9292
+rake run:api
 ```
 
 **IMPORTANT**: Open http://localhost:9292 in your browser (the backend), NOT port 8080. The backend serves both the API and frontend files from `dist/`. The webpack dev server (8080) only handles compilation with hot reload and writes to `dist/`.
@@ -113,14 +137,16 @@ puma config.ru -t 1:5 -p 9292
 
 ### Ruby
 - Frozen string literals enabled at file top
-- Module namespacing: `Todo::Api`, `Todo::Routes::*`
+- Module namespacing: `Tyto::Api`, `Tyto::Routes::*`
 - RuboCop for linting
+- **Avoid `nil` as state**: Use Null Object pattern instead of returning `nil` for missing/empty states. This eliminates guard clauses and follows "Tell, Don't Ask" principle. Example: `NullTimeRange` instead of `nil` for courses without dates.
 
 ### Vue/JavaScript
 - Vue Single File Components (.vue)
 - Element Plus components auto-imported via unplugin-vue-components
 
 ### Git Commits
+- **Always ask for manual review before making commits** - do not commit automatically
 - Never use "Generated with Claude" line in commit messages
 - User is primary committer; use `Co-Authored-By: Claude <noreply@anthropic.com>`
 

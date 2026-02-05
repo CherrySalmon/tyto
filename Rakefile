@@ -61,16 +61,16 @@ namespace :db do
     Sequel.extension :migration
 
     # Set up the migration path
-    migration_path = File.expand_path('backend_app/db/migration', __dir__)
+    migration_path = File.expand_path('backend_app/db/migrations', __dir__)
 
     # Run the migrations
     Dir.glob("#{migration_path}/*.rb").each { |file| require file }
-    Sequel::Migrator.run(Todo::Api.db, migration_path)
+    Sequel::Migrator.run(Tyto::Api.db, migration_path)
   end
 
   desc 'Seed the database with default data'
   task seed: [:config] do
-    seed_path = File.expand_path('backend_app/db/account_seeds.rb')
+    seed_path = File.expand_path('backend_app/db/seeds/account_seeds.rb')
 
     # Load and execute the seed script
     load(seed_path)
@@ -79,7 +79,7 @@ namespace :db do
 
   desc 'Delete dev or test database file'
   task drop: [:config] do
-    @app = BackendApp::Api
+    @app = Tyto::Api
     if @app.environment == :production
       puts 'Cannot wipe production database!'
       return
@@ -101,10 +101,22 @@ task :load_lib do
   require_app('lib')
 end
 
+namespace :run do
+  desc 'Run backend API server for development'
+  task :api do
+    sh 'puma config.ru -t 1:5 -p 9292'
+  end
+
+  desc 'Run frontend webpack dev server'
+  task :frontend do
+    sh 'npm run dev'
+  end
+end
+
 namespace :generate do
   desc 'Generate JWT_KEY for secrets.yml'
   task jwt_key: :load_lib do
-    puts "JWT_KEY: #{Todo::JWTCredential.generate_key}"
+    puts "JWT_KEY: #{Tyto::JWTCredential.generate_key}"
   end
 
   # Alias for backwards compatibility

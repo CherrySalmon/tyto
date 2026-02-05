@@ -2,4 +2,4 @@
 
 require './require_app'
 require_app
-run Todo::Api.freeze.app
+run Tyto::Api.freeze.app

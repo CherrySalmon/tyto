@@ -2,7 +2,7 @@ require 'sequel'
 require 'figaro'
 require 'roda'
 require 'logger'
-module Todo
+module Tyto
   # Configuration for the API
   class Api < Roda
     plugin :environments
@@ -22,7 +22,9 @@ module Todo
     Sequel.default_timezone = :utc
     Sequel.application_timezone = :utc
 
-    @db = Sequel.connect(db_url, logger: Logger.new($stderr))
+    # Only log SQL in development, not in test
+    db_logger = environment == :development ? Logger.new($stderr) : nil
+    @db = Sequel.connect(db_url, logger: db_logger)
     def self.db = @db # rubocop:disable Style/TrivialAccessors
   end
 end

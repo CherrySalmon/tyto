@@ -7,14 +7,14 @@ describe 'Current Event Routes' do
   include TestHelpers
 
   def app
-    Todo::Api
+    Tyto::Api
   end
 
   # Helper to create a course owned by a given account
   def create_test_course(owner_account, name: 'Test Course')
-    course = Todo::Course.create(name: name)
-    owner_role = Todo::Role.find(name: 'owner')
-    Todo::AccountCourse.create(
+    course = Tyto::Course.create(name: name)
+    owner_role = Tyto::Role.find(name: 'owner')
+    Tyto::AccountCourse.create(
       course_id: course.id,
       account_id: owner_account.id,
       role_id: owner_role.id
@@ -24,7 +24,7 @@ describe 'Current Event Routes' do
 
   # Helper to create a location for testing
   def create_test_location(course, name: 'Test Location')
-    Todo::Location.create(
+    Tyto::Location.create(
       course_id: course.id,
       name: name,
       latitude: 40.7128,
@@ -34,7 +34,7 @@ describe 'Current Event Routes' do
 
   # Helper to create an event with specific times
   def create_test_event(course, location, name: 'Test Event', start_at: Time.now, end_at: Time.now + 3600)
-    Todo::Event.create(
+    Tyto::Event.create(
       course_id: course.id,
       location_id: location.id,
       name: name,
