@@ -18,6 +18,16 @@ describe 'Account Routes' do
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
+      _(json_response['data']).must_be_kind_of Array
+      _(json_response['data'].length).must_be :>, 0
+
+      account_data = json_response['data'].first
+      _(account_data).must_include 'id'
+      _(account_data).must_include 'name'
+      _(account_data).must_include 'email'
+      _(account_data['id']).must_be_kind_of Integer
+      _(account_data['name']).must_be_kind_of String
+      _(account_data['email']).must_be_kind_of String
     end
 
     it 'returns forbidden for non-admin' do
@@ -38,6 +48,11 @@ describe 'Account Routes' do
 
       _(last_response.status).must_equal 201
       _(json_response['success']).must_equal true
+      _(json_response['message']).must_equal 'Account created'
+      _(json_response['user_info']).wont_be_nil
+      _(json_response['user_info']['id']).must_be_kind_of Integer
+      _(json_response['user_info']['name']).must_equal 'New User'
+      _(json_response['user_info']['email']).must_equal 'new@test.com'
     end
 
     it 'returns bad request without auth header' do
@@ -59,6 +74,7 @@ describe 'Account Routes' do
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
+      _(json_response['message']).must_be_kind_of String
     end
 
     it 'forbids updating other accounts without admin role' do
@@ -80,6 +96,7 @@ describe 'Account Routes' do
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
+      _(json_response['message']).must_be_kind_of String
     end
 
     it 'forbids deleting other accounts without admin role' do

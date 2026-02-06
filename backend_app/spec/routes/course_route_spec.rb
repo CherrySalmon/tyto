@@ -35,6 +35,15 @@ describe 'Course Routes' do
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
       _(json_response['data']).must_be_kind_of Array
+      _(json_response['data'].length).must_be :>, 0
+
+      course_data = json_response['data'].first
+      _(course_data).must_include 'id'
+      _(course_data).must_include 'name'
+      _(course_data).must_include 'enroll_identity'
+      _(course_data['id']).must_be_kind_of Integer
+      _(course_data['name']).must_be_kind_of String
+      _(course_data['enroll_identity']).must_be_kind_of Array
     end
   end
 
@@ -46,6 +55,7 @@ describe 'Course Routes' do
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
+      _(json_response['data']).must_be_kind_of Array
     end
 
     it 'returns forbidden for non-admin' do
@@ -66,9 +76,14 @@ describe 'Course Routes' do
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
-      _(json_response['data']['id']).must_equal course.id
-      _(json_response['data']['enroll_identity']).must_be_kind_of Array
-      _(json_response['data']['enroll_identity']).must_include 'owner'
+
+      course_data = json_response['data']
+      _(course_data['id']).must_equal course.id
+      _(course_data['name']).must_be_kind_of String
+      _(course_data).must_include 'created_at'
+      _(course_data).must_include 'updated_at'
+      _(course_data['enroll_identity']).must_be_kind_of Array
+      _(course_data['enroll_identity']).must_include 'owner'
     end
 
     it 'returns forbidden for non-enrolled user' do
@@ -92,6 +107,12 @@ describe 'Course Routes' do
       _(last_response.status).must_equal 201
       _(json_response['success']).must_equal true
       _(json_response['message']).must_equal 'Course created'
+      _(json_response['course_info']).wont_be_nil
+      _(json_response['course_info']['id']).must_be_kind_of Integer
+      _(json_response['course_info']['name']).must_equal 'New Course'
+      _(json_response['course_info']).must_include 'created_at'
+      _(json_response['course_info']).must_include 'updated_at'
+      _(json_response['course_info']).must_include 'enroll_identity'
     end
 
     it 'returns forbidden without creator role' do
@@ -129,6 +150,7 @@ describe 'Course Routes' do
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
+      _(json_response['message']).must_be_kind_of String
     end
 
     it 'updates course as instructor' do
@@ -179,6 +201,7 @@ describe 'Course Routes' do
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
+      _(json_response['message']).must_be_kind_of String
     end
 
     it 'deletes course as admin' do
@@ -227,6 +250,7 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
+        _(json_response['message']).must_be_kind_of String
       end
 
       it 'returns forbidden as student' do
@@ -286,6 +310,15 @@ describe 'Course Routes' do
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
         _(json_response['data']).must_be_kind_of Array
+        _(json_response['data'].length).must_be :>, 0
+
+        enrollment = json_response['data'].first
+        _(enrollment).must_include 'account'
+        _(enrollment).must_include 'enroll_identity'
+        _(enrollment['account']).must_include 'id'
+        _(enrollment['account']).must_include 'email'
+        _(enrollment['account']).must_include 'name'
+        _(enrollment['enroll_identity']).must_be_kind_of Array
       end
 
       it 'returns forbidden for non-enrolled users' do
@@ -318,6 +351,8 @@ describe 'Course Routes' do
         post "/api/course/#{course.id}/enroll/#{student.id}", payload.to_json, json_headers(auth)
 
         _(last_response.status).must_equal 200
+        _(json_response['success']).must_equal true
+        _(json_response['message']).must_be_kind_of String
       end
     end
 
@@ -339,6 +374,7 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
+        _(json_response['message']).must_be_kind_of String
       end
     end
   end
@@ -364,6 +400,13 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 201
         _(json_response['success']).must_equal true
+        _(json_response['message']).must_equal 'Location created'
+        _(json_response['location_info']).wont_be_nil
+        _(json_response['location_info']['id']).must_be_kind_of Integer
+        _(json_response['location_info']['course_id']).must_be_kind_of Integer
+        _(json_response['location_info']['name']).must_equal 'Room 101'
+        _(json_response['location_info']).must_include 'latitude'
+        _(json_response['location_info']).must_include 'longitude'
       end
 
       it 'returns forbidden as student' do
@@ -405,6 +448,14 @@ describe 'Course Routes' do
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
         _(json_response['data']).must_be_kind_of Array
+        _(json_response['data'].length).must_be :>, 0
+
+        location_data = json_response['data'].first
+        _(location_data).must_include 'id'
+        _(location_data).must_include 'course_id'
+        _(location_data).must_include 'name'
+        _(location_data).must_include 'latitude'
+        _(location_data).must_include 'longitude'
       end
 
       it 'returns forbidden for non-enrolled users' do
@@ -433,6 +484,12 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
+        _(json_response['data']).wont_be_nil
+        _(json_response['data']['id']).must_equal location.id
+        _(json_response['data']['course_id']).must_be_kind_of Integer
+        _(json_response['data']['name']).must_equal 'Test Location'
+        _(json_response['data']).must_include 'latitude'
+        _(json_response['data']).must_include 'longitude'
       end
     end
 
@@ -463,6 +520,10 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
+        _(json_response['message']).must_equal 'Location updated'
+        _(json_response['location_info']).wont_be_nil
+        _(json_response['location_info']['id']).must_equal location.id
+        _(json_response['location_info']['name']).must_equal 'Updated Location Name'
       end
 
       it 'returns forbidden as student' do
@@ -508,6 +569,7 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
+        _(json_response['message']).must_be_kind_of String
       end
 
       it 'fails when location has associated events' do
@@ -578,6 +640,16 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 201
         _(json_response['success']).must_equal true
+        _(json_response['message']).must_equal 'Attendance created'
+        _(json_response['attendance_info']).wont_be_nil
+        _(json_response['attendance_info']['id']).must_be_kind_of Integer
+        _(json_response['attendance_info']['account_id']).must_be_kind_of Integer
+        _(json_response['attendance_info']['course_id']).must_be_kind_of Integer
+        _(json_response['attendance_info']['event_id']).must_be_kind_of Integer
+        _(json_response['attendance_info']).must_include 'latitude'
+        _(json_response['attendance_info']).must_include 'longitude'
+        _(json_response['attendance_info']).must_include 'created_at'
+        _(json_response['attendance_info']).must_include 'updated_at'
       end
 
       it 'includes GPS coordinates' do
@@ -664,6 +736,7 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
+        _(json_response['data']).must_be_kind_of Array
       end
 
       it 'returns forbidden for student' do
@@ -718,6 +791,7 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
+        _(json_response['data']).must_be_kind_of Array
       end
     end
   end
