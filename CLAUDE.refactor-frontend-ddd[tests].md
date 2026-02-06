@@ -726,12 +726,14 @@ E2E tests will be added if manual verification proves insufficient. Candidates:
 ## Questions
 
 - [ ] Should E2E tests mock geolocation or use a test location?
-- [ ] What's the CI/CD situation? Will tests run automatically?
+- [x] ~~What's the CI/CD situation? Will tests run automatically?~~ **Yes — GitHub Actions CI now runs on all PRs and pushes to main**
 - [x] ~~Should we use factories (factory_bot) for test data?~~ **No — existing test helpers work well**
 
 ## Completed
 
-(none yet)
+- [x] **GitHub Actions CI** — Added `.github/workflows/ci.yml` that runs backend tests automatically on PRs (any branch), pushes to main, and manual dispatch. Setup includes libsodium, Ruby (from `.ruby-version`), SQLite, JWT key generation, and test database migration/seeding.
+- [x] **Fix `rake generate:jwt_key`** — Task was broken after DDD refactor (referenced removed `Tyto::JWTCredential`). Fixed to use `Tyto::AuthToken::Gateway.generate_key` and require only the gateway file (no database connection needed). This also fixed a chicken-and-egg problem where the task couldn't run without `secrets.yml` already existing.
+- [x] **Remove dead `load_lib` rake task** — No longer referenced after `generate:jwt_key` was decoupled from it.
 
 ---
 
