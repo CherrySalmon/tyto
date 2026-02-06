@@ -139,6 +139,7 @@ rake run:api
 - Frozen string literals enabled at file top
 - Module namespacing: `Tyto::Api`, `Tyto::Routes::*`
 - RuboCop for linting
+- **Testing**: Minitest with spec-style syntax (`describe`/`it`), NOT RSpec.
 - **Avoid `nil` as state**: Use Null Object pattern instead of returning `nil` for missing/empty states. This eliminates guard clauses and follows "Tell, Don't Ask" principle. Example: `NullTimeRange` instead of `nil` for courses without dates.
 
 ### Vue/JavaScript
