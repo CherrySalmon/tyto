@@ -70,6 +70,13 @@ describe 'Event Routes' do
       _(last_response.status).must_equal 201
       _(json_response['success']).must_equal true
       _(json_response['message']).must_equal 'Event created'
+      _(json_response['event_info']).wont_be_nil
+      _(json_response['event_info']['id']).must_be_kind_of Integer
+      _(json_response['event_info']['course_id']).must_be_kind_of Integer
+      _(json_response['event_info']['location_id']).must_be_kind_of Integer
+      _(json_response['event_info']['name']).must_equal 'New Event'
+      _(json_response['event_info']).must_include 'start_at'
+      _(json_response['event_info']).must_include 'end_at'
     end
 
     it 'creates event as owner' do
@@ -88,6 +95,9 @@ describe 'Event Routes' do
 
       _(last_response.status).must_equal 201
       _(json_response['success']).must_equal true
+      _(json_response['event_info']).wont_be_nil
+      _(json_response['event_info']['id']).must_be_kind_of Integer
+      _(json_response['event_info']['name']).must_equal 'Owner Event'
     end
 
     it 'returns forbidden as student' do
@@ -140,6 +150,15 @@ describe 'Event Routes' do
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
       _(json_response['data']).must_be_kind_of Array
+      _(json_response['data'].length).must_equal 2
+
+      event_data = json_response['data'].first
+      _(event_data).must_include 'id'
+      _(event_data).must_include 'course_id'
+      _(event_data).must_include 'location_id'
+      _(event_data).must_include 'name'
+      _(event_data).must_include 'start_at'
+      _(event_data).must_include 'end_at'
     end
 
     it 'returns empty array when no events exist' do
@@ -178,6 +197,12 @@ describe 'Event Routes' do
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
       _(json_response['message']).must_equal 'Event updated'
+      _(json_response['event_info']).wont_be_nil
+      _(json_response['event_info']['id']).must_equal event.id
+      _(json_response['event_info']['name']).must_equal 'Updated Event Name'
+      _(json_response['event_info']).must_include 'course_id'
+      _(json_response['event_info']).must_include 'start_at'
+      _(json_response['event_info']).must_include 'end_at'
     end
 
     it 'updates event as instructor' do

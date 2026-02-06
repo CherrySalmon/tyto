@@ -38,7 +38,7 @@ module Tyto
       end
 
       def roles
-        represented[:account].roles || []
+        represented[:account].roles.to_a
       end
     end
   end

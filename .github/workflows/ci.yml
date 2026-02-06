@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    env:
+      BUNDLE_WITHOUT: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libsodium (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsodium-dev
+
+      - name: Install libsodium (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libsodium
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Create test secrets
+        run: |
+          set -o pipefail
+          JWT_KEY=$(bundle exec rake generate:jwt_key | grep 'JWT_KEY:' | cut -d' ' -f2)
+          printf "test:\n  DATABASE_URL: sqlite://backend_app/db/store/test.db\n  JWT_KEY: %s\n  ADMIN_EMAIL: test@example.com\n" "$JWT_KEY" > backend_app/config/secrets.yml
+
+      - name: Setup test database
+        run: RACK_ENV=test bundle exec rake db:setup
+
+      - name: Run tests
+        run: bundle exec rake spec

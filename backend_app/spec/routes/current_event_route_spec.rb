@@ -64,6 +64,16 @@ describe 'Current Event Routes' do
       _(json_response['success']).must_equal true
       _(json_response['data']).must_be_kind_of Array
       _(json_response['data'].length).must_be :>, 0
+
+      event_data = json_response['data'].first
+      _(event_data).must_include 'id'
+      _(event_data).must_include 'course_id'
+      _(event_data).must_include 'location_id'
+      _(event_data).must_include 'name'
+      _(event_data).must_include 'start_at'
+      _(event_data).must_include 'end_at'
+      _(event_data['id']).must_be_kind_of Integer
+      _(event_data['name']).must_be_kind_of String
     end
 
     it 'excludes past events' do
@@ -189,6 +199,13 @@ describe 'Current Event Routes' do
       _(last_response.status).must_equal 200
       _(json_response['data']).must_be_kind_of Array
       _(json_response['data'].length).must_equal 2
+
+      event_data = json_response['data'].first
+      _(event_data).must_include 'id'
+      _(event_data).must_include 'course_id'
+      _(event_data).must_include 'name'
+      _(event_data).must_include 'start_at'
+      _(event_data).must_include 'end_at'
     end
 
     it 'includes events that just started' do
