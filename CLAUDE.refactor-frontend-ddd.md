@@ -244,7 +244,9 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 ## Completed
 
-(none yet)
+- [x] **CI pipeline** — GitHub Actions on Ubuntu + macOS, triggers on PRs/main/manual
+- [x] **Fix `rake generate:jwt_key`** — Updated for DDD refactor, no DB dependency
+- [x] **Bump sqlite3 to 2.x** — Ruby 3.4 + ARM macOS compatibility
 
 ---
 
