@@ -50,6 +50,12 @@ module.exports = {
         })
     ],
 
+    resolve: {
+        alias: {
+            '@': __src,
+        },
+    },
+
     //Webpack dosent know how to handler all type of files and what to do with them, so this section 
     //we can capture and configure a specific type of file and determine a loader plugin to process it 
     module: {

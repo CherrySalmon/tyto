@@ -41,9 +41,7 @@
 
 
 <script>
-import Cookies from 'js-cookie'
-import axios from 'axios'
-import { imageEmits } from 'element-plus'
+import api from '@/lib/tyto-api'
 
 export default {
     data() {
@@ -74,11 +72,7 @@ export default {
         async updateAccount(account) {
             try {
                 account.account_id = this.user_id; // for auth information
-                const response = await axios.put(`/api/account/${account.id}`, account, {
-                    headers: {
-                        Authorization: `Bearer ${this.getCredentialFromCookie()}`
-                    }
-                });
+                const response = await api.put(`/account/${account.id}`, account);
                 if (response.status === 200) {
                     this.getUserRole(this.user_id);
                 }
@@ -90,11 +84,7 @@ export default {
         },
         async deleteAccount(id) {
             try {
-                const response = await axios.delete(`/api/account/${id}`, {
-                    headers: {
-                        Authorization: `Bearer ${this.getCredentialFromCookie()}`
-                    }
-                });
+                const response = await api.delete(`/account/${id}`);
                 if (response.status === 200) {
                     this.getUserRole();
                 }
@@ -104,23 +94,15 @@ export default {
             }
         },
         async getUserRole() {
-            const response = await axios.get('/api/account', {
-                headers: {
-                    Authorization: `Bearer ${this.getCredentialFromCookie()}`
-                }
-            });
+            const response = await api.get('/account');
             if (response.status === 200) {
                 this.accounts = response.data.data;
             }
             else {
                 console.error('Error sending token to backend');
             }
-        },
-        getCredentialFromCookie() {
-            return Cookies.get('account_credential');
         }
-    },
-    components: { imageEmits }
+    }
 }
 </script>
 

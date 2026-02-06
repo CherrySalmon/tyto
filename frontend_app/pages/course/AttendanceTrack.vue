@@ -28,7 +28,7 @@
 </template>
   
 <script>
-import axios from 'axios';
+import api from '@/lib/tyto-api';
 import cookieManager from '../../lib/cookieManager';
 import { ElMessageBox, ElLoading } from 'element-plus';
 
@@ -41,7 +41,6 @@ export default {
             events: {},
             course_id: '',
             location_name: '',
-            accountCredential: '',
             isEventDataFetched: false,
             locationText: '', // Initialize location text
             errMessage: '',
@@ -78,7 +77,6 @@ export default {
     },
 
     created() {
-        this.accountCredential = cookieManager.getCookie('account_credential');
         this.account = cookieManager.getAccount();
         this.course_id = this.$route.params.id;
         this.fullscreenLoading = true;
@@ -87,11 +85,7 @@ export default {
     methods: {
         async fetchEventData() { // Mark the method as async
             try {
-                const response = await axios.get(`/api/current_event/`, {
-                    headers: {
-                        Authorization: `Bearer ${this.accountCredential}`,
-                    },
-                });
+                const response = await api.get(`/current_event/`);
                 console.log('Event Data Fetched Successfully:', response.data.data);
                 this.isEventDataFetched = true;
 
@@ -117,22 +111,16 @@ export default {
             }
         },
         getCourseName(course_id) {
-            return axios.get(`/api/course/${course_id}`, {
-                headers: {
-                    Authorization: `Bearer ${this.accountCredential}`,
-                },
-            }).then(response => response.data.data.name) // Assuming the response has this structure
+            return api.get(`/course/${course_id}`)
+            .then(response => response.data.data.name) // Assuming the response has this structure
             .catch(error => {
                 console.error('Error fetching course name:', error);
                 return 'Error fetching course name'; // Provide a fallback or error message
             });
         },
         getLocationName(event) {
-            return axios.get(`/api/course/${event.course_id}/location/${event.location_id}`, {
-                headers: {
-                    Authorization: `Bearer ${this.accountCredential}`,
-                },
-            }).then(response => response.data.data.name) // Assuming the response has this structure
+            return api.get(`/course/${event.course_id}/location/${event.location_id}`)
+            .then(response => response.data.data.name) // Assuming the response has this structure
             .catch(error => {
                 console.error('Error fetching location name:', error);
                 return 'Error fetching location name'; // Provide a fallback or error message
@@ -184,11 +172,8 @@ export default {
             const course_id = event.course_id;
             const location_id = event.location_id;
 
-            axios.get(`/api/course/${course_id}/location/${location_id}`, {
-                headers: {
-                    Authorization: `Bearer ${this.accountCredential}`,
-                },
-            }).then(response => {
+            api.get(`/course/${course_id}/location/${location_id}`)
+            .then(response => {
                 this.location = response.data.data;
                 this.isEventDataFetched = true;
 
@@ -232,16 +217,12 @@ export default {
         postAttendance(loading, event) {
             // Use your actual course ID here
             const courseId = event.course_id; // Example course ID
-            axios.post(`/api/course/${courseId}/attendance`, {
+            api.post(`/course/${courseId}/attendance`, {
                 // Include any required data here
                 event_id: event.id,
                 name: event.name,
                 latitude: this.latitude,
                 longitude: this.longitude,
-            }, {
-                headers: {
-                    Authorization: `Bearer ${this.accountCredential}`,
-                }
             })
                 .then(response => {
                     // Handle success
@@ -267,11 +248,8 @@ export default {
         findAttendance(event) {
             // Return a new promise that resolves with the boolean result
             return new Promise((resolve, reject) => {
-                axios.get(`/api/course/${event.course_id}/attendance`, {
-                    headers: {
-                        Authorization: `Bearer ${this.accountCredential}`,
-                    },
-                }).then(response => {
+                api.get(`/course/${event.course_id}/attendance`)
+                .then(response => {
                     const accountId = this.account.id; // Ensure this is set correctly
                     const eventId = event.id;
                     const matchingAttendances = response.data.data.filter(attendance => 
