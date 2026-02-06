@@ -97,10 +97,6 @@ namespace :db do
   task reset: %i[drop migrate seed]
 end
 
-task :load_lib do
-  require_app('lib')
-end
-
 namespace :run do
   desc 'Run backend API server for development'
   task :api do
@@ -115,8 +111,9 @@ end
 
 namespace :generate do
   desc 'Generate JWT_KEY for secrets.yml'
-  task jwt_key: :load_lib do
-    puts "JWT_KEY: #{Tyto::JWTCredential.generate_key}"
+  task :jwt_key do
+    require_app('infrastructure')
+    puts "JWT_KEY: #{Tyto::AuthToken::Gateway.generate_key}"
   end
 
   # Alias for backwards compatibility
