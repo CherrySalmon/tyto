@@ -84,6 +84,8 @@ describe 'Authentication Routes' do
           _(json_response['user_info']).wont_be_nil
           _(json_response['user_info']['credential']).wont_be_nil
           _(json_response['user_info']['email']).must_equal 'testuser@example.com'
+          _(json_response['user_info']['roles']).must_be_kind_of Array
+          _(json_response['user_info']['roles']).must_include 'creator'
         end
       end
 

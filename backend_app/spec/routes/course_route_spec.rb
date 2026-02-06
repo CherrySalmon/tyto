@@ -67,6 +67,8 @@ describe 'Course Routes' do
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
       _(json_response['data']['id']).must_equal course.id
+      _(json_response['data']['enroll_identity']).must_be_kind_of Array
+      _(json_response['data']['enroll_identity']).must_include 'owner'
     end
 
     it 'returns forbidden for non-enrolled user' do
@@ -269,6 +271,8 @@ describe 'Course Routes' do
 
         _(last_response.status).must_equal 200
         _(json_response['success']).must_equal true
+        _(json_response['data']['enroll_identity']).must_be_kind_of Array
+        _(json_response['data']['enroll_identity']).must_include 'student'
       end
     end
 

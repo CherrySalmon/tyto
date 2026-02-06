@@ -64,7 +64,8 @@ module Tyto
       end
 
       def enroll_identity
-        represented.respond_to?(:enroll_identity) ? represented.enroll_identity : []
+        roles = represented.respond_to?(:enroll_identity) ? represented.enroll_identity : nil
+        roles.respond_to?(:to_a) ? roles.to_a : []
       end
     end
 

@@ -57,7 +57,7 @@ module Tyto
             end_at: course_orm.end_at,
             created_at: course_orm.created_at,
             updated_at: course_orm.updated_at,
-            enroll_identity: enrollment&.roles&.to_a || []
+            enroll_identity: enrollment&.roles
           )
 
           Success(course)
