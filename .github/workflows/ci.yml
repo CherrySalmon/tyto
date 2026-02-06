@@ -13,6 +13,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
 
+    env:
+      BUNDLE_WITHOUT: production
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,9 +32,6 @@ jobs:
         with:
           ruby-version: .ruby-version
           bundler-cache: true
-
-      - name: Configure bundler
-        run: bundle config set --local without production
 
       - name: Create test secrets
         run: |
