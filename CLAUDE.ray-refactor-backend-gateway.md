@@ -3,12 +3,15 @@
 > **IMPORTANT**: This plan must be kept up-to-date at all times. Assume context can be cleared at any time — this file is the single source of truth for the current state of this work.
 
 ## Branch
+
 `ray/refactor-backend-gateway`
 
 ## Goal
+
 Create a centralized API client (`frontend_app/lib/tyto-api.js`) that acts as the frontend's gateway to the backend API. This eliminates duplicated axios calls, auth header logic, and error handling scattered across 39 calls in 8 Vue components.
 
 ## Why
+
 - **Single responsibility**: One module handles all HTTP/auth concerns
 - **Consistency**: Uniform error handling, logging, and auth across all API calls
 - **Maintainability**: Change auth scheme or error handling in one place
@@ -16,26 +19,32 @@ Create a centralized API client (`frontend_app/lib/tyto-api.js`) that acts as th
 - **Matches backend architecture**: Similar to `infrastructure/auth/*/gateway.rb` pattern
 
 ## Current State
+
 - [x] Plan created
 - [ ] API gateway module implemented
 - [ ] Verified working with existing endpoint
 
 ## Next Step (Requires Consultation)
+
 - [ ] Migrate existing 39 axios calls to use gateway — **do not start without discussing scope and approach first**
 
 ## Design
 
 ### File Location
+
 `frontend_app/lib/tyto-api.js`
 
 ### Responsibilities
+
 1. Create axios instance with base URL `/api`
 2. Attach `Bearer` auth header from cookieManager on every request
 3. Handle 401 errors: clear cookies and redirect to `/login`
-4. Return full axios response (callers handle 422/500 contextually)
-5. Future: Consider dev-mode request/response logging
+4. Handle 422/500 errors: show toast notifications (Element Plus `ElMessage`)
+5. Return full axios response; still reject on error so callers can add contextual handling
+6. Future: Consider dev-mode request/response logging
 
 ### Interface
+
 ```javascript
 import api from '@/lib/tyto-api'
 
@@ -47,6 +56,7 @@ await api.delete('/course/123')
 ```
 
 ### Implementation Sketch
+
 ```javascript
 import axios from 'axios'
 import cookieManager from './cookieManager'
@@ -64,15 +74,19 @@ api.interceptors.request.use(config => {
   return config
 })
 
-// Response interceptor: handle errors
+// Response interceptor: handle errors with toast notifications
 api.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
       cookieManager.onLogout()
       window.location.href = '/login'
+    } else if (error.response?.status === 422) {
+      ElMessage.warning(error.response.data?.message || 'Validation error')
+    } else if (error.response?.status >= 500) {
+      ElMessage.error('Server error — please try again later')
     }
-    // 422/500: Left to callers for contextual handling
+    // Still reject so callers can add contextual handling if needed
     return Promise.reject(error)
   }
 )
@@ -83,12 +97,15 @@ export default api
 ## Migration Strategy
 
 ### Phase 1: Gateway Implementation (This Branch)
+
 1. Implement `tyto-api.js` without touching existing code
 2. Verify it works with an existing endpoint
 3. New features use `tyto-api.js` exclusively
 
 ### Phase 2: Migrate Existing Calls (Future — Requires Consultation)
+
 Existing 39 axios calls across 8 files can continue working as-is. Migration is **not automatic** — discuss before starting:
+
 - `AllCourse.vue` (9 calls)
 - `SingleCourse.vue` (14 calls)
 - `AttendanceTrack.vue` (6 calls)
@@ -105,7 +122,7 @@ Existing 39 axios calls across 8 files can continue working as-is. Migration is 
 - [x] **Q1: Return value convention** — Should `api.get()` return the full axios `response` or unwrap to `response.data`? Current code often does `response.data.data` to get the payload.
   - **Decision**: Return full response for easier migration. Consider unwrapping as a future enhancement after major refactoring.
 - [x] **Q2: 422/500 handling** — Should the gateway handle these uniformly (e.g., show toast notification) or leave error handling to individual callers?
-  - **Decision**: Leave to callers. Gateway only handles 401 (redirect to login). Components handle validation/server errors contextually.
+  - **Decision**: Gateway handles errors uniformly through toast notifications. 401 redirects to login; 422/500 show toast notifications to the user. Callers can still catch errors for additional contextual handling if needed.
 
 ## Tasks (Phase 1)
 
@@ -114,8 +131,9 @@ Existing 39 axios calls across 8 files can continue working as-is. Migration is 
 - [ ] Document usage in this file
 
 ## Completed
+
 (none yet)
 
 ---
 
-*Last updated: 2026-02-05*
+Last updated: 2026-02-05
