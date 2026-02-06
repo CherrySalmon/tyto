@@ -32,7 +32,7 @@
 </template>
   
 <script>
-import axios from 'axios';
+import api from '@/lib/tyto-api';
 import cookieManager from '../../../lib/cookieManager';
 import AttendanceMap from './AttendanceMap.vue';
   export default {
@@ -79,11 +79,7 @@ import AttendanceMap from './AttendanceMap.vue';
         }
       },
       fetchEventAttendances(event_id) {
-        axios.get(`/api/course/${this.course.id}/attendance/${event_id}`, {
-          headers: {
-            Authorization: `Bearer ${this.account.credential}`,
-          }
-        }).then(response => {
+        api.get(`/course/${this.course.id}/attendance/${event_id}`).then(response => {
           this.eventAttendances = response.data.data;
           this.attendanceMapVisible = true;
         }).catch(error => {
@@ -91,11 +87,7 @@ import AttendanceMap from './AttendanceMap.vue';
         });
       },
       fetchAttendances() {
-        axios.get(`/api/course/${this.course.id}/attendance/list_all`, {
-          headers: {
-            Authorization: `Bearer ${this.account.credential}`,
-          }
-        }).then(response => {
+        api.get(`/course/${this.course.id}/attendance/list_all`).then(response => {
           this.attendances = response.data.data;
           this.downloadAttendanceRecordAsCSV()
         }).catch(error => {

@@ -93,7 +93,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '@/lib/tyto-api';
 import cookieManager from '../../lib/cookieManager';
 import CourseInfoCard from './components/CourseInfoCard.vue';
 import ModifyCourseDialog from './components/ModifyCourseDialog.vue';
@@ -198,11 +198,7 @@ export default {
       this.$router.push({ path: route })
     },
     fetchCourse(id) {
-      axios.get(`/api/course/${id}`, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        },
-      }).then(response => {
+      api.get(`/course/${id}`).then(response => {
         this.course = response.data.data;
         // Copying the course object to courseForm
         let course = {...this.course}
@@ -224,11 +220,7 @@ export default {
       if (this.courseForm.repeat == 'no-repeat') {
         this.courseForm.occurrence = 1
       }
-      axios.put('/api/course/' + this.course.id, this.courseForm, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        },
-      }).then(() => {
+      api.put('/course/' + this.course.id, this.courseForm).then(() => {
         this.showModifyCourseDialog = false;
         this.fetchCourse(this.course.id);
       }).catch(error => {
@@ -236,11 +228,7 @@ export default {
       });
     },
     fetchEnrollments() {
-      axios.get(`/api/course/${this.course.id}/enroll`, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        }
-      }).then(response => {
+      api.get(`/course/${this.course.id}/enroll`).then(response => {
         this.enrollments = response.data.data;
         this.enrollments.forEach((enrollment) => {
           enrollment.enrolls = response.data.data.enroll_identity
@@ -252,15 +240,10 @@ export default {
     },
 
     addEnrollments(newEnrolls) {
-      axios.post(`/api/course/${this.course.id}/enroll`, { enroll: newEnrolls }, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        }
-      }).then(response => {
+      api.post(`/course/${this.course.id}/enroll`, { enroll: newEnrolls }).then(response => {
         this.fetchEnrollments()
       }).catch(error => {
         console.error('Error fetching enrollments:', error);
-        ElMessage.error(error.message)
       });
     },
 
@@ -271,35 +254,22 @@ export default {
           roles: enrollment.enroll_identity.join(',')
         }
       }
-      axios.post(`/api/course/${this.course.id}/enroll/${enrollment.account.id}`, entollList, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        }
-      }).then(response => {
+      api.post(`/course/${this.course.id}/enroll/${enrollment.account.id}`, entollList).then(response => {
         this.fetchEnrollments()
       }).catch(error => {
         console.error('Error fetching enrollments:', error);
-        ElMessage.error(error.message)
       });
     },
 
     deleteEnrollments(enrollment) {
-      axios.delete(`/api/course/${this.course.id}/enroll/${enrollment}`, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        }
-      }).then(response => {
+      api.delete(`/course/${this.course.id}/enroll/${enrollment}`).then(response => {
         this.fetchEnrollments()
       }).catch(error => {
         console.error('Error fetching enrollments:', error);
       });
     },
     createAttendanceEvent(eventForm) {
-      axios.post(`/api/course/${this.course.id}/event`, eventForm, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        },
-      }).then(() => {
+      api.post(`/course/${this.course.id}/event`, eventForm).then(() => {
         this.showCreateAttendanceEventDialog = false
         this.createAttendanceEventForm = {}
         this.fetchAttendanceEvents() // Refresh the list after adding
@@ -308,11 +278,7 @@ export default {
       });
     },
     fetchAttendanceEvents() {
-      axios.get(`/api/course/${this.course.id}/event`, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        },
-      }).then(response => {
+      api.get(`/course/${this.course.id}/event`).then(response => {
         let attendanceEvents = response.data.data;
         this.attendanceEvents = attendanceEvents
       }).catch(error => {
@@ -320,11 +286,7 @@ export default {
       });
     },
     fetchLocations() {
-      axios.get(`/api/course/${this.course.id}/location`, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        },
-      }).then(response => {
+      api.get(`/course/${this.course.id}/location`).then(response => {
         this.locations = response.data.data
       }).catch(error => {
         console.error('Error fetching locations:', error);
@@ -332,13 +294,8 @@ export default {
     },
     createNewLocation(locationData) {
       let courseId = this.$route.params.id;
-      axios.post(`/api/course/${courseId}/location`, locationData, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        }
-      })
+      api.post(`/course/${courseId}/location`, locationData)
         .then(response => {
-          // alert('Location created successfully', response);
           ElMessage({
             type: 'success',
             message: 'Location created successfully'
@@ -347,19 +304,11 @@ export default {
         })
         .catch(error => {
           console.error('Error creating location', error);
-          ElMessage({
-            type: 'error',
-            message: 'Error creating location'
-          })
         });
     },
     updateLocation(id, locationData) {
       let courseId = this.$route.params.id;
-      axios.put(`/api/course/${courseId}/location/${id}`, locationData, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        }
-      })
+      api.put(`/course/${courseId}/location/${id}`, locationData)
         .then(response => {
           ElMessage({
             type: 'success',
@@ -369,35 +318,19 @@ export default {
         })
         .catch(error => {
           console.error('Error updating location', error);
-          ElMessage({
-            type: 'error',
-            message: error,
-          })
         });
     },
     deleteLocation(locationId) {
-      axios.delete(`/api/course/${this.course.id}/location/${locationId}`, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        }
-      }).then(() => {
+      api.delete(`/course/${this.course.id}/location/${locationId}`).then(() => {
         console.log(`Location ${locationId} deleted successfully.`);
         // Refresh the locations list
         this.fetchLocations();
       }).catch(error => {
         console.error('Error deleting location:', error.message);
-        ElMessage({
-            type: 'error',
-            message: error,
-          })
       });
     },
     deleteAttendanceEvent(eventId) {
-      axios.delete(`/api/course/${this.course.id}/event/${eventId}`, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        }
-      }).then(() => {
+      api.delete(`/course/${this.course.id}/event/${eventId}`).then(() => {
         console.log(`Event ${eventId} deleted successfully.`);
         // Refresh the attendance events list
         this.fetchAttendanceEvents(this.course.id);
@@ -430,11 +363,7 @@ export default {
     },
 
     updateAttendanceEvent() {
-      axios.put(`/api/course/${this.course.id}/event/${this.currentEventID}`, this.attendanceEventForm, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        },
-      }).then(() => {
+      api.put(`/course/${this.course.id}/event/${this.currentEventID}`, this.attendanceEventForm).then(() => {
         this.showModifyAttendanceEventDialog = false;
         this.fetchAttendanceEvents(); // Refresh the list after adding
       }).catch(error => {

@@ -77,7 +77,7 @@
 </template>
   
 <script>
-import axios from 'axios';
+import api from '@/lib/tyto-api';
 import cookieManager from '../../lib/cookieManager';
 import { ElNotification } from 'element-plus'
 
@@ -99,7 +99,6 @@ export default {
       courses: [],
       account: {
         roles: [],
-        credential: ''
       },
       showCreateCourseDialog: false,
       createCourseForm: {
@@ -112,7 +111,6 @@ export default {
     };
   },
   created() {
-    this.accountCredential = cookieManager.getCookie('account_credential');
     this.account = cookieManager.getAccount()
     if (this.account) {
       this.fetchCourses()
@@ -122,11 +120,7 @@ export default {
   methods: {
     async fetchEventData() { // Mark the method as async
         try {
-            const response = await axios.get(`/api/current_event/`, {
-                headers: {
-                    Authorization: `Bearer ${this.accountCredential}`,
-                },
-            });
+            const response = await api.get('/current_event/');
 
             this.events = await Promise.all(response.data.data.map(async (event) => {
                 // Use getCourseName to fetch the course name asynchronously
@@ -145,25 +139,19 @@ export default {
         }
     },
     getCourseName(course_id) {
-        return axios.get(`/api/course/${course_id}`, {
-            headers: {
-                Authorization: `Bearer ${this.accountCredential}`,
-            },
-        }).then(response => response.data.data.name) // Assuming the response has this structure
+        return api.get(`/course/${course_id}`)
+        .then(response => response.data.data.name)
         .catch(error => {
             console.error('Error fetching course name:', error);
-            return 'Error fetching course name'; // Provide a fallback or error message
+            return 'Error fetching course name';
         });
     },
     getLocationName(event) {
-        return axios.get(`/api/course/${event.course_id}/location/${event.location_id}`, {
-            headers: {
-                Authorization: `Bearer ${this.accountCredential}`,
-            },
-        }).then(response => response.data.data.name) // Assuming the response has this structure
+        return api.get(`/course/${event.course_id}/location/${event.location_id}`)
+        .then(response => response.data.data.name)
         .catch(error => {
             console.error('Error fetching location name:', error);
-            return 'Error fetching location name'; // Provide a fallback or error message
+            return 'Error fetching location name';
         });
     },
     getLocation(event) {
@@ -192,11 +180,7 @@ export default {
         const course_id = event.course_id;
         const location_id = event.location_id;
 
-        axios.get(`/api/course/${course_id}/location/${location_id}`, {
-            headers: {
-                Authorization: `Bearer ${this.accountCredential}`,
-            },
-        }).then(response => {
+        api.get(`/course/${course_id}/location/${location_id}`).then(response => {
             console.log('Event Data Fetched Successfully:', response.data.data);
             this.location = response.data.data;
             this.isEventDataFetched = true;
@@ -241,16 +225,11 @@ export default {
     postAttendance(loading, event) {
         // Use your actual course ID here
         const courseId = event.course_id; // Example course ID
-        axios.post(`/api/course/${courseId}/attendance`, {
-            // Include any required data here
+        api.post(`/course/${courseId}/attendance`, {
             event_id: event.id,
             name: event.name,
             latitude: this.latitude,
             longitude: this.longitude,
-        }, {
-            headers: {
-                Authorization: `Bearer ${this.accountCredential}`,
-            }
         })
             .then(response => {
                 // Handle success
@@ -276,11 +255,7 @@ export default {
     findAttendance(event) {
         // Return a new promise that resolves with the boolean result
         return new Promise((resolve, reject) => {
-            axios.get(`/api/course/${event.course_id}/attendance`, {
-                headers: {
-                    Authorization: `Bearer ${this.accountCredential}`,
-                },
-            }).then(response => {
+            api.get(`/course/${event.course_id}/attendance`).then(response => {
                 const accountId = this.account.id; // Ensure this is set correctly
                 const eventId = event.id;
                 const matchingAttendances = response.data.data.filter(attendance => 
@@ -316,11 +291,7 @@ export default {
       this.$router.push(route)
     },
     deleteCourse(course_id) {
-      axios.delete('api/course/'+course_id, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        },
-      }).then(response => {
+      api.delete('/course/'+course_id).then(response => {
         ElNotification({
           title: 'Success',
           message: 'Delete success!',
@@ -328,20 +299,11 @@ export default {
         })
         this.fetchCourses()
       }).catch(error => {
-        console.error('Error fetching courses:', error);
-        ElNotification({
-          title: 'Error',
-          message: error.message,
-          type: 'error',
-        })
+        console.error('Error deleting course:', error);
       });
     },
     fetchCourses() {
-      axios.get('api/course', {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        },
-      }).then(response => {
+      api.get('/course').then(response => {
         this.courses = response.data.data;
       }).catch(error => {
         console.error('Error fetching courses:', error);
@@ -364,11 +326,7 @@ export default {
       this.showCreateCourseDialog = false;
     },
     createCourse() {
-      axios.post('api/course', this.createCourseForm, {
-        headers: {
-          Authorization: `Bearer ${this.account.credential}`,
-        },
-      }).then(() => {
+      api.post('/course', this.createCourseForm).then(() => {
         this.showCreateCourseDialog = false;
         this.fetchCourses();
       }).catch(error => {

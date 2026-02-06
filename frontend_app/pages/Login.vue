@@ -9,7 +9,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import api from '@/lib/tyto-api'
 import Cookies from 'js-cookie'
 import { ElNotification } from 'element-plus'
 import { googleTokenLogin } from 'vue3-google-login'
@@ -23,7 +23,7 @@ export default {
   methods: {
     async fetchLoginToken(accessToken) {
       try {
-        const { status, data } = await axios.post('/api/auth/verify_google_token', { accessToken: accessToken });
+        const { status, data } = await api.post('/auth/verify_google_token', { accessToken: accessToken });
         if (status === 200 || status === 201) {
           this.setUserInfoCookies(data.user_info);
           if (this.$route.query.redirect && this.$route.query.redirect!='/' ) {
