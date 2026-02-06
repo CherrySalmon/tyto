@@ -27,6 +27,7 @@ jobs:
 
       - name: Create test secrets
         run: |
+          set -o pipefail
           JWT_KEY=$(bundle exec rake generate:jwt_key | grep 'JWT_KEY:' | cut -d' ' -f2)
           printf "test:\n  DATABASE_URL: sqlite://backend_app/db/store/test.db\n  JWT_KEY: %s\n  ADMIN_EMAIL: test@example.com\n" "$JWT_KEY" > backend_app/config/secrets.yml
 

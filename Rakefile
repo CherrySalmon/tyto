@@ -112,7 +112,7 @@ end
 namespace :generate do
   desc 'Generate JWT_KEY for secrets.yml'
   task :jwt_key do
-    require_app('infrastructure')
+    require_relative 'backend_app/app/infrastructure/auth/auth_token/gateway'
     puts "JWT_KEY: #{Tyto::AuthToken::Gateway.generate_key}"
   end
 
