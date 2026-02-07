@@ -53,7 +53,7 @@ This approach ensures we only build what the frontend actually needs, with immed
 ### Backend DDD Capabilities (Already Exists)
 
 - **Domain Layer**: `Attendance#within_range?(max_distance_km)`, `GeoLocation#distance_to()`
-- **Policies**: `CoursePolicy`, `AttendancePolicy` with role-based authorization
+- **Policies**: `CoursePolicy`, `AttendanceAuthorization` with role-based authorization
 - **Services**: Railway-oriented operations with proper validation
 - **Repositories**: Lazy loading strategies (find_full, find_with_events, etc.)
 
@@ -69,11 +69,11 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 **Shape change**: The original frontend used a bounding box (square ±0.0005°), which allowed ~78m at corners (55m × √2). The backend uses Haversine (circle), giving a uniform 55m radius — more correct.
 
-**Boundary**: Geo-fence enforcement applies only to self-reported student attendance (gated by `AttendancePolicy.can_create?` → `self_enrolled?`). Teacher/TA/owner/admin manual attendance flagging bypasses geo-fence — deferred to future work.
+**Boundary**: Geo-fence enforcement applies only to self-reported student attendance (gated by `AttendanceAuthorization.can_create?` → `self_enrolled?`). Teacher/TA/owner/admin manual attendance flagging bypasses geo-fence — deferred to future work.
 
 **Architecture** (domain policy vs. application policy):
 - `Policy::AttendanceEligibility` (domain) — actor-agnostic business rule: "attendance is valid when the student is at the right place at the right time." Checks both time window (`Event#active?`) and proximity (Haversine ≤ 55m). Returns `:time_window`, `:proximity`, or `nil` (eligible).
-- `AttendancePolicy` (application) — actor-dependent: "who can record attendance?" Checks enrollment/roles.
+- `AttendanceAuthorization` (application) — actor-dependent: "who can record attendance?" Checks enrollment/roles.
 - `RecordAttendance` service (application) — orchestrates both: checks who can act, requires coordinates for self-reported attendance, delegates eligibility check to domain policy.
 
 **Backend changes**:

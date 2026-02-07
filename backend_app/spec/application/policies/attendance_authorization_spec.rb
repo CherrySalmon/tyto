@@ -2,7 +2,7 @@
 
 require_relative '../../spec_helper'
 
-describe Tyto::AttendancePolicy do
+describe Tyto::AttendanceAuthorization do
   let(:account) { Tyto::Account.create(email: 'test@example.com', name: 'Test User') }
   let(:course) { Tyto::Course.create(name: 'Test Course') }
   let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
@@ -22,7 +22,7 @@ describe Tyto::AttendancePolicy do
 
   describe 'with owner enrollment' do
     let(:enrollment) { create_enrollment(roles: ['owner']) }
-    let(:policy) { Tyto::AttendancePolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::AttendanceAuthorization.new(requestor, enrollment) }
 
     it 'allows all attendance operations including view_all' do
       _(policy.can_create?).must_equal true
@@ -34,7 +34,7 @@ describe Tyto::AttendancePolicy do
 
   describe 'with instructor enrollment' do
     let(:enrollment) { create_enrollment(roles: ['instructor']) }
-    let(:policy) { Tyto::AttendancePolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::AttendanceAuthorization.new(requestor, enrollment) }
 
     it 'allows all attendance operations including view_all' do
       _(policy.can_create?).must_equal true
@@ -46,7 +46,7 @@ describe Tyto::AttendancePolicy do
 
   describe 'with staff enrollment' do
     let(:enrollment) { create_enrollment(roles: ['staff']) }
-    let(:policy) { Tyto::AttendancePolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::AttendanceAuthorization.new(requestor, enrollment) }
 
     it 'allows all attendance operations including view_all' do
       _(policy.can_create?).must_equal true
@@ -58,7 +58,7 @@ describe Tyto::AttendancePolicy do
 
   describe 'with student enrollment' do
     let(:enrollment) { create_enrollment(roles: ['student']) }
-    let(:policy) { Tyto::AttendancePolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::AttendanceAuthorization.new(requestor, enrollment) }
 
     it 'allows own attendance operations but not view_all' do
       _(policy.can_create?).must_equal true
@@ -69,7 +69,7 @@ describe Tyto::AttendancePolicy do
   end
 
   describe 'with nil enrollment (not enrolled)' do
-    let(:policy) { Tyto::AttendancePolicy.new(requestor, nil) }
+    let(:policy) { Tyto::AttendanceAuthorization.new(requestor, nil) }
 
     it 'denies all attendance operations' do
       _(policy.can_create?).must_equal false
@@ -81,7 +81,7 @@ describe Tyto::AttendancePolicy do
 
   describe '#summary' do
     let(:enrollment) { create_enrollment(roles: ['student']) }
-    let(:policy) { Tyto::AttendancePolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::AttendanceAuthorization.new(requestor, enrollment) }
 
     it 'returns hash of all permissions' do
       summary = policy.summary

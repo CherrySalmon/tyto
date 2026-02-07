@@ -39,7 +39,7 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 |---------|------|
 | Service test template | `spec/application/services/attendances/record_attendance_spec.rb` |
 | Route test template | `spec/routes/course_route_spec.rb` |
-| Application policy test | `spec/application/policies/attendance_policy_spec.rb` |
+| Application authorization test | `spec/application/policies/attendance_authorization_spec.rb` |
 | Domain policy test | `spec/domain/attendance/policies/attendance_proximity_spec.rb` |
 | Domain entity test | `spec/domain/attendance/entities/attendance_spec.rb` |
 

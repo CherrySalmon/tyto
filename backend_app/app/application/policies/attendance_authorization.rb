@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Tyto
-  # Policy to determine if an account can view, edit, or record attendance
-  class AttendancePolicy
+  # Authorization policy: determines if an actor can view, edit, or record attendance
+  class AttendanceAuthorization
     def initialize(requestor, enrollment)
       @requestor = requestor
       @enrollment = enrollment
