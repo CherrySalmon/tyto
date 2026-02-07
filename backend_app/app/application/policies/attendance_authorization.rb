@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Tyto
-  # Policy to determine if an account can view, edit, or record attendance
-  class AttendancePolicy
+  # Authorization policy: determines if an actor can view, edit, or record attendance
+  class AttendanceAuthorization
     def initialize(requestor, enrollment)
       @requestor = requestor
       @enrollment = enrollment
@@ -23,8 +23,8 @@ module Tyto
       teaching_staff?
     end
 
-    # Enrolled users can update their own attendance
-    def can_update?
+    # Enrolled users can mark their own attendance
+    def can_attend?
       self_enrolled?
     end
 
@@ -34,7 +34,7 @@ module Tyto
         can_view_all: can_view_all?,
         can_view: can_view?,
         can_create: can_create?,
-        can_update: can_update?
+        can_attend: can_attend?
       }
     end
 

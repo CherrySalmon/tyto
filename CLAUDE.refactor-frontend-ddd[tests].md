@@ -39,7 +39,8 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 |---------|------|
 | Service test template | `spec/application/services/attendances/record_attendance_spec.rb` |
 | Route test template | `spec/routes/course_route_spec.rb` |
-| Policy test template | `spec/application/policies/attendance_policy_spec.rb` |
+| Application authorization test | `spec/application/policies/attendance_authorization_spec.rb` |
+| Domain policy test | `spec/domain/attendance/policies/attendance_proximity_spec.rb` |
 | Domain entity test | `spec/domain/attendance/entities/attendance_spec.rb` |
 
 ## Existing Coverage Analysis
@@ -58,7 +59,7 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 
 | Area | Unit Tests | Integration Tests | Gaps |
 |------|-----------|------------------|------|
-| Attendance Recording | Good (basic) | Good | Geo-fence, duplicates |
+| Attendance Recording | Good (geo-fence enforced) | Good | Duplicates |
 | Role Assignment | Excellent | Good | Assignable roles logic |
 | Event Responses | Good | Good | Enriched data |
 | Course Reports | None | None | Everything |
@@ -69,11 +70,23 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 
 Each slice's test tasks (1.1a, 2.1a, etc.) are listed in `CLAUDE.refactor-frontend-ddd.md`. Below are testing-specific notes for each slice.
 
-### Slice 1: Geo-fence Validation
+### Slice 1: Geo-fence + Time-Window Validation ✅
 
-- **Add to**: `spec/application/services/attendances/record_attendance_spec.rb`
-- **Test scenarios**: Accept within radius, reject outside, event-specific radius, default 55m fallback
-- **Note**: Domain entity tests for `within_range?` already exist — new tests go at the service level
+Two levels of testing — domain policy (business rules) and service (orchestration):
+
+**Domain policy spec**: `spec/domain/attendance/policies/attendance_eligibility_spec.rb`
+- Merged `AttendanceProximity` + `EventTimeWindow` into single `AttendanceEligibility` policy
+- 13 tests covering both time window and proximity facets:
+  - Threshold constant is 0.055 km (~55m)
+  - Time window: eligible when active, `:time_window` when ended, `:time_window` when not started, eligible when no time range, boundary tests at exact start/end
+  - Proximity: eligible at exact location, eligible within 55m, `:proximity` beyond 55m, eligible when location nil, eligible when location has no coordinates, `:proximity` when attendance has no coordinates
+
+**Service spec**: `spec/application/services/attendances/record_attendance_spec.rb`
+- Geo-fence tests: accept within radius, reject outside radius, reject missing coordinates
+- Time-window tests: reject ended event, reject future event
+- **Existing tests**: all use active events and pass unchanged
+- **Dropped**: ~~1.1c event-specific radius~~ — variable fencing deferred
+- **Frontend** (1.5): Removed client-side bounding box checks from `AttendanceTrack.vue` and `AllCourse.vue`. Error handling distinguishes geo-fence 403 from other errors.
 
 ### Slice 2: Duplicate Attendance Prevention
 
@@ -127,4 +140,4 @@ E2E tests will be added if manual verification proves insufficient. Candidates:
 
 ---
 
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-07*

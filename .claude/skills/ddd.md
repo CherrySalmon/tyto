@@ -1,402 +1,150 @@
 # DDD Skill
 
-Domain-Driven Design architecture patterns and conventions for this Ruby codebase.
+Domain-Driven Design architecture patterns and conventions.
 
-## Migration Strategy: Vertical Slices
+## Codebase Reference
 
-**Implement each use case as a complete vertical slice**, not layer-by-layer.
+> Look at relevant portions of the current codebase's DDD if needed, or else request a reference project if unsure the current project is a good fit.
 
-```text
-❌ Horizontal (avoid):          ✅ Vertical (preferred):
-   All services first             ListEvents (complete)
-   Then all representers          CreateEvent (complete)
-   Then all contracts             UpdateEvent (complete)
-   Then wire controllers          ...
-```
-
-**Each vertical slice includes:**
-
-1. Service class inheriting from `Service::ApplicationOperation`
-2. Representer for JSON output (create if new entity type)
-3. Controller updated with pattern matching on result
-4. Unit tests for service
-5. Integration tests pass
-
-**Workflow:**
-
-1. Pick next use case from legacy God object service
-2. Create focused service class inheriting from `ApplicationOperation`
-3. Create/update representer if needed
-4. Update controller route with pattern matching
-5. Write/update tests
-6. Verify all tests pass
-7. Repeat until legacy service is empty, then delete it
+See `CLAUDE.md` → "Architecture" for layer paths, file conventions, and key examples.
 
 ## Architecture Layers
 
 ```text
 domain/                     # Pure domain (no framework dependencies)
-├── types.rb               # Shared constrained types
+├── types                   # Shared constrained types
 ├── <context>/
-│   ├── entities/          # Aggregate roots and entities (dry-struct)
-│   └── values/            # Value objects
+│   ├── entities/           # Aggregate roots and entities
+│   ├── values/             # Value objects
+│   └── policies/           # Domain policies (business rules, actor-agnostic)
 
 infrastructure/
 ├── database/
-│   ├── orm/               # Sequel models (thin, no business logic)
-│   └── repositories/      # Maps ORM ↔ domain entities
-├── auth/
-│   ├── auth_token/        # JWT handling
-│   └── sso_auth/          # Google OAuth
+│   ├── orm/                # ORM models (thin, no business logic)
+│   └── repositories/       # Maps ORM ↔ domain entities
+├── <external>/             # External API adapters (Gateway + Mapper)
 
 application/
-├── services/              # Use cases (dry-operation)
-│   └── application_operation.rb  # Base class with response helpers
-├── responses/             # Response DTOs (ApiResult)
-└── policies/              # Authorization rules
+├── services/               # Use cases, orchestration
+├── policies/               # Application policies (actor-dependent authorization)
+├── responses/              # Response DTOs
 
 presentation/
-└── representers/          # JSON serialization (roar)
+└── representers/           # Serialization for API responses
 ```
-
-**Note:** These patterns apply to the backend only. The frontend is a presentation layer — domain logic and authoritative validation live in the backend.
-
-## Input Handling Philosophy
-
-**Keep validation in services. Avoid premature abstraction.**
-
-We deliberately avoid:
-- **dry-validation contracts** - Add indirection without clear benefit for simple inputs
-- **Request objects** - Solve a problem we don't have (computed derived values)
-
-**Why validation belongs in services:**
-
-1. **Cohesion** - Service IS the use case. Validation is part of that use case. One file to understand complete flow.
-2. **YAGNI** - No proven need for reusable validation. CreateEvent and UpdateEvent validation will differ.
-3. **Visibility** - Validation steps are explicit in the railway flow, not hidden in separate classes.
-
-**Controller responsibility is minimal:**
-- Parse JSON (or return 400 on parse error)
-- Call service with parsed data
-- Pattern match on result
-
-```ruby
-r.post do
-  request_body = JSON.parse(r.body.read)
-
-  case Service::Events::CreateEvent.new.call(requestor:, course_id:, event_data: request_body)
-  in Success(api_result) then ...
-  in Failure(api_result) then ...
-  end
-rescue JSON::ParserError => e
-  response.status = 400
-  { error: 'Invalid JSON', details: e.message }.to_json
-end
-```
-
-**When to revisit this decision:**
-- Multiple services share complex validation logic
-- You need computed derived values (cache keys, slugs)
-- Validation rules become genuinely complex (nested objects, conditional fields)
-
-## Gateway/Mapper Pattern for External APIs
-
-External API integrations use a **Gateway + Mapper** pattern:
-
-- **Gateway**: Handles raw I/O (HTTP requests, encryption). Returns `Success`/`Failure` with raw data.
-- **Mapper**: Transforms external data to domain-friendly structures. Isolates external field names.
-
-```ruby
-# infrastructure/auth/sso_auth/gateway.rb
-class Gateway
-  def fetch_user_info(access_token)
-    # HTTP request to Google API
-    # Returns Success(raw_hash) or Failure(error_string)
-  end
-end
-
-# infrastructure/auth/sso_auth/mapper.rb
-class Mapper
-  def initialize(gateway: Gateway.new)
-    @gateway = gateway
-  end
-
-  def load(access_token)
-    @gateway.fetch_user_info(access_token).fmap { |data| DataMapper.new(data).to_hash }
-  end
-
-  class DataMapper
-    def initialize(data)
-      @data = data
-    end
-
-    def to_hash
-      {
-        email: @data['email'],
-        name: @data['name'],
-        avatar: @data['picture']  # Google → domain field name
-      }
-    end
-  end
-end
-```
-
-**Services inject the Mapper**, not the Gateway:
-
-```ruby
-class VerifyGoogleToken < ApplicationOperation
-  def initialize(sso_mapper: SSOAuth::Mapper.new)
-    @sso_mapper = sso_mapper
-    super()
-  end
-
-  def call(access_token:)
-    google_user = step fetch_google_user_info(access_token)
-    # google_user[:avatar] - domain vocabulary, not google_user['picture']
-  end
-end
-```
-
-**Benefits:**
-- External API field changes isolated to Mapper
-- Service uses domain vocabulary
-- Gateway testable with HTTP stubs, Mapper testable with mock Gateway
 
 ## Dependency Rules
 
-**Dependencies flow inward only.** Domain is at center, knows nothing about outer layers.
+Dependencies flow inward only. Domain is at the center, knows nothing about outer layers.
 
 **Allowed:**
+
 - `repositories/` → imports `domain/entities/`
 - `services/` → imports `domain/`, `repositories/`, `policies/`
 - `controllers/` → imports `services/`
 
 **Forbidden:**
-- `domain/` → NEVER imports from infrastructure, application, or controllers
 
-## ApplicationOperation Base Class
+- `domain/` → NEVER imports from infrastructure, application, or presentation
 
-All services inherit from `Service::ApplicationOperation` which provides response helpers:
+## Domain Logic, Domain Policies, and Application Policies
 
-```ruby
-# application/services/application_operation.rb
-module Tyto
-  module Service
-    class ApplicationOperation < Dry::Operation
-      private
+Three distinct concepts, often conflated:
 
-      def ok(message) = Response::ApiResult.new(status: :ok, message:)
-      def created(message) = Response::ApiResult.new(status: :created, message:)
-      def bad_request(message) = Response::ApiResult.new(status: :bad_request, message:)
-      def not_found(message) = Response::ApiResult.new(status: :not_found, message:)
-      def forbidden(message) = Response::ApiResult.new(status: :forbidden, message:)
-      def internal_error(message) = Response::ApiResult.new(status: :internal_error, message:)
-    end
-  end
-end
-```
+**Domain logic** = intrinsic computations, always true regardless of context. "These two points are 32km apart." Pure math — belongs in value objects and entities.
+
+**Domain policies** = business rules a domain expert would articulate, actor-agnostic. "Attendance must be within 55m of the event location." The threshold is a business decision (not a deployment decision), but the rule itself doesn't reference who is acting. Constants for thresholds belong in the domain, not in config files or infrastructure.
+
+**Application policies** = rules that depend on *who* is acting or application-level context. "Only teaching staff can view all attendance records." These reference roles, requestors, or use-case context.
+
+**The key constraint:** The domain layer can't know about application concepts like "who is the requestor" or "what role do they have."
+
+**Heuristic:** If the rule is actor-agnostic (a domain expert would state it without mentioning roles) → `domain/`. If it references roles, requestors, or use-case context → `application/policies/`.
+
+| Concern | Layer | Why |
+| ------- | ----- | --- |
+| Distance calculation (Haversine) | Domain (value object) | Pure math, always true |
+| "Right place, right time" | Domain (policy) | Business rule, actor-agnostic |
+| "Only students must comply" | Application (service orchestration) | Depends on actor role |
+| "Only staff can view all records" | Application (policy) | Depends on actor role |
+
+Group related domain rules into a single policy when they answer the same domain question (e.g., proximity + time window = "is this attendance eligible?").
+
+**Anti-pattern: policy decisions in services.** Services must NOT contain business rule logic — even simple conditionals like threshold comparisons. If a domain expert would articulate the rule, it belongs in a policy, not as an `if` statement in a service. Services call policies; they don't replicate them.
+
+**Evolution:** If a threshold might vary (per course, per campus), make it a value object rather than a constant. The threshold evolves from a constant to a repository-backed lookup without architectural refactoring.
 
 ## Service Pattern
 
-Services inherit from `ApplicationOperation` and use `step` for railway-oriented flow:
+Services are use cases. Each service is a single operation with railway-oriented flow (each step succeeds or short-circuits on failure).
 
-```ruby
-module Tyto
-  module Service
-    module Events
-      class CreateEvent < ApplicationOperation
-        def initialize(events_repo: Repository::Events.new)
-          @events_repo = events_repo
-          super()  # Required after setting instance variables
-        end
+**Key principles:**
 
-        def call(requestor:, course_id:, event_data:)
-          course_id = step validate_course_id(course_id)
-          step verify_course_exists(course_id)
-          step authorize(requestor, course_id)
-          validated = step validate_input(event_data, course_id)
-          event = step persist_event(validated)
+- One service per use case (not a God object with many methods)
+- Inject repository and mapper dependencies via constructor
+- Each step returns Success or Failure
+- Validation is inline in service steps, not in separate contract classes (unless multiple services share complex validation)
+- Response helpers (`ok`, `created`, `bad_request`, `forbidden`, etc.) wrap results with HTTP-friendly status
 
-          created(event)  # Uses helper from base class
-        end
+**Typical step flow:**
 
-        private
+1. Validate input
+2. Authorize (application policy)
+3. Check domain rules (domain policy)
+4. Persist / fetch
+5. Return response DTO
 
-        def validate_course_id(course_id)
-          id = course_id.to_i
-          return Failure(bad_request('Invalid course ID')) if id.zero?
-          Success(id)
-        end
+## Input Handling
 
-        def validate_input(event_data, course_id)
-          # Validation lives HERE in the service, not in separate contracts
-          name = event_data['name']
-          return Failure(bad_request('Name is required')) if name.nil? || name.strip.empty?
+Keep validation in services. Avoid premature abstraction.
 
-          location_id = event_data['location_id']
-          return Failure(bad_request('Location ID is required')) if location_id.nil?
+**Why validation belongs in services:**
 
-          Success(name: name.strip, location_id: location_id.to_i, course_id:)
-        end
+1. **Cohesion** — The service IS the use case. Validation is part of it. One file to understand the complete flow.
+2. **YAGNI** — No proven need for reusable validation. Create and Update validation will differ.
+3. **Visibility** — Validation steps are explicit in the railway flow, not hidden in separate classes.
 
-        def authorize(requestor, course_id)
-          # ... policy check ...
-          policy.can_create? ? Success(true) : Failure(forbidden('Access denied'))
-        end
-      end
-    end
-  end
-end
-```
+**Controller responsibility is minimal:** parse input, call service, pattern match on result.
 
-**Key patterns:**
+**When to extract validation:**
 
-- Inherit from `ApplicationOperation` (not directly from `Dry::Operation`)
-- Call `super()` in initialize after setting instance variables
-- Use `step` to chain operations (auto short-circuits on Failure)
-- Each step returns `Success(value)` or `Failure(ApiResult)`
-- Use response helpers: `ok()`, `created()`, `bad_request()`, `not_found()`, `forbidden()`, `internal_error()`
-- Validation is inline in service steps, not in separate contract classes
+- Multiple services share complex validation logic
+- You need computed derived values (cache keys, slugs)
+- Validation rules become genuinely complex (nested objects, conditional fields)
 
-## Controller Pattern Matching
+## Gateway/Mapper Pattern
 
-Controllers use Ruby pattern matching on service results:
+External API integrations use Gateway + Mapper:
 
-```ruby
-require 'dry/monads'
+- **Gateway**: Handles raw I/O (HTTP, encryption). Returns Success/Failure with raw data.
+- **Mapper**: Transforms external data to domain vocabulary. Isolates external field names.
 
-class Courses < Roda
-  include Dry::Monads[:result]  # Required for Success/Failure constants
+Services inject the Mapper, not the Gateway. This means:
 
-  route do |r|
-    r.on 'event' do
-      # GET api/course/:course_id/event
-      r.get do
-        case Service::Events::ListEvents.new.call(requestor:, course_id:)
-        in Success(api_result)
-          response.status = api_result.http_status_code
-          { success: true, data: Representer::EventsList.from_entities(api_result.message).to_array }.to_json
-        in Failure(api_result)
-          response.status = api_result.http_status_code
-          api_result.to_json
-        end
-      end
-
-      # POST api/course/:course_id/event
-      r.post do
-        request_body = JSON.parse(r.body.read)
-
-        case Service::Events::CreateEvent.new.call(requestor:, course_id:, event_data: request_body)
-        in Success(api_result)
-          response.status = api_result.http_status_code
-          { success: true, message: 'Event created', event_info: Representer::Event.new(api_result.message).to_hash }.to_json
-        in Failure(api_result)
-          response.status = api_result.http_status_code
-          api_result.to_json
-        end
-      rescue JSON::ParserError => e
-        response.status = 400
-        { error: 'Invalid JSON', details: e.message }.to_json
-      end
-    end
-  end
-end
-```
-
-**Key points:**
-
-- Include `Dry::Monads[:result]` in controller class for `Success`/`Failure` constants
-- Use `case/in` pattern matching (Ruby 3.0+)
-- `in Success(api_result)` destructures the wrapped value
-- HTTP status flows from `ApiResult`
-- JSON parsing errors handled with rescue, not in service
-
-## Representers (Presentation Layer)
-
-Use Roar decorators for JSON serialization:
-
-```ruby
-module Tyto
-  module Representer
-    class Event < Roar::Decorator
-      include Roar::JSON
-
-      property :id
-      property :name
-      property :start_at, exec_context: :decorator
-      property :longitude
-      property :latitude
-
-      def start_at
-        represented.start_at&.utc&.iso8601
-      end
-    end
-  end
-end
-```
-
-## Data Enrichment Pattern
-
-When combining data from multiple sources, use OpenStruct:
-
-```ruby
-def enrich_with_location(event)
-  location = @locations_repo.find_id(event.location_id)
-  OpenStruct.new(
-    id: event.id,
-    name: event.name,
-    start_at: event.start_at,
-    longitude: location&.longitude,
-    latitude: location&.latitude
-  )
-end
-```
+- External API field changes are isolated to the Mapper
+- Services use domain vocabulary throughout
+- Gateway is testable with HTTP stubs, Mapper with a mock Gateway
 
 ## Complete Flow
 
 ```text
-Request → Controller parses JSON
+Request → Controller parses input
               ↓
           Service.call()
               ↓
-          step validate_input (validation HERE, not in contracts)
+          step validate_input
               ↓
-          step authorize
+          step authorize (application policy)
+              ↓
+          step check_domain_rules (domain policy)
               ↓
           step persist/fetch
               ↓
-          ok(data) or created(data)
+          Success(response) or Failure(response)
               ↓
-          Success(ApiResult) or Failure(ApiResult)
+          Controller pattern matches result
               ↓
-          Controller pattern matches: case/in
+          Representer serializes success data
               ↓
-          Representer.to_json for success data
-              ↓
-Response ← JSON with HTTP status from ApiResult
+Response ← JSON/etc. with status from response DTO
 ```
-
-## Gems Required
-
-```ruby
-gem 'dry-monads', '~>1.6'
-gem 'dry-operation', '~>1.0'
-gem 'dry-struct', '~>1.6'
-gem 'roar', '~>1.2'
-gem 'multi_json'
-```
-
-## Checklist for New Vertical Slices
-
-- [ ] Create service in `application/services/<context>/<use_case>.rb`
-- [ ] Inherit from `Service::ApplicationOperation`
-- [ ] Call `super()` in initialize after setting instance variables
-- [ ] Inject repository dependencies via constructor
-- [ ] Validation in service steps (NOT in separate contracts)
-- [ ] Each step returns `Success(value)` or `Failure(response_helper(msg))`
-- [ ] Use response helpers: `ok`, `created`, `bad_request`, `not_found`, `forbidden`
-- [ ] Create/update representer for entity serialization
-- [ ] Controller includes `Dry::Monads[:result]`
-- [ ] Controller uses `case/in` pattern matching
-- [ ] Write unit tests for service (success and failure paths)
-- [ ] Run integration tests to verify controller behavior

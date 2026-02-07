@@ -28,7 +28,10 @@ This approach ensures we only build what the frontend actually needs, with immed
 - [x] Frontend domain logic analyzed
 - [x] Backend DDD architecture reviewed
 - [x] Vertical slice strategy adopted
-- [ ] Slice 1 started
+- [x] Slice 1 backend completed (geo-fence enforcement in RecordAttendance)
+- [x] Slice 1 frontend (remove client-side geo-fence logic, show backend errors)
+- [x] Slice 1 hardening: event time-window enforcement via domain policy
+- [x] Slice 1 complete (manual verification passed)
 
 ## Key Findings
 
@@ -50,7 +53,7 @@ This approach ensures we only build what the frontend actually needs, with immed
 ### Backend DDD Capabilities (Already Exists)
 
 - **Domain Layer**: `Attendance#within_range?(max_distance_km)`, `GeoLocation#distance_to()`
-- **Policies**: `CoursePolicy`, `AttendancePolicy` with role-based authorization
+- **Policies**: `CoursePolicy`, `AttendanceAuthorization` with role-based authorization
 - **Services**: Railway-oriented operations with proper validation
 - **Repositories**: Lazy loading strategies (find_full, find_with_events, etc.)
 
@@ -62,28 +65,52 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 **Why first**: Security-critical; domain logic already exists but isn't wired up.
 
+**Scope**: Domain policy radius (~55m). No new DB columns, no per-event configuration. Variable fencing deferred to future work.
+
+**Shape change**: The original frontend used a bounding box (square ±0.0005°), which allowed ~78m at corners (55m × √2). The backend uses Haversine (circle), giving a uniform 55m radius — more correct.
+
+**Boundary**: Geo-fence enforcement applies only to self-reported student attendance (gated by `AttendanceAuthorization.can_create?` → `self_enrolled?`). Teacher/TA/owner/admin manual attendance flagging bypasses geo-fence — deferred to future work.
+
+**Architecture** (domain policy vs. application policy):
+- `Policy::AttendanceEligibility` (domain) — actor-agnostic business rule: "attendance is valid when the student is at the right place at the right time." Checks both time window (`Event#active?`) and proximity (Haversine ≤ 55m). Returns `:time_window`, `:proximity`, or `nil` (eligible).
+- `AttendanceAuthorization` (application) — actor-dependent: "who can record attendance?" Checks enrollment/roles.
+- `RecordAttendance` service (application) — orchestrates both: checks who can act, requires coordinates for self-reported attendance, delegates eligibility check to domain policy.
+
 **Backend changes**:
-- Add `geo_fence_radius_m` column to `events` table (integer, default: 55 meters)
-- Add `geo_fence_radius_m` attribute to `Event` entity and representer
-- Enhance `Services::Attendances::RecordAttendance` to:
-  - Fetch event's location
-  - Call `attendance.within_range?(location, event.geo_fence_radius_km)`
-  - Return `:forbidden` with clear error message if outside range
+- New domain policy: `domain/attendance/policies/attendance_eligibility.rb`
+  - `Policy::AttendanceEligibility.check(attendance:, event:, location:, time:)` — returns `nil` (eligible), `:time_window`, or `:proximity`
+  - `MAX_DISTANCE_KM = 0.055` (~55m) — business rule constant
+  - Gracefully handles missing time ranges and missing coordinates
+  - Prevents stale-browser and direct HTTP request bypass
+- Enhanced `Services::Attendances::RecordAttendance` with:
+  - `locations_repo` dependency (injected, same pattern as other repos)
+  - `verify_eligibility` step between `validate_input` and `persist_attendance`
+  - Rejects missing coordinates as forbidden (bypass attempt)
+  - Delegates eligibility decision to `Policy::AttendanceEligibility`
 
 **Frontend changes**:
 - Remove geo-fence validation from `AttendanceTrack.vue` and `AllCourse.vue`
 - Display backend error message when attendance is rejected
 
 **Tasks**:
-- [ ] 1.1a Add geo-fence acceptance test (within radius)
-- [ ] 1.1b Add geo-fence rejection test (outside radius)
-- [ ] 1.1c Add test for event-specific radius
-- [ ] 1.1d Add test for default radius fallback
-- [ ] 1.2 Add `geo_fence_radius_m` migration (default: 55)
-- [ ] 1.3 Add `geo_fence_radius_m` to Event entity and representer
-- [ ] 1.4 Wire up geo-fence check in RecordAttendance service
-- [ ] 1.5 Update frontend to remove geo-fence logic and show backend errors
-- [ ] 1.6 Manual verification: test inside/outside geo-fence scenarios
+- [x] 1.1a Add geo-fence acceptance test (within radius)
+- [x] 1.1b Add geo-fence rejection test (outside radius)
+- [x] 1.1d Add geo-fence rejection test (no coordinates — bypass attempt)
+- [x] 1.1e Add domain policy spec (`attendance_proximity_spec.rb`)
+- [x] 1.4a Wire up geo-fence check in RecordAttendance service
+- [x] 1.4b Extract domain policy `Policy::AttendanceProximity` from service
+- [x] 1.5 Update frontend to remove geo-fence logic and show backend errors
+- [x] 1.7a Add domain policy spec (`event_time_window_spec.rb`)
+- [x] 1.7b Add event time-window rejection test (ended event)
+- [x] 1.7c Add event time-window rejection test (future event)
+- [x] 1.7d Wire up time-window check in RecordAttendance service via domain policy
+- [x] 1.6 Manual verification: test inside/outside geo-fence and time-window scenarios
+
+**Dropped** (deferred to future work):
+- ~~1.1c Test for event-specific radius~~ — variable fencing deferred
+- ~~1.2 Add `geo_fence_radius_m` migration~~ — no per-event config needed
+- ~~1.3 Add `geo_fence_radius_m` to Event entity and representer~~ — no per-event config needed
+- GPS accuracy enforcement — browser reports `coords.accuracy` (radius in meters); reject when accuracy > fence radius (position too imprecise). Requires new DB column + frontend to send accuracy field.
 
 ---
 
@@ -223,13 +250,15 @@ This approach ensures we only build what the frontend actually needs, with immed
 **Frontend changes**:
 - Extract `frontend_app/lib/geolocation.js` utility (shared across components)
 - Extract `frontend_app/lib/dateFormatter.js` utility
+- Extract shared attendance logic (composable or service) — `postAttendance()`, `findAttendance()`, `getLocation()`, `showPosition()`, `showError()`, `updateEventAttendanceStatus()` are duplicated across `AttendanceTrack.vue` and `AllCourse.vue`
 - Remove any remaining deprecated domain logic
 
 **Tasks**:
 - [ ] 7.1 Create geolocation utility with shared functions
 - [ ] 7.2 Create date formatting utility
-- [ ] 7.3 Update components to use utilities
-- [ ] 7.4 Remove deprecated logic from components
+- [ ] 7.3 Extract shared attendance logic from AttendanceTrack and AllCourse
+- [ ] 7.4 Update components to use utilities
+- [ ] 7.5 Remove deprecated logic from components
 
 ---
 
@@ -237,7 +266,7 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 > Questions must be crossed off when resolved. Note the decision made.
 
-- [x] ~~Should the geo-fence radius be configurable per-course or global?~~ **Decision: Per-event, in meters, default 55m**
+- [x] ~~Should the geo-fence radius be configurable per-course or global?~~ **Decision: Hardcoded policy constant (~55m) for now. Variable per-event fencing deferred to future work.**
 - [ ] Should CSV export be a streaming download or return data for frontend to format?
 - [ ] What date format should the API return? ISO 8601 with timezone, or pre-formatted locale string?
 - [ ] Should capabilities be embedded in every response or a separate endpoint?
@@ -250,4 +279,4 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 ---
 
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-07*
