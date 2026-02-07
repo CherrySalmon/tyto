@@ -31,26 +31,18 @@ Planned improvements and features to be addressed in future tasks.
 
 The following domain functionality has been implemented but is not yet used by the application. These are available for future features:
 
-### Backend Attendance Proximity Validation
+### Geolocation Accuracy Check for Attendance Anti-Spoofing
 
-Currently, attendance check-in proximity validation is done only in the frontend (bounding box check in `AttendanceTrack.vue`). This can be bypassed by malicious users sending fake coordinates.
-
-**Available domain objects for backend validation:**
-
-- `Value::GeoLocation#distance_to(other)` - Haversine formula, returns distance in km
-- `Entity::Location#distance_to(other_location)` - Delegates to GeoLocation
-- `Value::NullGeoLocation` - Safe handling when coordinates are missing
+Backend geo-fence proximity validation (Haversine, 55m radius) and time-window enforcement are now implemented. However, the system trusts whatever coordinates the client sends. The browser Geolocation API provides a `coords.accuracy` value (radius in meters) that can help detect naive spoofing attempts (e.g., Chrome DevTools Sensors panel often reports accuracy of `0`).
 
 **Suggested implementation:**
 
-```ruby
-# In AttendanceService or a domain service
-def validate_proximity(user_coords, event_location, max_distance_km: 0.5)
-  user_geo = Value::GeoLocation.new(longitude: user_coords[:lng], latitude: user_coords[:lat])
-  distance = event_location.geo_location.distance_to(user_geo)
-  distance <= max_distance_km
-end
-```
+- Frontend: send `coords.accuracy` alongside latitude/longitude when recording attendance
+- Backend: reject submissions where accuracy is `0` or exceeds a threshold (e.g., > 100m)
+- Real GPS typically reports 5-20m accuracy; unrealistic values suggest spoofing or poor signal
+- Low effort: one additional field in the request, one check in the service
+
+**Limitations:** sophisticated spoofers can set realistic accuracy values. This blocks naive spoofing only. For stronger anti-spoofing, consider rotating check-in codes (physical presence proof) or motion sensor verification.
 
 ### Scheduling Conflict Detection
 
