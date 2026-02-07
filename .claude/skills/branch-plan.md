@@ -24,7 +24,7 @@ The created plan file includes:
 ```markdown
 # [Title based on branch name]
 
-> **IMPORTANT**: This plan must be kept up-to-date at all times. Assume context can be cleared at any time — this file is the single source of truth for the current state of this work.
+> **IMPORTANT**: This plan must be kept up-to-date at all times. Assume context can be cleared at any time — this file is the single source of truth for the current state of this work. Update this plan before and after task and subtask implementations.
 
 ## Branch
 
@@ -64,11 +64,10 @@ The created plan file includes:
 
 ## Instructions for Claude
 
-When the user invokes `/branch-plan <name>`:
+When the user invokes `/branch-plan`:
 
-1. **Parse the branch name** from the argument
-2. **Sanitize for filename**: Replace `/` with `-` for the plan filename
-3. **Run**: `git checkout -b <branch-name>`
+1. **Discover the branch name** from git
+2. **Sanitize for filename**: Replace `/` with `-` for the plan filename, etc.
 4. **Create plan file**: `CLAUDE.<sanitized-name>.md` with the template above
 5. **Update CLAUDE.local.md**: Replace the existing `@CLAUDE.*.md` reference with the new file
 6. **Ask the user** for a one-line goal to add to the plan (optional)

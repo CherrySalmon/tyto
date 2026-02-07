@@ -288,6 +288,74 @@ describe 'Service::Attendances::RecordAttendance' do
     end
   end
 
+  describe 'Event time-window validation' do
+    it 'rejects attendance for an event that has ended' do
+      owner = create_test_account(roles: ['creator'])
+      course = create_test_course(owner)
+      location = create_test_location(course)
+      # Event ended 30 minutes ago
+      ended_event = Tyto::Event.create(
+        course_id: course.id,
+        location_id: location.id,
+        name: 'Past Event',
+        start_at: Time.now - 7200,
+        end_at: Time.now - 1800
+      )
+
+      student = create_test_account(name: 'Student', roles: ['member'])
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
+        requestor:,
+        course_id: course.id,
+        attendance_data: {
+          'event_id' => ended_event.id,
+          'latitude' => 40.7128,
+          'longitude' => -74.0060
+        }
+      )
+
+      _(result.failure?).must_equal true
+      _(result.failure.status).must_equal :forbidden
+      _(result.failure.message).must_include 'event time window'
+    end
+
+    it 'rejects attendance for an event that has not started' do
+      owner = create_test_account(roles: ['creator'])
+      course = create_test_course(owner)
+      location = create_test_location(course)
+      # Event starts in 30 minutes
+      future_event = Tyto::Event.create(
+        course_id: course.id,
+        location_id: location.id,
+        name: 'Future Event',
+        start_at: Time.now + 1800,
+        end_at: Time.now + 5400
+      )
+
+      student = create_test_account(name: 'Student', roles: ['member'])
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(course_id: course.id, account_id: student.id, role_id: student_role.id)
+
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: student.id, roles: ['creator'])
+      result = Tyto::Service::Attendances::RecordAttendance.new.call(
+        requestor:,
+        course_id: course.id,
+        attendance_data: {
+          'event_id' => future_event.id,
+          'latitude' => 40.7128,
+          'longitude' => -74.0060
+        }
+      )
+
+      _(result.failure?).must_equal true
+      _(result.failure.status).must_equal :forbidden
+      _(result.failure.message).must_include 'event time window'
+    end
+  end
+
   describe 'Representer integration' do
     it 'serializes attendance via Attendance representer' do
       owner = create_test_account(roles: ['creator'])

@@ -46,7 +46,6 @@ export default {
             errMessage: '',
             latitude: 0,
             longitude: 0,
-            location: {},
             account: {},
         };
     },
@@ -163,40 +162,11 @@ export default {
             }
         },
         showPosition(position, loading, event) {
-            this.locationText = `Latitude: ${position.coords.latitude}, Longitude: ${position.coords.longitude}, Accuracy: ${position.coords.accuracy}`;
-
             this.latitude = position.coords.latitude;
             this.longitude = position.coords.longitude;
 
-
-            const course_id = event.course_id;
-            const location_id = event.location_id;
-
-            api.get(`/course/${course_id}/location/${location_id}`)
-            .then(response => {
-                this.location = response.data.data;
-                this.isEventDataFetched = true;
-
-                const range = 0.0005
-                const minLat = this.location.latitude - range
-                const maxLat = this.location.latitude + range
-                const minLng = this.location.longitude - range
-                const maxLng = this.location.longitude + range
-
-                // Check if the current position is within the range
-                if (this.latitude >= minLat && this.latitude <= maxLat && this.longitude >= minLng && this.longitude <= maxLng) {
-                    // Call your API if within the range
-                    this.postAttendance(loading, event);
-                } else {
-                    ElMessageBox.alert('You are not in the right location', 'Failed', {
-                        confirmButtonText: 'OK',
-                        type: 'error',
-                    })
-                    loading.close();
-                }
-            }).catch(error => {
-                console.error('Error fetching event:', error);
-            });
+            // POST coordinates to backend; geo-fence validated server-side
+            this.postAttendance(loading, event);
         },
         showError(error) {
             switch (error.code) {
@@ -234,13 +204,21 @@ export default {
                     })
                 })
                 .catch(error => {
-                    // Handle error
                     console.error('Error recording attendance', error);
-                    this.updateEventAttendanceStatus(event.id, true);
-                    ElMessageBox.alert('Attendance has already recorded', 'Warning', {
-                        confirmButtonText: 'OK',
-                        type: 'warning',
-                    })
+                    const details = error.response?.data?.details || '';
+
+                    if (error.response?.status === 403) {
+                        ElMessageBox.alert(details || 'Attendance was rejected', 'Failed', {
+                            confirmButtonText: 'OK',
+                            type: 'error',
+                        })
+                    } else {
+                        this.updateEventAttendanceStatus(event.id, true);
+                        ElMessageBox.alert('Attendance has already been recorded', 'Warning', {
+                            confirmButtonText: 'OK',
+                            type: 'warning',
+                        })
+                    }
                 }).finally(() => {
                     loading.close();
                 });

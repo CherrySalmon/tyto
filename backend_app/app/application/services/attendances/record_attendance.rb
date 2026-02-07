@@ -4,7 +4,7 @@ require_relative '../../../infrastructure/database/repositories/attendances'
 require_relative '../../../infrastructure/database/repositories/events'
 require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../../../infrastructure/database/repositories/locations'
-require_relative '../../../domain/attendance/policies/attendance_proximity'
+require_relative '../../../domain/attendance/policies/attendance_eligibility'
 require_relative '../application_operation'
 require_relative '../concerns/coordinate_validation'
 
@@ -30,7 +30,7 @@ module Tyto
           step verify_course_exists(course_id)
           step authorize(requestor, course_id)
           validated, event = step validate_input(attendance_data, requestor, course_id)
-          step verify_geo_fence(validated, event)
+          step verify_eligibility(validated, event)
           attendance = step persist_attendance(validated)
 
           created(attendance)
@@ -92,19 +92,22 @@ module Tyto
           Success([validated, event])
         end
 
-        def verify_geo_fence(validated, event)
-          # Coordinates are required for student self-reported attendance
+        def verify_eligibility(validated, event)
           if validated[:latitude].nil? || validated[:longitude].nil?
             return Failure(forbidden('Location coordinates are required'))
           end
 
           location = @locations_repo.find_id(event.location_id)
-
           attendance = build_attendance_entity(validated)
 
-          return Success() if Policy::AttendanceProximity.satisfied?(attendance, location)
-
-          Failure(forbidden('Attendance location is outside the allowed geo-fence range'))
+          case Policy::AttendanceEligibility.check(attendance:, event:, location:)
+          when :time_window
+            Failure(forbidden('Attendance is outside the event time window'))
+          when :proximity
+            Failure(forbidden('Attendance location is outside the allowed geo-fence range'))
+          else
+            Success()
+          end
         end
 
         def validate_event_id(event_id)

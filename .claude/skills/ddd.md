@@ -191,11 +191,13 @@ Three distinct concepts, often conflated:
 | Concern | Layer | Why |
 | ------- | ----- | --- |
 | Distance calculation (Haversine) | Domain (value object) | Pure math, always true |
-| "Attendance must be within 55m" + the 55m threshold | Domain (policy/specification) | Business rule, actor-agnostic |
-| "Only students must comply with geo-fence" | Application (service orchestration) | Depends on actor role |
+| "Right place, right time" (proximity + time window) | Domain (policy) | Business rules, actor-agnostic |
+| "Only students must comply with eligibility" | Application (service orchestration) | Depends on actor role |
 | "Only teaching staff can view all attendance" | Application (policy) | Depends on actor role |
 
-**In practice:** Domain values provide *computations* (e.g., `GeoLocation#distance_to`). Domain policies encapsulate *business rules with thresholds* (e.g., proximity check with the 55m constant). Application policies check *who can do what*. Services orchestrate: fetch data, apply the right policies for the context, persist results.
+**In practice:** Domain values provide *computations* (e.g., `GeoLocation#distance_to`). Domain policies encapsulate *business rules* — group related rules into a single policy when they answer the same domain question (e.g., `AttendanceEligibility` checks both proximity and time window because a domain expert would say "attendance is valid at the right place and time" as one concept). Application policies check *who can do what*. Services orchestrate: fetch data, apply the right policies for the context, persist results.
+
+**Anti-pattern: policy decisions in services.** Services must NOT contain business rule logic — even simple conditionals like time-window checks or threshold comparisons. If a domain expert would articulate the rule ("attendance must be within the event's time window"), it belongs in a policy, not as an `if` statement in a service method. Services call policies; they don't replicate them. Watch for this pattern creeping in during implementation.
 
 **Evolution:** If a threshold might vary (per course, per campus), make it a value object (e.g., `AttendanceRules`) rather than a constant. This honors the DDD principle of making implicit concepts explicit — the threshold evolves from a constant to a repository-backed lookup without architectural refactoring.
 

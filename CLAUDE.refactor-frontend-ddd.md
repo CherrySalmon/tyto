@@ -29,7 +29,9 @@ This approach ensures we only build what the frontend actually needs, with immed
 - [x] Backend DDD architecture reviewed
 - [x] Vertical slice strategy adopted
 - [x] Slice 1 backend completed (geo-fence enforcement in RecordAttendance)
-- [ ] Slice 1 frontend (remove client-side geo-fence logic, show backend errors)
+- [x] Slice 1 frontend (remove client-side geo-fence logic, show backend errors)
+- [x] Slice 1 hardening: event time-window enforcement via domain policy
+- [x] Slice 1 complete (manual verification passed)
 
 ## Key Findings
 
@@ -63,25 +65,28 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 **Why first**: Security-critical; domain logic already exists but isn't wired up.
 
-**Scope**: Domain policy radius (~55m) matching current frontend behavior. No new DB columns, no per-event configuration. Variable fencing deferred to future work.
+**Scope**: Domain policy radius (~55m). No new DB columns, no per-event configuration. Variable fencing deferred to future work.
+
+**Shape change**: The original frontend used a bounding box (square ±0.0005°), which allowed ~78m at corners (55m × √2). The backend uses Haversine (circle), giving a uniform 55m radius — more correct.
 
 **Boundary**: Geo-fence enforcement applies only to self-reported student attendance (gated by `AttendancePolicy.can_create?` → `self_enrolled?`). Teacher/TA/owner/admin manual attendance flagging bypasses geo-fence — deferred to future work.
 
 **Architecture** (domain policy vs. application policy):
-- `Policy::AttendanceProximity` (domain) — actor-agnostic business rule: "attendance must be within 55m." Holds the `MAX_DISTANCE_KM` constant. Uses `Attendance#within_range?` for computation.
+- `Policy::AttendanceEligibility` (domain) — actor-agnostic business rule: "attendance is valid when the student is at the right place at the right time." Checks both time window (`Event#active?`) and proximity (Haversine ≤ 55m). Returns `:time_window`, `:proximity`, or `nil` (eligible).
 - `AttendancePolicy` (application) — actor-dependent: "who can record attendance?" Checks enrollment/roles.
-- `RecordAttendance` service (application) — orchestrates both: checks who can act, requires coordinates for self-reported attendance, delegates proximity check to domain policy.
+- `RecordAttendance` service (application) — orchestrates both: checks who can act, requires coordinates for self-reported attendance, delegates eligibility check to domain policy.
 
 **Backend changes**:
-- New domain policy: `domain/attendance/policies/attendance_proximity.rb`
-  - `Policy::AttendanceProximity.satisfied?(attendance, event_location)` — returns true/false
+- New domain policy: `domain/attendance/policies/attendance_eligibility.rb`
+  - `Policy::AttendanceEligibility.check(attendance:, event:, location:, time:)` — returns `nil` (eligible), `:time_window`, or `:proximity`
   - `MAX_DISTANCE_KM = 0.055` (~55m) — business rule constant
-  - Returns true if event has no location/coordinates (nothing to validate against)
+  - Gracefully handles missing time ranges and missing coordinates
+  - Prevents stale-browser and direct HTTP request bypass
 - Enhanced `Services::Attendances::RecordAttendance` with:
   - `locations_repo` dependency (injected, same pattern as other repos)
-  - `verify_geo_fence` step between `validate_input` and `persist_attendance`
+  - `verify_eligibility` step between `validate_input` and `persist_attendance`
   - Rejects missing coordinates as forbidden (bypass attempt)
-  - Delegates proximity decision to `Policy::AttendanceProximity`
+  - Delegates eligibility decision to `Policy::AttendanceEligibility`
 
 **Frontend changes**:
 - Remove geo-fence validation from `AttendanceTrack.vue` and `AllCourse.vue`
@@ -94,13 +99,18 @@ This approach ensures we only build what the frontend actually needs, with immed
 - [x] 1.1e Add domain policy spec (`attendance_proximity_spec.rb`)
 - [x] 1.4a Wire up geo-fence check in RecordAttendance service
 - [x] 1.4b Extract domain policy `Policy::AttendanceProximity` from service
-- [ ] 1.5 Update frontend to remove geo-fence logic and show backend errors
-- [ ] 1.6 Manual verification: test inside/outside geo-fence scenarios
+- [x] 1.5 Update frontend to remove geo-fence logic and show backend errors
+- [x] 1.7a Add domain policy spec (`event_time_window_spec.rb`)
+- [x] 1.7b Add event time-window rejection test (ended event)
+- [x] 1.7c Add event time-window rejection test (future event)
+- [x] 1.7d Wire up time-window check in RecordAttendance service via domain policy
+- [x] 1.6 Manual verification: test inside/outside geo-fence and time-window scenarios
 
 **Dropped** (deferred to future work):
 - ~~1.1c Test for event-specific radius~~ — variable fencing deferred
 - ~~1.2 Add `geo_fence_radius_m` migration~~ — no per-event config needed
 - ~~1.3 Add `geo_fence_radius_m` to Event entity and representer~~ — no per-event config needed
+- GPS accuracy enforcement — browser reports `coords.accuracy` (radius in meters); reject when accuracy > fence radius (position too imprecise). Requires new DB column + frontend to send accuracy field.
 
 ---
 
@@ -240,13 +250,15 @@ This approach ensures we only build what the frontend actually needs, with immed
 **Frontend changes**:
 - Extract `frontend_app/lib/geolocation.js` utility (shared across components)
 - Extract `frontend_app/lib/dateFormatter.js` utility
+- Extract shared attendance logic (composable or service) — `postAttendance()`, `findAttendance()`, `getLocation()`, `showPosition()`, `showError()`, `updateEventAttendanceStatus()` are duplicated across `AttendanceTrack.vue` and `AllCourse.vue`
 - Remove any remaining deprecated domain logic
 
 **Tasks**:
 - [ ] 7.1 Create geolocation utility with shared functions
 - [ ] 7.2 Create date formatting utility
-- [ ] 7.3 Update components to use utilities
-- [ ] 7.4 Remove deprecated logic from components
+- [ ] 7.3 Extract shared attendance logic from AttendanceTrack and AllCourse
+- [ ] 7.4 Update components to use utilities
+- [ ] 7.5 Remove deprecated logic from components
 
 ---
 

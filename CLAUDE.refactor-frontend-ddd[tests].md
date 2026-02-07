@@ -70,27 +70,23 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 
 Each slice's test tasks (1.1a, 2.1a, etc.) are listed in `CLAUDE.refactor-frontend-ddd.md`. Below are testing-specific notes for each slice.
 
-### Slice 1: Geo-fence Validation ✅
+### Slice 1: Geo-fence + Time-Window Validation ✅
 
-Two levels of testing — domain policy (business rule) and service (orchestration):
+Two levels of testing — domain policy (business rules) and service (orchestration):
 
-**Domain policy spec**: `spec/domain/attendance/policies/attendance_proximity_spec.rb`
-- 1.1e Threshold constant is 0.055 km (~55m)
-- Satisfied when at event location (exact match)
-- Satisfied when within 55m (~30m away)
-- Not satisfied when beyond 55m (~32km away)
-- Satisfied when event location is nil (nothing to validate against)
-- Satisfied when event location has no coordinates
-- Not satisfied when attendance has no coordinates but event location does
+**Domain policy spec**: `spec/domain/attendance/policies/attendance_eligibility_spec.rb`
+- Merged `AttendanceProximity` + `EventTimeWindow` into single `AttendanceEligibility` policy
+- 13 tests covering both time window and proximity facets:
+  - Threshold constant is 0.055 km (~55m)
+  - Time window: eligible when active, `:time_window` when ended, `:time_window` when not started, eligible when no time range, boundary tests at exact start/end
+  - Proximity: eligible at exact location, eligible within 55m, `:proximity` beyond 55m, eligible when location nil, eligible when location has no coordinates, `:proximity` when attendance has no coordinates
 
 **Service spec**: `spec/application/services/attendances/record_attendance_spec.rb`
-- Tests in `describe 'Geo-fence validation'` block:
-  - 1.1a Accept within radius — student coords match location (40.7128, -74.0060) → Success
-  - 1.1b Reject outside radius — student at (41.0, -74.0) ~32km away → Failure(:forbidden) with "geo-fence" message
-  - 1.1d Reject when no coordinates — missing lat/lng is a bypass attempt → Failure(:forbidden) with "coordinates" message
-- **Existing tests updated**: "auto-generated name", "persists attendance", and "Representer integration" tests now send coordinates to remain passing after geo-fence enforcement
-- **Note**: Domain entity tests for `within_range?` already exist — domain policy tests cover the business rule (threshold + edge cases), service tests cover orchestration
-- **Dropped**: ~~1.1c event-specific radius~~ — variable fencing deferred to future work
+- Geo-fence tests: accept within radius, reject outside radius, reject missing coordinates
+- Time-window tests: reject ended event, reject future event
+- **Existing tests**: all use active events and pass unchanged
+- **Dropped**: ~~1.1c event-specific radius~~ — variable fencing deferred
+- **Frontend** (1.5): Removed client-side bounding box checks from `AttendanceTrack.vue` and `AllCourse.vue`. Error handling distinguishes geo-fence 403 from other errors.
 
 ### Slice 2: Duplicate Attendance Prevention
 
