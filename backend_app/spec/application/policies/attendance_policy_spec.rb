@@ -28,7 +28,7 @@ describe Tyto::AttendancePolicy do
       _(policy.can_create?).must_equal true
       _(policy.can_view?).must_equal true
       _(policy.can_view_all?).must_equal true
-      _(policy.can_update?).must_equal true
+      _(policy.can_attend?).must_equal true
     end
   end
 
@@ -40,7 +40,7 @@ describe Tyto::AttendancePolicy do
       _(policy.can_create?).must_equal true
       _(policy.can_view?).must_equal true
       _(policy.can_view_all?).must_equal true
-      _(policy.can_update?).must_equal true
+      _(policy.can_attend?).must_equal true
     end
   end
 
@@ -52,7 +52,7 @@ describe Tyto::AttendancePolicy do
       _(policy.can_create?).must_equal true
       _(policy.can_view?).must_equal true
       _(policy.can_view_all?).must_equal true
-      _(policy.can_update?).must_equal true
+      _(policy.can_attend?).must_equal true
     end
   end
 
@@ -64,7 +64,7 @@ describe Tyto::AttendancePolicy do
       _(policy.can_create?).must_equal true
       _(policy.can_view?).must_equal true
       _(policy.can_view_all?).must_equal false
-      _(policy.can_update?).must_equal true
+      _(policy.can_attend?).must_equal true
     end
   end
 
@@ -75,7 +75,7 @@ describe Tyto::AttendancePolicy do
       _(policy.can_create?).must_equal false
       _(policy.can_view?).must_equal false
       _(policy.can_view_all?).must_equal false
-      _(policy.can_update?).must_equal false
+      _(policy.can_attend?).must_equal false
     end
   end
 
@@ -90,7 +90,7 @@ describe Tyto::AttendancePolicy do
       _(summary[:can_view]).must_equal true
       _(summary[:can_view_all]).must_equal false
       _(summary[:can_create]).must_equal true
-      _(summary[:can_update]).must_equal true
+      _(summary[:can_attend]).must_equal true
     end
   end
 end
