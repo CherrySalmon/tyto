@@ -34,14 +34,23 @@ The created plan file includes:
 
 [To be filled in]
 
+## Strategy: Vertical Slice
+
+Deliver a complete, testable feature end-to-end:
+
+1. **Backend test** — Write failing test for new behavior (red)
+2. **Backend implementation** — Make the test pass (green)
+3. **Frontend update** — Remove old logic, consume new API
+4. **Verify** — Manual or E2E test confirms behavior
+
 ## Current State
 
 - [ ] Plan created
 - [ ] [Additional items to be added]
 
-## Design
+## Key Findings
 
-[To be filled in]
+[Analysis of existing code, capabilities, and gaps — to be filled in during investigation]
 
 ## Questions
 
@@ -49,9 +58,27 @@ The created plan file includes:
 
 - [ ] [To be added]
 
+## Scope
+
+[What's in and out of scope]
+
+**Backend changes**:
+
+- [Description of backend work]
+
+**Frontend changes**:
+
+- [Description of frontend work]
+
 ## Tasks
 
-- [ ] [To be added]
+> **Test-first**: Write or update tests that fail (red) before writing the implementation to make them pass (green).
+
+- [ ] 1a [Failing test for expected behavior]
+- [ ] 1b [Additional test scenarios]
+- [ ] 2 [Implementation to make tests pass]
+- [ ] 3 [Frontend update]
+- [ ] 4 Manual verification
 
 ## Completed
 
@@ -68,16 +95,33 @@ When the user invokes `/branch-plan`:
 
 1. **Discover the branch name** from git
 2. **Sanitize for filename**: Replace `/` with `-` for the plan filename, etc.
-4. **Create plan file**: `CLAUDE.<sanitized-name>.md` with the template above
-5. **Update CLAUDE.local.md**: Replace the existing `@CLAUDE.*.md` reference with the new file
-6. **Ask the user** for a one-line goal to add to the plan (optional)
-7. **Report success** with the created branch and file paths
+3. **Create plan file**: `CLAUDE.<sanitized-name>.md` with the template above
+4. **Update CLAUDE.local.md**: Replace the existing `@CLAUDE.*.md` reference with the new file
+5. **Ask the user** for a one-line goal to add to the plan (optional)
+6. **Report success** with the created branch and file paths
+
+### Planning and execution guidelines
+
+When populating or updating a plan, follow these principles:
+
+**Vertical slice**: Each branch is typically one slice — a complete, testable feature from backend to frontend. Avoid horizontal layers (e.g., "all tests first, then all implementation"). For extensive long-term plans requiring multiple slices, number them (Slice 1, Slice 2, etc.) with per-slice Scope/Tasks sections and prefixed task IDs (1.1a, 1.2, 2.1a, 2.2, etc.).
+
+**Test-first (red-green-refactor)**: Each branch begins with failing tests before implementation.
+
+- Test tasks use lettered sub-IDs (1a, 1b) and precede implementation tasks (2, 3)
+- Implementation should make the tests pass — no more, no less
+- If tests cannot be written first for a particular task (e.g., pure config changes, frontend-only cleanup), note that explicitly
+
+**Single plan file**: Tests are part of the plan, not a separate document. The Tasks section includes both test and implementation tasks in execution order.
+
+**Scope decisions**: Record what's deferred and why. Use the Questions section for open design decisions — cross off when resolved, note the decision made.
 
 ## Example
 
 Input: `/branch-plan ray/add-file-uploads`
 
 Creates:
+
 - Branch: `ray/add-file-uploads`
 - File: `CLAUDE.ray-add-file-uploads.md`
 - Updates: `CLAUDE.local.md` → `@CLAUDE.ray-add-file-uploads.md`
