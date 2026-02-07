@@ -39,7 +39,8 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 |---------|------|
 | Service test template | `spec/application/services/attendances/record_attendance_spec.rb` |
 | Route test template | `spec/routes/course_route_spec.rb` |
-| Policy test template | `spec/application/policies/attendance_policy_spec.rb` |
+| Application policy test | `spec/application/policies/attendance_policy_spec.rb` |
+| Domain policy test | `spec/domain/attendance/policies/attendance_proximity_spec.rb` |
 | Domain entity test | `spec/domain/attendance/entities/attendance_spec.rb` |
 
 ## Existing Coverage Analysis
@@ -58,7 +59,7 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 
 | Area | Unit Tests | Integration Tests | Gaps |
 |------|-----------|------------------|------|
-| Attendance Recording | Good (basic) | Good | Geo-fence, duplicates |
+| Attendance Recording | Good (geo-fence enforced) | Good | Duplicates |
 | Role Assignment | Excellent | Good | Assignable roles logic |
 | Event Responses | Good | Good | Enriched data |
 | Course Reports | None | None | Everything |
@@ -69,11 +70,27 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 
 Each slice's test tasks (1.1a, 2.1a, etc.) are listed in `CLAUDE.refactor-frontend-ddd.md`. Below are testing-specific notes for each slice.
 
-### Slice 1: Geo-fence Validation
+### Slice 1: Geo-fence Validation ✅
 
-- **Add to**: `spec/application/services/attendances/record_attendance_spec.rb`
-- **Test scenarios**: Accept within radius, reject outside, event-specific radius, default 55m fallback
-- **Note**: Domain entity tests for `within_range?` already exist — new tests go at the service level
+Two levels of testing — domain policy (business rule) and service (orchestration):
+
+**Domain policy spec**: `spec/domain/attendance/policies/attendance_proximity_spec.rb`
+- 1.1e Threshold constant is 0.055 km (~55m)
+- Satisfied when at event location (exact match)
+- Satisfied when within 55m (~30m away)
+- Not satisfied when beyond 55m (~32km away)
+- Satisfied when event location is nil (nothing to validate against)
+- Satisfied when event location has no coordinates
+- Not satisfied when attendance has no coordinates but event location does
+
+**Service spec**: `spec/application/services/attendances/record_attendance_spec.rb`
+- Tests in `describe 'Geo-fence validation'` block:
+  - 1.1a Accept within radius — student coords match location (40.7128, -74.0060) → Success
+  - 1.1b Reject outside radius — student at (41.0, -74.0) ~32km away → Failure(:forbidden) with "geo-fence" message
+  - 1.1d Reject when no coordinates — missing lat/lng is a bypass attempt → Failure(:forbidden) with "coordinates" message
+- **Existing tests updated**: "auto-generated name", "persists attendance", and "Representer integration" tests now send coordinates to remain passing after geo-fence enforcement
+- **Note**: Domain entity tests for `within_range?` already exist — domain policy tests cover the business rule (threshold + edge cases), service tests cover orchestration
+- **Dropped**: ~~1.1c event-specific radius~~ — variable fencing deferred to future work
 
 ### Slice 2: Duplicate Attendance Prevention
 
@@ -127,4 +144,4 @@ E2E tests will be added if manual verification proves insufficient. Candidates:
 
 ---
 
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-07*

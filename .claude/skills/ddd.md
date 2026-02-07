@@ -174,6 +174,31 @@ end
 **Forbidden:**
 - `domain/` → NEVER imports from infrastructure, application, or controllers
 
+## Domain Logic, Domain Policies, and Application Policies
+
+Three distinct concepts, often conflated:
+
+**Domain logic** = intrinsic computations, always true regardless of context. "These two points are 32km apart." Pure math — belongs in value objects and entities.
+
+**Domain policies** = business rules a domain expert would articulate, actor-agnostic. "Attendance must be within 55m of the event location." The threshold is a business decision (not a deployment decision), but the rule itself doesn't reference who is recording. Changing 55m to 100m is a business decision, so the constant belongs in the domain, not in config files or infrastructure.
+
+**Application policies** = rules that depend on *who* is acting or application-level context. "Only teaching staff can view all attendance records." These reference roles, requestors, or use-case context.
+
+**The key constraint:** The domain layer can't know about application concepts like "who is the requestor" or "what role do they have." Dependencies flow inward — domain is at the center.
+
+**Heuristic:** If the rule is actor-agnostic (a domain expert would state it without mentioning roles) → `domain/`. If it references roles, requestors, or use-case context → `application/policies/`.
+
+| Concern | Layer | Why |
+| ------- | ----- | --- |
+| Distance calculation (Haversine) | Domain (value object) | Pure math, always true |
+| "Attendance must be within 55m" + the 55m threshold | Domain (policy/specification) | Business rule, actor-agnostic |
+| "Only students must comply with geo-fence" | Application (service orchestration) | Depends on actor role |
+| "Only teaching staff can view all attendance" | Application (policy) | Depends on actor role |
+
+**In practice:** Domain values provide *computations* (e.g., `GeoLocation#distance_to`). Domain policies encapsulate *business rules with thresholds* (e.g., proximity check with the 55m constant). Application policies check *who can do what*. Services orchestrate: fetch data, apply the right policies for the context, persist results.
+
+**Evolution:** If a threshold might vary (per course, per campus), make it a value object (e.g., `AttendanceRules`) rather than a constant. This honors the DDD principle of making implicit concepts explicit — the threshold evolves from a constant to a repository-backed lookup without architectural refactoring.
+
 ## ApplicationOperation Base Class
 
 All services inherit from `Service::ApplicationOperation` which provides response helpers:

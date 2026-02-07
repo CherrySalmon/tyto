@@ -71,7 +71,7 @@ All runtime code lives in `app/`:
 **Application Layer** (`app/application/`):
 - **controllers/routes/**: API route handlers (Roda). Routes are under `/api/` namespace
 - **services/**: Use cases, orchestration
-- **policies/**: Authorization rules (role-based access control)
+- **policies/**: Business rules that depend on actor/context (authorization, geo-fence, etc.)
 - **contracts/**: Input validation (dry-validation, imports domain types)
 
 **Presentation Layer** (`app/presentation/`):

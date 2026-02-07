@@ -3,6 +3,8 @@
 require_relative '../../../infrastructure/database/repositories/attendances'
 require_relative '../../../infrastructure/database/repositories/events'
 require_relative '../../../infrastructure/database/repositories/courses'
+require_relative '../../../infrastructure/database/repositories/locations'
+require_relative '../../../domain/attendance/policies/attendance_proximity'
 require_relative '../application_operation'
 require_relative '../concerns/coordinate_validation'
 
@@ -13,11 +15,13 @@ module Tyto
       # Returns Success(ApiResult) with created attendance or Failure(ApiResult) with error
       class RecordAttendance < ApplicationOperation
         include CoordinateValidation
+
         def initialize(attendances_repo: Repository::Attendances.new, events_repo: Repository::Events.new,
-                       courses_repo: Repository::Courses.new)
+                       courses_repo: Repository::Courses.new, locations_repo: Repository::Locations.new)
           @attendances_repo = attendances_repo
           @events_repo = events_repo
           @courses_repo = courses_repo
+          @locations_repo = locations_repo
           super()
         end
 
@@ -25,7 +29,8 @@ module Tyto
           course_id = step validate_course_id(course_id)
           step verify_course_exists(course_id)
           step authorize(requestor, course_id)
-          validated = step validate_input(attendance_data, requestor, course_id)
+          validated, event = step validate_input(attendance_data, requestor, course_id)
+          step verify_geo_fence(validated, event)
           attendance = step persist_attendance(validated)
 
           created(attendance)
@@ -74,7 +79,7 @@ module Tyto
           # Generate name from event if not provided
           name = attendance_data['name'] || "#{event.name} Attendance"
 
-          Success(
+          validated = {
             account_id: requestor.account_id,
             course_id: course_id,
             event_id: event_id.value!,
@@ -82,7 +87,24 @@ module Tyto
             name: name,
             longitude: coordinates.value![:longitude],
             latitude: coordinates.value![:latitude]
-          )
+          }
+
+          Success([validated, event])
+        end
+
+        def verify_geo_fence(validated, event)
+          # Coordinates are required for student self-reported attendance
+          if validated[:latitude].nil? || validated[:longitude].nil?
+            return Failure(forbidden('Location coordinates are required'))
+          end
+
+          location = @locations_repo.find_id(event.location_id)
+
+          attendance = build_attendance_entity(validated)
+
+          return Success() if Policy::AttendanceProximity.satisfied?(attendance, location)
+
+          Failure(forbidden('Attendance location is outside the allowed geo-fence range'))
         end
 
         def validate_event_id(event_id)
@@ -94,8 +116,8 @@ module Tyto
           Success(id)
         end
 
-        def persist_attendance(validated)
-          entity = Entity::Attendance.new(
+        def build_attendance_entity(validated)
+          Entity::Attendance.new(
             id: nil,
             account_id: validated[:account_id],
             course_id: validated[:course_id],
@@ -107,8 +129,10 @@ module Tyto
             created_at: nil,
             updated_at: nil
           )
+        end
 
-          Success(@attendances_repo.create(entity))
+        def persist_attendance(validated)
+          Success(@attendances_repo.create(build_attendance_entity(validated)))
         rescue StandardError => e
           Failure(internal_error(e.message))
         end
