@@ -1,3 +1,9 @@
+---
+name: branch-plan
+description: Create a new git branch with an accompanying plan file for tracked, context-preserving work
+disable-model-invocation: true
+---
+
 # Branch Plan Skill
 
 Create a new git branch with an accompanying plan file for tracked, context-preserving work.

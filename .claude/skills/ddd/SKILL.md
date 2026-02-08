@@ -1,3 +1,8 @@
+---
+name: ddd
+description: Domain-Driven Design architecture patterns and conventions for this project
+---
+
 # DDD Skill
 
 Domain-Driven Design architecture patterns and conventions.
