@@ -32,6 +32,7 @@ This approach ensures we only build what the frontend actually needs, with immed
 - [x] Slice 1 frontend (remove client-side geo-fence logic, show backend errors)
 - [x] Slice 1 hardening: event time-window enforcement via domain policy
 - [x] Slice 1 complete (manual verification passed)
+- [x] Slice 2 dropped — idempotent by design (see Slice 2 notes)
 
 ## Key Findings
 
@@ -114,26 +115,13 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 ---
 
-### Slice 2: Duplicate Attendance Prevention
+### ~~Slice 2: Duplicate Attendance Prevention~~ (Dropped)
 
-**Why second**: Data integrity; closely related to Slice 1 (same service).
+**Status**: Unnecessary — attendance recording is **idempotent by design**.
 
-**Backend changes**:
-- Add duplicate check to `RecordAttendance` service (same account + event)
-- Return `:conflict` status with message "Attendance already recorded"
-- Optionally return existing attendance record in response
+**Why dropped**: The repository uses `find_or_create()` backed by a database unique constraint on `[course_id, account_id, event_id]`. A duplicate request silently returns the existing record — no error, no side effect. This is better REST semantics than returning 409 Conflict, which would break idempotency (same request succeeding first time, failing second time) and is particularly problematic for unreliable mobile networks where retries are expected.
 
-**Frontend changes**:
-- Remove any client-side duplicate checking
-- Handle 409 Conflict response gracefully (show message, don't treat as error)
-
-**Tasks**:
-- [ ] 2.1a Add duplicate rejection test
-- [ ] 2.1b Add error message clarity test
-- [ ] 2.1c Add test allowing different events
-- [ ] 2.2 Add duplicate check to RecordAttendance service
-- [ ] 2.3 Update frontend to handle conflict response
-- [ ] 2.4 Manual verification: attempt duplicate attendance
+**Remaining frontend concern → moved to Slice 7**: Both `AttendanceTrack.vue` and `AllCourse.vue` have a `findAttendance()` method that fetches all course attendances and filters client-side to determine button state ("Mark Attendance" vs "Attendance Recorded"). This is a **read/display concern** (not a write/validation concern) and should be consolidated as part of the shared attendance composable extraction in Slice 7.
 
 ---
 
@@ -251,6 +239,7 @@ This approach ensures we only build what the frontend actually needs, with immed
 - Extract `frontend_app/lib/geolocation.js` utility (shared across components)
 - Extract `frontend_app/lib/dateFormatter.js` utility
 - Extract shared attendance logic (composable or service) — `postAttendance()`, `findAttendance()`, `getLocation()`, `showPosition()`, `showError()`, `updateEventAttendanceStatus()` are duplicated across `AttendanceTrack.vue` and `AllCourse.vue`
+  - **Note (from Slice 2)**: `findAttendance()` fetches all course attendances and filters client-side to determine button state. This read/display concern should be part of the shared composable.
 - Remove any remaining deprecated domain logic
 
 **Tasks**:
