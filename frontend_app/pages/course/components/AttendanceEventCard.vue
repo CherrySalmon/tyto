@@ -2,7 +2,7 @@
   <div class="event-card-container course-card-container">
     <div class="course-content-title">Attendance Events</div>
     <div class="course-download-btn">
-      <el-button color="#824533" :dark="true" @click="downloadRecord()">Download Record</el-button>
+      <el-button color="#824533" :dark="true" @click="downloadReport()">Download Record</el-button>
     </div>
     
     <el-card class="event-item" shadow="hover" @click.stop="$emit('create-event')">
@@ -34,6 +34,7 @@
 <script>
 import api from '@/lib/tyto-api';
 import cookieManager from '../../../lib/cookieManager';
+import downloadFile from '../../../lib/downloadFile';
 import AttendanceMap from './AttendanceMap.vue';
   export default {
     emits: ['create-event', 'edit-event', 'delete-event', 'create-location', 'update-location', 'delete-location', 'new-enrolls', 'update-enrollment', 'delete-enrollment'],
@@ -51,7 +52,6 @@ import AttendanceMap from './AttendanceMap.vue';
             roles: [],
             credential: ''
           },
-          attendances: '',
           selectedEvent: {},
           eventAttendances: '',
           attendanceMapVisible: false,
@@ -86,75 +86,20 @@ import AttendanceMap from './AttendanceMap.vue';
           console.error('Error fetching attendances:', error);
         });
       },
-      fetchAttendances() {
-        api.get(`/course/${this.course.id}/attendance/list_all`).then(response => {
-          this.attendances = response.data.data;
-          this.downloadAttendanceRecordAsCSV()
-        }).catch(error => {
-          console.error('Error fetching attendances:', error);
-        });
-      },
       showAttendanceMap(event) {
         this.selectedEvent = event
         this.fetchEventAttendances(this.selectedEvent.id)
       },
-      downloadRecord() {
-        this.fetchAttendances()
-      },
-      downloadAttendanceRecordAsCSV() {
-        const eventNames = this.attendanceEvents.map(event => event.name);
-        const headers = ["Student Email", "attend_sum", "attend_percent", ...eventNames];
-
-        let csvContent = headers.join(",") + "\n";
-
-        this.enrollments.forEach(enrollment => {
-          if (enrollment.enroll_identity.includes("student")) {
-            const studentEmail = enrollment.account.email;
-            const attendanceDetails = {};
-
-            // Initialize attendance details for each event with '0', absent.
-            this.attendanceEvents.forEach(event => {
-              attendanceDetails[event.id] = 0;
-            });
-
-            // Mark attendance as '1', present for attended events.
-            this.attendances.forEach(attendance => {
-              if (attendance.account_id === enrollment.account.id) {
-                attendanceDetails[attendance.event_id] = 1;
-              }
-            });
-
-            const attendSum = Object.values(attendanceDetails).filter(status => status === 1).length;
-            const attendPercent = (attendSum / this.attendanceEvents.length) * 100;
-
-            const rowData = [
-              studentEmail,
-              attendSum,
-              attendPercent.toFixed(2),
-              ...Object.keys(attendanceDetails).map(key => attendanceDetails[key])
-            ];
-
-            csvContent += rowData.join(",") + "\n";
-          }
+      downloadReport() {
+        api.get(`/course/${this.course.id}/attendance/report?format=csv`, {
+          responseType: 'blob'
+        }).then(response => {
+          const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+          const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+          downloadFile(blob, `${this.course.name}-attendance-${dateStr}.csv`);
+        }).catch(error => {
+          console.error('Error downloading attendance report:', error);
         });
-
-        // Trigger download of CSV file.
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-
-        link.setAttribute('download', `${this.course.name}-attendance-${this.getCurrentDateTimeYYYYMMDD()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      },
-      getCurrentDateTimeYYYYMMDD() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        const day = now.getDate().toString().padStart(2, '0');
-        const dateFormatted = `${year}${month}${day}`;
-        return dateFormatted;
       },
       getEventLocationName(locationId) {
           const location = this.locations.find(loc => loc.id === locationId);

@@ -127,6 +127,27 @@ module Tyto
                 end
               end
 
+              r.on 'report' do
+                # GET api/course/:course_id/attendance/report[?format=csv]
+                r.get do
+                  case Service::Attendances::GenerateReport.new.call(requestor:, course_id:)
+                  in Success(api_result)
+                    response.status = api_result.http_status_code
+                    if r.params['format'] == 'csv'
+                      csv = Presentation::Formatters::AttendanceReportCsv.to_csv(api_result.message)
+                      response['Content-Type'] = 'text/csv'
+                      response['Content-Disposition'] = 'attachment; filename="attendance-report.csv"'
+                      csv
+                    else
+                      { success: true, data: Representer::AttendanceReport.new(api_result.message).to_hash }.to_json
+                    end
+                  in Failure(api_result)
+                    response.status = api_result.http_status_code
+                    api_result.to_json
+                  end
+                end
+              end
+
               r.on String do |event_id|
                 # GET api/course/:course_id/attendance/:event_id
                 r.get do
