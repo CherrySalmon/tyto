@@ -7,8 +7,9 @@ module Tyto
   module Domain
     module Courses
       module Values
-        # Value object representing a collection of course-level roles.
-        # Encapsulates role checking logic for Enrollment.
+        # Value object representing a specific person's collection of course-level roles.
+        # Answers "what roles does this person have?" — not about roles in general.
+        # For role hierarchy rules (e.g., which roles can assign which), see Policy::RoleAssignment.
         class CourseRoles < Dry::Struct
           attribute :roles, Types::Array.of(Types::CourseRole)
 

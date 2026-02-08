@@ -233,6 +233,54 @@ describe 'Course Routes' do
     end
   end
 
+  describe 'GET /api/course/:id/assignable_roles' do
+    it 'returns all course roles for owner' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+
+      get "/api/course/#{course.id}/assignable_roles", nil, auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['success']).must_equal true
+      _(json_response['data']).must_be_kind_of Array
+      _(json_response['data']).must_include 'owner'
+      _(json_response['data']).must_include 'instructor'
+      _(json_response['data']).must_include 'staff'
+      _(json_response['data']).must_include 'student'
+    end
+
+    it 'returns limited roles for instructor' do
+      owner_account = create_test_account(roles: ['creator'])
+      course = create_test_course(owner_account)
+      instructor_account, instructor_auth = authenticated_header(roles: ['member'])
+
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(
+        course_id: course.id,
+        account_id: instructor_account.id,
+        role_id: instructor_role.id
+      )
+
+      get "/api/course/#{course.id}/assignable_roles", nil, instructor_auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['data']).must_include 'staff'
+      _(json_response['data']).must_include 'student'
+      _(json_response['data']).wont_include 'owner'
+      _(json_response['data']).wont_include 'instructor'
+    end
+
+    it 'returns forbidden for non-enrolled user' do
+      owner_account = create_test_account(roles: ['creator'])
+      course = create_test_course(owner_account)
+      _, other_auth = authenticated_header(roles: ['member'])
+
+      get "/api/course/#{course.id}/assignable_roles", nil, other_auth
+
+      _(last_response.status).must_equal 403
+    end
+  end
+
   describe 'Course Enrollment' do
     describe 'POST /api/course/:id/enroll' do
       it 'enrolls users as owner' do
