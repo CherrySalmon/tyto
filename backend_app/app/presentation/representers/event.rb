@@ -17,6 +17,9 @@ module Tyto
       property :end_at, exec_context: :decorator
       property :longitude, exec_context: :decorator
       property :latitude, exec_context: :decorator
+      property :course_name, exec_context: :decorator
+      property :location_name, exec_context: :decorator
+      property :user_attendance_status, exec_context: :decorator
 
       def start_at
         represented.start_at&.utc&.iso8601
@@ -33,6 +36,18 @@ module Tyto
 
       def latitude
         represented.respond_to?(:latitude) ? represented.latitude : nil
+      end
+
+      def course_name
+        represented.respond_to?(:course_name) ? represented.course_name : nil
+      end
+
+      def location_name
+        represented.respond_to?(:location_name) ? represented.location_name : nil
+      end
+
+      def user_attendance_status
+        represented.respond_to?(:user_attendance_status) ? represented.user_attendance_status : nil
       end
     end
   end

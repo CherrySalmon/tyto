@@ -37,6 +37,7 @@ This approach ensures we only build what the frontend actually needs, with immed
 - [x] Slice 3 frontend complete (ManagePeopleCard fetches roles from API)
 - [x] Slice 3 manual verification complete (task 3.5)
 - [x] Slice 4 complete (attendance report endpoint + DDD entity refactoring)
+- [x] Slice 5 complete (enriched event responses with batch lookups + response DTOs)
 
 ## Key Findings
 
@@ -63,6 +64,26 @@ This approach ensures we only build what the frontend actually needs, with immed
 - **Repositories**: Lazy loading strategies (find_full, find_with_events, etc.)
 
 ---
+
+## Cross-Cutting Decisions
+
+### Response DTOs replace OpenStruct enrichment
+
+**Introduced in**: Slice 5. **Applies to**: all slices that compose multi-entity API responses.
+
+Multiple services currently build `OpenStruct` wrappers to combine data from different repositories (e.g., event + location coordinates, course + enrollment roles). `OpenStruct` has no guaranteed shape — representers must use `respond_to?` guards, and typos silently produce `nil`.
+
+**Convention**: Use `Data.define` response DTOs in `application/responses/`. Each DTO defines the exact shape of a use case's response. The representer can rely on the contract instead of runtime guards.
+
+See the `/ddd` skill → "Response DTOs" for the full pattern and guidelines.
+
+**Migration roadmap** (by slice):
+
+| Slice | Services using OpenStruct | Response DTO |
+| ----- | ------------------------ | ------------ |
+| 5 | `FindActiveEvents`, `ListEvents` | `Response::ActiveEventDetails`, `Response::EventDetails` |
+| 6 | `GetCourse`, `ListUserCourses`, `CreateCourse` | `Response::CourseWithCapabilities` (or similar) |
+| Post-slice | `CreateEvent`, `UpdateEvent` | `Response::EventWithLocation` (or reuse `EventDetails`) |
 
 ## Vertical Slices
 
@@ -218,28 +239,60 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 
 ---
 
-### Slice 5: Enriched Event Responses
+### Slice 5: Enriched Event Responses ✅
 
 **Why fifth**: Performance; eliminates N+1 fetching in frontend.
 
-**Backend changes**:
-- Modify event representer to include:
-  - `course_name` (from parent course)
-  - `location` object (embedded, not just ID)
-  - `user_attendance_status` for requesting user (null, "recorded", etc.)
+**Status**: Complete. Implemented on branch `ray/refactor-event-responses` in 5 phases — see `CLAUDE.ray-refactor-event-responses.md` for full branch plan.
+
+**Problem**: Both `AttendanceTrack.vue` and `AllCourse.vue` fetched active events, then for each event made 3 additional HTTP calls (course, location, attendance). For N events this produced 3N+1 requests. Reduced to **1 request** by embedding all three fields in the event response.
+
+**Architecture**:
+- **Batch lookups** in repositories replace N+1 queries: `find_ids(ids) → Hash<id, Entity>` for courses/locations, `find_attended_event_ids(account_id, event_ids) → Set<Integer>` for attendance status
+- **Response DTOs** (`Data.define`) replace `OpenStruct` enrichment: `Response::EventDetails` (list events) and `Response::ActiveEventDetails` (active events + `user_attendance_status`)
+- **Enrichment in service layer**: services compose data from multiple repos into response DTOs — repositories return pure domain entities
+- **`user_attendance_status`** only on requestor-aware endpoint (`FindActiveEvents`); omitted from requestor-agnostic `ListEvents`
+
+**Two endpoints enriched**:
+| Endpoint | Service | Response DTO |
+| -------- | ------- | ------------ |
+| `GET /api/current_event/` | `FindActiveEvents` | `Response::ActiveEventDetails` |
+| `GET /api/course/:id/event/` | `ListEvents` | `Response::EventDetails` |
+
+**Backend files created**:
+- `app/application/responses/event_details.rb` — `Data.define` DTO for event list endpoints
+- `app/application/responses/active_event_details.rb` — `Data.define` DTO with attendance status
+
+**Backend files modified**:
+- `app/infrastructure/database/repositories/locations.rb` — added `find_ids` batch method
+- `app/infrastructure/database/repositories/courses.rb` — added `find_ids` batch method
+- `app/infrastructure/database/repositories/attendances.rb` — added `find_attended_event_ids` method
+- `app/application/services/events/find_active_events.rb` — batch enrichment → `Response::ActiveEventDetails`
+- `app/application/services/events/list_events.rb` — batch enrichment → `Response::EventDetails`
+- `app/presentation/representers/event.rb` — added `course_name`, `location_name`, `user_attendance_status` properties
 
 **Frontend changes**:
-- Remove `Promise.all` loops that fetch course/location for each event
-- Use embedded data directly from event response
+- `AttendanceTrack.vue` — removed `getCourseName()`, `getLocationName()`, `findAttendance()`; simplified `fetchEventData()` to use enriched fields
+- `AllCourse.vue` — removed `getCourseName()`, `getLocationName()`, `findAttendance()`; simplified `fetchEventData()` to use enriched fields
+
+**Tests**: 18 new tests across 7 spec files. 795 tests total, 0 failures, 98% coverage.
 
 **Tasks**:
-- [ ] 5.1a Add embedded location test
-- [ ] 5.1b Add course_name test
-- [ ] 5.1c Add user_attendance_status tests
-- [ ] 5.2 Update Event representer with embedded location
-- [ ] 5.3 Add user_attendance_status to event responses
-- [ ] 5.4 Update frontend to use enriched data
-- [ ] 5.5 Manual verification: confirm no additional fetches in network tab
+- [x] 5.1a Add `Repository::Locations#find_ids` batch method + tests (3 tests)
+- [x] 5.1b Add `Repository::Courses#find_ids` batch method + tests (4 tests)
+- [x] 5.1c Add `Repository::Attendances#find_attended_event_ids` method + tests (4 tests)
+- [x] 5.2a Create response DTOs (`EventDetails`, `ActiveEventDetails`) in `application/responses/`
+- [x] 5.2b Refactor `FindActiveEvents` service — batch enrichment → `Response::ActiveEventDetails`
+- [x] 5.2c Add `FindActiveEvents` enrichment tests (4 tests: `course_name`, `location_name`, `user_attendance_status` true/false)
+- [x] 5.2d Refactor `ListEvents` service — batch enrichment → `Response::EventDetails`
+- [x] 5.2e Add `ListEvents` enrichment tests (3 tests: `course_name`, `location_name`, no `user_attendance_status`)
+- [x] 5.3a Update `Representer::Event` with `course_name`, `location_name`, `user_attendance_status` properties
+- [x] 5.3b Add route integration tests for `GET /api/current_event/` (enriched fields + attendance status)
+- [x] 5.3c Add route integration tests for `GET /api/course/:id/event/` (enriched fields, no attendance status)
+- [x] 5.3d Full test suite pass (795 tests, 0 failures, 98% coverage)
+- [x] 5.4a Update `AttendanceTrack.vue` — remove N+1 fetch methods, use enriched response
+- [x] 5.4b Update `AllCourse.vue` — remove N+1 fetch methods, use enriched response
+- [x] 5.5 Manual verification: confirmed enriched data in browser, no N+1 in network tab
 
 ---
 
@@ -275,8 +328,8 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 **Frontend changes**:
 - Extract `frontend_app/lib/geolocation.js` utility (shared across components)
 - Extract `frontend_app/lib/dateFormatter.js` utility
-- Extract shared attendance logic (composable or service) — `postAttendance()`, `findAttendance()`, `getLocation()`, `showPosition()`, `showError()`, `updateEventAttendanceStatus()` are duplicated across `AttendanceTrack.vue` and `AllCourse.vue`
-  - **Note (from Slice 2)**: `findAttendance()` fetches all course attendances and filters client-side to determine button state. This read/display concern should be part of the shared composable.
+- Extract shared attendance logic (composable or service) — `postAttendance()`, `getLocation()`, `showPosition()`, `showError()`, `updateEventAttendanceStatus()` are duplicated across `AttendanceTrack.vue` and `AllCourse.vue`
+  - **Note**: `findAttendance()` and the N+1 fetch methods (`getCourseName()`, `getLocationName()`) were already removed in Slice 5 — the API now returns enriched data with `user_attendance_status`.
 - Remove any remaining deprecated domain logic
 
 **Tasks**:
@@ -305,4 +358,4 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 
 ---
 
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-09*

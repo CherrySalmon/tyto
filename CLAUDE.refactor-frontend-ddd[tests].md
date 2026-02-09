@@ -47,6 +47,13 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 | Domain value test (student record) | `spec/domain/attendance/values/student_attendance_record_spec.rb` |
 | Service test (report) | `spec/application/services/attendances/generate_report_spec.rb` |
 | Presentation test (CSV) | `spec/presentation/formatters/attendance_report_csv_spec.rb` |
+| Repository test (locations batch) | `spec/infrastructure/database/repositories/locations_spec.rb` |
+| Repository test (courses batch) | `spec/infrastructure/database/repositories/courses_spec.rb` |
+| Repository test (attendance lookup) | `spec/infrastructure/database/repositories/attendances_spec.rb` |
+| Service test (active events) | `spec/application/services/events/find_active_events_spec.rb` |
+| Service test (list events) | `spec/application/services/events/list_events_spec.rb` |
+| Route test (current events) | `spec/routes/current_event_route_spec.rb` |
+| Route test (course events) | `spec/routes/event_route_spec.rb` |
 
 ## Existing Coverage Analysis
 
@@ -66,7 +73,7 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 |------|-----------|------------------|------|
 | Attendance Recording | Good (geo-fence enforced) | Good | Duplicates |
 | Role Assignment | Excellent | Good | Assignable roles logic |
-| Event Responses | Good | Good | Enriched data |
+| Event Responses | Excellent (18 tests) | Good (route tests) | — |
 | Course Reports | Excellent (29 tests) | Good (3 route tests) | — |
 | Repositories | Excellent | — | Duplicate query |
 | Policies | Excellent | Good | Capabilities matrix |
@@ -137,10 +144,24 @@ Two levels of testing — domain policy (business rules) and service (orchestrat
 **Route spec** (in `spec/routes/course_route_spec.rb`): 3 tests
 - JSON response format, CSV download with correct headers, forbidden for students
 
-### Slice 5: Enriched Event Responses
+### Slice 5: Enriched Event Responses ✅
 
-- **Add to**: route spec or new representer spec
-- **Test scenarios**: Embedded location object, course_name field, user_attendance_status present/absent
+**Status**: Complete. 18 new tests across 7 spec files. 795 tests total, 0 failures, 98% coverage. Implemented on branch `ray/refactor-event-responses`.
+
+Three testing layers: repository batch methods, service enrichment, and route integration.
+
+**Repository specs** (11 tests):
+- `spec/infrastructure/database/repositories/locations_spec.rb` — `#find_ids` (3 tests): returns hash keyed by ID, handles empty array, omits missing IDs
+- `spec/infrastructure/database/repositories/courses_spec.rb` — `#find_ids` (4 tests): returns hash keyed by ID, handles empty array, omits missing IDs, returns courses without children loaded
+- `spec/infrastructure/database/repositories/attendances_spec.rb` — `#find_attended_event_ids` (4 tests): returns set of attended event IDs, excludes unattended events, handles empty event_ids, excludes other accounts' attendances
+
+**Service specs** (7 tests):
+- `spec/application/services/events/find_active_events_spec.rb` (4 tests): response includes `course_name`, `location_name`, `user_attendance_status` false when no attendance, `user_attendance_status` true when attendance exists
+- `spec/application/services/events/list_events_spec.rb` (3 tests): response includes `course_name`, `location_name`, response does NOT include `user_attendance_status` (requestor-agnostic endpoint)
+
+**Route specs** (expanded existing):
+- `spec/routes/current_event_route_spec.rb` — expanded assertions: `course_name`, `location_name` fields with correct values, `user_attendance_status` false/true
+- `spec/routes/event_route_spec.rb` — expanded assertions: `course_name`, `location_name` fields, confirmed `user_attendance_status` is nil
 
 ### Slice 6: Capabilities-Based Visibility
 
@@ -172,4 +193,4 @@ E2E tests will be added if manual verification proves insufficient. Candidates:
 
 ---
 
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-09*

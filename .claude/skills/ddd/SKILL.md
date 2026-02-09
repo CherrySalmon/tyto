@@ -241,6 +241,53 @@ Keep validation in services. Avoid premature abstraction.
 - You need computed derived values (cache keys, slugs)
 - Validation rules become genuinely complex (nested objects, conditional fields)
 
+## Response DTOs
+
+Services often compose data from multiple repositories — an event with its location coordinates and course name, or a course with enrollment roles. These composites aren't domain entities (nobody says "enriched event"). They're application-layer concerns: the shape of what the use case returns.
+
+Response DTOs live in `application/responses/` and use `Data.define`.
+
+**Implementation:**
+
+```ruby
+# app/application/responses/event_details.rb
+module Tyto
+  module Response
+    EventDetails = Data.define(
+      :id, :course_id, :location_id, :name, :start_at, :end_at,
+      :longitude, :latitude, :course_name, :location_name
+    )
+  end
+end
+```
+
+The service builds the DTO from its repository results:
+
+```ruby
+def enrich(event, location, course)
+  Response::EventDetails.new(
+    id: event.id, course_id: event.course_id, location_id: event.location_id,
+    name: event.name, start_at: event.start_at, end_at: event.end_at,
+    longitude: location&.longitude, latitude: location&.latitude,
+    course_name: course.name, location_name: location&.name
+  )
+end
+```
+
+The representer serializes it — with a guaranteed shape, no `respond_to?` guards needed.
+
+**When to use response DTOs vs. passing entities directly:**
+
+| Situation | Use |
+| --- | --- |
+| Response matches a single entity's shape | Pass the entity directly to the representer |
+| Response combines data from multiple entities | Response DTO (`Data.define`) |
+| Response adds computed/derived fields not on the entity | Response DTO |
+
+**Anti-pattern:** `OpenStruct` for composing multi-entity responses. OpenStruct has no guaranteed shape — the representer must use `respond_to?` guards, and typos in field names silently produce `nil` instead of raising errors.
+
+**Variant DTOs for different endpoints:** When two endpoints return nearly the same shape but one has extra fields (e.g., `user_attendance_status` on a requestor-aware endpoint), use separate DTOs rather than one DTO with nil fields. This makes each endpoint's contract explicit and avoids conditional serialization logic.
+
 ## Gateway/Mapper Pattern
 
 External API integrations use Gateway + Mapper:

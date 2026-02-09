@@ -3,6 +3,7 @@
 require_relative '../../../infrastructure/database/repositories/events'
 require_relative '../../../infrastructure/database/repositories/locations'
 require_relative '../../../infrastructure/database/repositories/courses'
+require_relative '../../responses/event_details'
 require_relative '../application_operation'
 
 module Tyto
@@ -21,10 +22,10 @@ module Tyto
 
         def call(requestor:, course_id:)
           course_id = step validate_course_id(course_id)
-          step verify_course_exists(course_id)
+          course = step verify_course_exists(course_id)
           step authorize(requestor, course_id)
           events = step fetch_events(course_id)
-          enriched = events.map { |event| enrich_with_location(event) }
+          enriched = enrich_events(events, course)
 
           ok(enriched)
         end
@@ -60,19 +61,28 @@ module Tyto
           Failure(internal_error(e.message))
         end
 
-        def enrich_with_location(event)
-          location = @locations_repo.find_id(event.location_id)
+        def enrich_events(events, course)
+          return [] if events.empty?
 
-          OpenStruct.new(
-            id: event.id,
-            course_id: event.course_id,
-            location_id: event.location_id,
-            name: event.name,
-            start_at: event.start_at,
-            end_at: event.end_at,
-            longitude: location&.longitude,
-            latitude: location&.latitude
-          )
+          location_ids = events.map(&:location_id).compact.uniq
+          locations = @locations_repo.find_ids(location_ids)
+
+          events.map do |event|
+            location = locations[event.location_id]
+
+            Response::EventDetails.new(
+              id: event.id,
+              course_id: event.course_id,
+              location_id: event.location_id,
+              name: event.name,
+              start_at: event.start_at,
+              end_at: event.end_at,
+              longitude: location&.longitude,
+              latitude: location&.latitude,
+              course_name: course.name,
+              location_name: location&.name
+            )
+          end
         end
       end
     end

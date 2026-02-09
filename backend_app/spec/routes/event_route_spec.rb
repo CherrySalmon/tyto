@@ -159,6 +159,11 @@ describe 'Event Routes' do
       _(event_data).must_include 'name'
       _(event_data).must_include 'start_at'
       _(event_data).must_include 'end_at'
+      _(event_data).must_include 'course_name'
+      _(event_data).must_include 'location_name'
+      _(event_data['course_name']).must_equal 'Test Course'
+      _(event_data['location_name']).must_equal 'Test Location'
+      _(event_data['user_attendance_status']).must_be_nil
     end
 
     it 'returns empty array when no events exist' do

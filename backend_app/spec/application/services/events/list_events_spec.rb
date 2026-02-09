@@ -32,6 +32,28 @@ describe Tyto::Service::Events::ListEvents do
       _(result.value!.message.length).must_equal 2
     end
 
+    it 'includes course_name and location_name in events' do
+      location = Tyto::Location.create(name: 'Lab 3', course_id: course.id)
+      Tyto::Event.create(name: 'Event 1', course_id: course.id, location_id: location.id)
+
+      result = Tyto::Service::Events::ListEvents.new.call(requestor:, course_id: course.id)
+
+      _(result).must_be_kind_of Dry::Monads::Result::Success
+      event = result.value!.message.first
+      _(event.course_name).must_equal 'Test Course'
+      _(event.location_name).must_equal 'Lab 3'
+    end
+
+    it 'does not include user_attendance_status' do
+      location = Tyto::Location.create(name: 'Room 101', course_id: course.id)
+      Tyto::Event.create(name: 'Event 1', course_id: course.id, location_id: location.id)
+
+      result = Tyto::Service::Events::ListEvents.new.call(requestor:, course_id: course.id)
+
+      event = result.value!.message.first
+      _(event.respond_to?(:user_attendance_status)).must_equal false
+    end
+
     it 'returns Failure for invalid course_id' do
       result = Tyto::Service::Events::ListEvents.new.call(requestor:, course_id: 'invalid')
 

@@ -72,8 +72,14 @@ describe 'Current Event Routes' do
       _(event_data).must_include 'name'
       _(event_data).must_include 'start_at'
       _(event_data).must_include 'end_at'
+      _(event_data).must_include 'course_name'
+      _(event_data).must_include 'location_name'
+      _(event_data).must_include 'user_attendance_status'
       _(event_data['id']).must_be_kind_of Integer
       _(event_data['name']).must_be_kind_of String
+      _(event_data['course_name']).must_equal 'Test Course'
+      _(event_data['location_name']).must_equal 'Test Location'
+      _(event_data['user_attendance_status']).must_equal false
     end
 
     it 'excludes past events' do
@@ -227,6 +233,28 @@ describe 'Current Event Routes' do
       _(last_response.status).must_equal 200
       _(json_response['data']).must_be_kind_of Array
       _(json_response['data'].length).must_be :>, 0
+    end
+
+    it 'returns user_attendance_status true when attended' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+      event = create_test_event(
+        course, location,
+        name: 'Attended Event',
+        start_at: Time.now - 600,
+        end_at: Time.now + 3000
+      )
+      Tyto::Attendance.create(
+        account_id: account.id, course_id: course.id,
+        event_id: event.id, name: 'Attended'
+      )
+
+      get '/api/current_event', nil, auth
+
+      _(last_response.status).must_equal 200
+      event_data = json_response['data'].first
+      _(event_data['user_attendance_status']).must_equal true
     end
 
     it 'returns token error without authentication' do
