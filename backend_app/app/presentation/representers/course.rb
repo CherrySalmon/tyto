@@ -46,6 +46,7 @@ module Tyto
       property :created_at, exec_context: :decorator
       property :updated_at, exec_context: :decorator
       property :enroll_identity, exec_context: :decorator
+      property :policies, exec_context: :decorator
 
       def start_at
         represented.start_at&.utc&.iso8601
@@ -66,6 +67,10 @@ module Tyto
       def enroll_identity
         roles = represented.respond_to?(:enroll_identity) ? represented.enroll_identity : nil
         roles.respond_to?(:to_a) ? roles.to_a : []
+      end
+
+      def policies
+        represented.respond_to?(:policies) ? represented.policies : nil
       end
     end
 

@@ -39,6 +39,8 @@ This approach ensures we only build what the frontend actually needs, with immed
 - [x] Slice 3 manual verification complete (task 3.5)
 - [x] Slice 4 complete (attendance report endpoint + DDD entity refactoring)
 - [x] Slice 5 complete (enriched event responses with batch lookups + response DTOs)
+- [x] Slice 6 backend complete (policy summaries in course responses, 4 route tests)
+- [x] Slice 6 frontend complete (SingleCourse + CourseInfoCard use policies instead of role strings)
 
 ## Key Findings
 
@@ -83,7 +85,7 @@ See the `/ddd` skill → "Response DTOs" for the full pattern and guidelines.
 | Slice | Services using OpenStruct | Response DTO |
 | ----- | ------------------------ | ------------ |
 | 5 | `FindActiveEvents`, `ListEvents` | `Response::ActiveEventDetails`, `Response::EventDetails` |
-| 6 | `GetCourse`, `ListUserCourses`, `CreateCourse` | `Response::CourseWithCapabilities` (or similar) |
+| 6 | `GetCourse`, `ListUserCourses` | `Response::CourseDetails` |
 | Post-slice | `CreateEvent`, `UpdateEvent` | `Response::EventWithLocation` (or reuse `EventDetails`) |
 
 ## Vertical Slices
@@ -321,29 +323,65 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 
 **Why sixth**: Cleaner authorization; frontend uses capabilities instead of role strings.
 
-**Backend changes**:
+**Status**: Complete (pending manual verification). Implemented on branch `ray/refactor-capabilities-visibility` — see `CLAUDE.ray-refactor-capabilities-visibility.md` for full branch plan.
 
-- Add `capabilities` object to course response:
+**Design decision**: Used `policies` as the response key (matching `CoursePolicy#summary` terminology) rather than `capabilities`. The summary is returned as-is from the existing policy — no new predicates needed.
 
-  ```json
-  { "can_edit": true, "can_delete": false, "can_manage_enrollments": true }
-  ```
+**Response shape**:
 
-- Derive from existing policy infrastructure
+```json
+{
+  "id": 1,
+  "name": "Course Name",
+  "enroll_identity": ["owner"],
+  "policies": {
+    "can_view": true,
+    "can_create": false,
+    "can_update": true,
+    "can_delete": true
+  }
+}
+```
+
+Key mapping: `can_update` replaces all frontend role string comparisons for teaching staff visibility (owner, instructor, staff).
+
+**Architecture**:
+
+- `CoursePolicy#summary` (existing) — returns hash of all capability checks
+- `Response::CourseDetails` (`Data.define` DTO) — replaces `OpenStruct` in both `GetCourse` and `ListUserCourses`; includes `policies` field
+- `CourseWithEnrollment` representer — new `policies` property with defensive `respond_to?` fallback to `nil`
+- Services build policy from enrollment, merge `policy.summary` into DTO
+
+**Backend files created**:
+
+- `app/application/responses/course_details.rb` — `Data.define` DTO with `policies` field
+
+**Backend files modified**:
+
+- `app/application/services/courses/get_course.rb` — builds DTO, merges `CoursePolicy#summary`
+- `app/application/services/courses/list_user_courses.rb` — builds DTO with policies per course
+- `app/presentation/representers/course.rb` — added `policies` property to `CourseWithEnrollment`
 
 **Frontend changes**:
 
-- Replace role string comparisons (`role === 'owner'`) with capability checks
-- Use `course.capabilities.can_edit` pattern
+- `SingleCourse.vue` — 4 role string comparisons → `course.policies.can_update`
+- `CourseInfoCard.vue` — 1 role string comparison → `course.policies.can_update`
+
+**Tests**: 4 new route tests in `spec/routes/course_route_spec.rb` (owner, instructor, student, list).
 
 **Tasks**:
 
-- [ ] 6.1a Add capabilities tests for owner
-- [ ] 6.1b Add capabilities tests for instructor
-- [ ] 6.1c Add capabilities tests for student
-- [ ] 6.2 Add capabilities to course representer
-- [ ] 6.3 Update frontend to use capabilities
-- [ ] 6.4 Manual verification: test visibility as different roles
+- [x] 6.1a Add route test: owner gets `policies` (`can_update: true, can_delete: true`)
+- [x] 6.1b Add route test: instructor gets `policies` (`can_update: true, can_delete: false`)
+- [x] 6.1c Add route test: student gets `policies` (`can_update: false, can_delete: false`)
+- [x] 6.1d Add route test: course list includes `policies` per course
+- [x] 6.2a Create `Response::CourseDetails` DTO
+- [x] 6.2b Refactor `GetCourse` — build DTO, merge `CoursePolicy#summary`
+- [x] 6.2c Refactor `ListUserCourses` — build DTO with policies per course
+- [x] 6.2d Update `CourseWithEnrollment` representer — add `policies` property
+- [x] 6.3a `SingleCourse.vue` — replace role comparisons with `course.policies.can_update`
+- [x] 6.3b `CourseInfoCard.vue` — replace `currentRole != 'student'` with `policies.can_update`
+- [ ] 6.4 Manual verification: test as owner, instructor, staff, student
 
 ---
 
@@ -376,7 +414,7 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 - [x] ~~Should the geo-fence radius be configurable per-course or global?~~ **Decision: Hardcoded policy constant (~55m) for now. Variable per-event fencing deferred to future work.**
 - [x] ~~Should CSV export be a streaming download or return data for frontend to format?~~ **Decision: Backend generates CSV via `AttendanceReportCsv` formatter. Frontend receives blob and triggers download via `downloadFile.js` utility.**
 - [ ] What date format should the API return? ISO 8601 with timezone, or pre-formatted locale string?
-- [ ] Should capabilities be embedded in every response or a separate endpoint?
+- [x] ~~Should capabilities be embedded in every response or a separate endpoint?~~ **Decision: Embedded in course response as `policies` key. Follows Credence pattern — service merges `CoursePolicy#summary` into DTO. One request, no extra round-trip.**
 
 ## Completed
 

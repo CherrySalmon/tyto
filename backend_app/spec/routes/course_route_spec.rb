@@ -45,6 +45,21 @@ describe 'Course Routes' do
       _(course_data['name']).must_be_kind_of String
       _(course_data['enroll_identity']).must_be_kind_of Array
     end
+
+    it 'includes policies per course in list' do
+      account, auth = authenticated_header(roles: ['creator'])
+      create_test_course(account, name: 'Policy Course')
+
+      get '/api/course', nil, auth
+
+      _(last_response.status).must_equal 200
+      course_data = json_response['data'].first
+      policies = course_data['policies']
+      _(policies).must_be_kind_of Hash
+      _(policies['can_view']).must_equal true
+      _(policies['can_update']).must_equal true
+      _(policies['can_delete']).must_equal true
+    end
   end
 
   describe 'GET /api/course/list_all' do
@@ -84,6 +99,64 @@ describe 'Course Routes' do
       _(course_data).must_include 'updated_at'
       _(course_data['enroll_identity']).must_be_kind_of Array
       _(course_data['enroll_identity']).must_include 'owner'
+    end
+
+    it 'returns policies for owner (can_update: true, can_delete: true)' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+
+      get "/api/course/#{course.id}", nil, auth
+
+      _(last_response.status).must_equal 200
+      policies = json_response['data']['policies']
+      _(policies).must_be_kind_of Hash
+      _(policies['can_view']).must_equal true
+      _(policies['can_update']).must_equal true
+      _(policies['can_delete']).must_equal true
+    end
+
+    it 'returns policies for instructor (can_update: true, can_delete: false)' do
+      owner_account = create_test_account(roles: ['creator'])
+      course = create_test_course(owner_account)
+      instructor_account, instructor_auth = authenticated_header(roles: ['member'])
+
+      instructor_role = Tyto::Role.find(name: 'instructor')
+      Tyto::AccountCourse.create(
+        course_id: course.id,
+        account_id: instructor_account.id,
+        role_id: instructor_role.id
+      )
+
+      get "/api/course/#{course.id}", nil, instructor_auth
+
+      _(last_response.status).must_equal 200
+      policies = json_response['data']['policies']
+      _(policies).must_be_kind_of Hash
+      _(policies['can_view']).must_equal true
+      _(policies['can_update']).must_equal true
+      _(policies['can_delete']).must_equal false
+    end
+
+    it 'returns policies for student (can_update: false, can_delete: false)' do
+      owner_account = create_test_account(roles: ['creator'])
+      course = create_test_course(owner_account)
+      student_account, student_auth = authenticated_header(roles: ['student'])
+
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
+        course_id: course.id,
+        account_id: student_account.id,
+        role_id: student_role.id
+      )
+
+      get "/api/course/#{course.id}", nil, student_auth
+
+      _(last_response.status).must_equal 200
+      policies = json_response['data']['policies']
+      _(policies).must_be_kind_of Hash
+      _(policies['can_view']).must_equal true
+      _(policies['can_update']).must_equal false
+      _(policies['can_delete']).must_equal false
     end
 
     it 'returns forbidden for non-enrolled user' do
