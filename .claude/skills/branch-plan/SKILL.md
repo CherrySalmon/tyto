@@ -6,27 +6,40 @@ disable-model-invocation: true
 
 # Branch Plan Skill
 
-Create an accompanying plan file for current or provided branch to track context-preserving work.
-
 ## Usage
 
 ```
 /branch-plan [<branch-name>]
 ```
 
-Example 1: `/branch-plan` — creates a plan for the current branch
-Example 2: `/branch-plan ray/refactor-backend-gateway` - creates a plan for a new branch
+- `/branch-plan` — plan for the current branch
+- `/branch-plan ray/refactor-backend-gateway` — create branch and plan
 
-## What This Skill Does
+## Instructions for Claude
 
-1. **Create git branch** with the provided name if branch name is provided
-2. **Create plan file** at `CLAUDE.<sanitized-branch-name>.md` (slashes become hyphens)
-3. **Update `CLAUDE.local.md`** to reference the new plan file
-4. **Seed the plan** with a template including the "keep up-to-date" requirement
+When the user invokes `/branch-plan`:
+
+1. **Discover branch**: Use current branch, or create the named branch
+2. **Create plan file**: `CLAUDE.<sanitized-name>.md` (replace `/` with `-`) using the template below
+3. **Update `CLAUDE.local.md`**: Replace existing `@CLAUDE.*.md` reference with the new file
+4. **Ask the user** for a one-line goal (optional)
+5. **Report** created branch and file paths
+
+### Planning and execution guidelines
+
+When populating or updating a plan:
+
+**Vertical slice**: One branch = one complete feature, backend to frontend. No horizontal layers. For multi-slice plans, number slices (Slice 1, 2) with per-slice Scope/Tasks sections and prefixed task IDs (1.1a, 1.2, 2.1a).
+
+**Test-first**: Tests (lettered sub-IDs: 1a, 1b) precede implementation (2, 3). Implementation makes tests pass — no more, no less. Note explicitly when test-first isn't feasible.
+
+**Single plan file**: Tests and implementation tasks together in execution order.
+
+**Update after each phase**: After each phase completes (tests written, implementation passing, frontend updated, verification), immediately update the plan: mark completed tasks, record findings/decisions, update Current State.
+
+**Scope decisions**: Record deferrals and rationale. Cross off resolved Questions with the decision made.
 
 ## Plan File Template
-
-The created plan file includes:
 
 ```markdown
 # [Title based on branch name]
@@ -95,33 +108,6 @@ Deliver a complete, testable feature end-to-end:
 
 *Last updated: [date]*
 ```
-
-## Instructions for Claude
-
-When the user invokes `/branch-plan`:
-
-1. **Discover the branch name** from git
-2. **Sanitize for filename**: Replace `/` with `-` for the plan filename, etc.
-3. **Create plan file**: `CLAUDE.<sanitized-name>.md` with the template above
-4. **Update CLAUDE.local.md**: Replace the existing `@CLAUDE.*.md` reference with the new file
-5. **Ask the user** for a one-line goal to add to the plan (optional)
-6. **Report success** with the created branch and file paths
-
-### Planning and execution guidelines
-
-When populating or updating a plan, follow these principles:
-
-**Vertical slice**: Each branch is typically one slice — a complete, testable feature from backend to frontend. Avoid horizontal layers (e.g., "all tests first, then all implementation"). For extensive long-term plans requiring multiple slices, number them (Slice 1, Slice 2, etc.) with per-slice Scope/Tasks sections and prefixed task IDs (1.1a, 1.2, 2.1a, 2.2, etc.).
-
-**Test-first (red-green-refactor)**: Each branch begins with failing tests before implementation.
-
-- Test tasks use lettered sub-IDs (1a, 1b) and precede implementation tasks (2, 3)
-- Implementation should make the tests pass — no more, no less
-- If tests cannot be written first for a particular task (e.g., pure config changes, frontend-only cleanup), note that explicitly
-
-**Single plan file**: Tests are part of the plan, not a separate document. The Tasks section includes both test and implementation tasks in execution order.
-
-**Scope decisions**: Record what's deferred and why. Use the Questions section for open design decisions — cross off when resolved, note the decision made.
 
 ## Example
 
