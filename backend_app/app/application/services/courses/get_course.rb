@@ -2,6 +2,7 @@
 
 require_relative '../../../infrastructure/database/repositories/courses'
 require_relative '../application_operation'
+require_relative '../../responses/course_details'
 
 module Tyto
   module Service
@@ -17,8 +18,8 @@ module Tyto
         def call(requestor:, course_id:)
           course_id = step validate_course_id(course_id)
           course_orm = step find_course_orm(course_id)
-          enrollment = step authorize(requestor, course_id)
-          course = step build_course_response(course_orm, enrollment)
+          auth = step authorize(requestor, course_id)
+          course = step build_course_response(course_orm, auth)
 
           ok(course)
         end
@@ -45,11 +46,11 @@ module Tyto
 
           return Failure(forbidden('You have no access to view this course')) unless policy.can_view?
 
-          Success(enrollment)
+          Success({ enrollment:, policy: })
         end
 
-        def build_course_response(course_orm, enrollment)
-          course = OpenStruct.new(
+        def build_course_response(course_orm, auth)
+          course = Response::CourseDetails.new(
             id: course_orm.id,
             name: course_orm.name,
             logo: course_orm.logo,
@@ -57,7 +58,8 @@ module Tyto
             end_at: course_orm.end_at,
             created_at: course_orm.created_at,
             updated_at: course_orm.updated_at,
-            enroll_identity: enrollment&.roles
+            enroll_identity: auth[:enrollment]&.roles,
+            policies: auth[:policy].summary
           )
 
           Success(course)

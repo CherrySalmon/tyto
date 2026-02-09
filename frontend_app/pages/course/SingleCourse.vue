@@ -5,7 +5,7 @@
       <el-col :xs="24" :md="18">
           <div v-if="currentRole">
             <div class="course-content-container"
-              v-if="currentRole =='owner' || currentRole =='instructor' || currentRole =='staff'">
+              v-if="course.policies && course.policies.can_update">
               <div class="course-menu-bar">
                 <ul class="course-menu">
                   <li class="tab" :class="$route.path.includes('attendance')?'active':''"><router-link to="attendance">Attendance Events</router-link></li>
@@ -28,7 +28,7 @@
 
       <el-col :xs="24" :md="6">
         <div v-if="currentRole">
-          <div v-if="currentRole != 'student'">
+          <div v-if="course.policies && course.policies.can_update">
             <CourseInfoCard :course="course" :currentRole="currentRole" @show-modify-dialog="showModifyCourseDialog = true" style="margin: 20px 0;">
             </CourseInfoCard>
             <div class="selecor-role-container">
@@ -53,7 +53,7 @@
       </el-col>
     </el-row>
     <div v-if="currentRole">
-      <div class="center-content" v-if="currentRole =='student'">
+      <div class="center-content" v-if="course.policies && !course.policies.can_update">
         <!-- <el-button type="primary" @click="changeRoute($route.params.id + '/attendance')">Mark Attendance</el-button> -->
         <CourseInfoCard :course="course" :role="currentRole" @show-modify-dialog="showModifyCourseDialog = true" style="margin: 20px 0;">
         </CourseInfoCard>
@@ -156,8 +156,8 @@ export default {
     }
   },
   watch: {
-    currentRole(newRole) {
-      if(newRole == 'owner' || newRole == 'instructor' || newRole == 'staff') {
+    currentRole() {
+      if(this.course.policies && this.course.policies.can_update) {
         this.fetchAttendanceEvents(this.course.id);
         this.fetchLocations();
         this.fetchEnrollments();
@@ -210,9 +210,10 @@ export default {
         this.selectableRoles = this.course.enroll_identity
         this.selectRole = this.selectableRoles[0]
         this.currentRole = this.selectRole
-        // Deleting the id and enroll_identity keys from courseForm
+        // Deleting non-form keys from courseForm
         delete this.courseForm.id;
         delete this.courseForm.enroll_identity;
+        delete this.courseForm.policies;
       }).catch(error => {
         console.error('Error fetching course:', error);
       });

@@ -8,8 +8,8 @@
     <div>
       <p>Start Time: {{ getLocalDateString(course.start_at) || 'N/A' }}</p>
       <p>End Time: {{ getLocalDateString(course.end_at) || 'N/A' }}</p>
-      <template v-if="currentRole">
-        <div v-if="currentRole != 'student'" style="text-align: center">
+      <template v-if="course.policies">
+        <div v-if="course.policies.can_update" style="text-align: center">
           <el-button type="warning" @click="$emit('show-modify-dialog')" text style="font-weight: 700;">Modify Course</el-button>
         </div>
       </template>
