@@ -78,6 +78,37 @@ describe 'Tyto::Repository::Locations' do
     end
   end
 
+  describe '#find_ids' do
+    it 'returns hash of ID to entity for existing locations' do
+      loc1 = Tyto::Location.create(course_id: course.id, name: 'Room A', longitude: 121.0, latitude: 25.0)
+      loc2 = Tyto::Location.create(course_id: course.id, name: 'Room B', longitude: 122.0, latitude: 26.0)
+
+      result = repository.find_ids([loc1.id, loc2.id])
+
+      _(result).must_be_kind_of Hash
+      _(result.length).must_equal 2
+      _(result[loc1.id]).must_be_instance_of Tyto::Entity::Location
+      _(result[loc1.id].name).must_equal 'Room A'
+      _(result[loc2.id].name).must_equal 'Room B'
+    end
+
+    it 'returns empty hash for empty input' do
+      result = repository.find_ids([])
+
+      _(result).must_equal({})
+    end
+
+    it 'skips non-existent IDs' do
+      loc = Tyto::Location.create(course_id: course.id, name: 'Only One')
+
+      result = repository.find_ids([loc.id, 999_999])
+
+      _(result.length).must_equal 1
+      _(result[loc.id].name).must_equal 'Only One'
+      _(result[999_999]).must_be_nil
+    end
+  end
+
   describe '#find_by_course' do
     it 'returns empty array when no locations exist for course' do
       result = repository.find_by_course(course.id)

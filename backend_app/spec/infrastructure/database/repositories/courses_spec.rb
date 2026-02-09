@@ -49,6 +49,47 @@ describe 'Tyto::Repository::Courses' do
     end
   end
 
+  describe '#find_ids' do
+    it 'returns hash of ID to entity for existing courses' do
+      c1 = Tyto::Course.create(name: 'Course A')
+      c2 = Tyto::Course.create(name: 'Course B')
+
+      result = repository.find_ids([c1.id, c2.id])
+
+      _(result).must_be_kind_of Hash
+      _(result.length).must_equal 2
+      _(result[c1.id]).must_be_instance_of Tyto::Entity::Course
+      _(result[c1.id].name).must_equal 'Course A'
+      _(result[c2.id].name).must_equal 'Course B'
+    end
+
+    it 'returns empty hash for empty input' do
+      result = repository.find_ids([])
+
+      _(result).must_equal({})
+    end
+
+    it 'skips non-existent IDs' do
+      c = Tyto::Course.create(name: 'Only One')
+
+      result = repository.find_ids([c.id, 999_999])
+
+      _(result.length).must_equal 1
+      _(result[c.id].name).must_equal 'Only One'
+      _(result[999_999]).must_be_nil
+    end
+
+    it 'returns courses without children loaded' do
+      c = Tyto::Course.create(name: 'No Children')
+      Tyto::Location.create(course_id: c.id, name: 'Room A')
+
+      result = repository.find_ids([c.id])
+
+      _(result[c.id].events).must_be_nil
+      _(result[c.id].locations).must_be_nil
+    end
+  end
+
   describe '#create_with_owner' do
     let(:owner_role) { Tyto::Role.first(name: 'owner') }
 

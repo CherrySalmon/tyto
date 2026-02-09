@@ -28,6 +28,16 @@ module Tyto
           .map { |record| rebuild_entity(record) }
       end
 
+      # Find multiple locations by IDs
+      # @param ids [Array<Integer>] the location IDs
+      # @return [Hash<Integer, Entity::Location>] hash of ID => domain entity
+      def find_ids(ids)
+        return {} if ids.empty?
+
+        Tyto::Location.where(id: ids).all
+                      .each_with_object({}) { |record, hash| hash[record.id] = rebuild_entity(record) }
+      end
+
       # Find all locations
       # @return [Array<Entity::Location>] array of domain entities
       def find_all

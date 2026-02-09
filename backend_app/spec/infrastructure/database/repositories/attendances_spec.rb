@@ -183,6 +183,53 @@ describe 'Tyto::Repository::Attendances' do
     end
   end
 
+  describe '#find_attended_event_ids' do
+    it 'returns set of attended event IDs' do
+      Tyto::Attendance.create(
+        account_id: account.id, course_id: course.id, event_id: event.id, name: 'Att 1'
+      )
+      Tyto::Attendance.create(
+        account_id: account.id, course_id: course.id, event_id: another_event.id, name: 'Att 2'
+      )
+
+      result = repository.find_attended_event_ids(account.id, [event.id, another_event.id])
+
+      _(result).must_be_instance_of Set
+      _(result.length).must_equal 2
+      _(result).must_include event.id
+      _(result).must_include another_event.id
+    end
+
+    it 'returns empty set for empty input' do
+      result = repository.find_attended_event_ids(account.id, [])
+
+      _(result).must_be_instance_of Set
+      _(result).must_be_empty
+    end
+
+    it 'excludes events not attended by the account' do
+      Tyto::Attendance.create(
+        account_id: account.id, course_id: course.id, event_id: event.id, name: 'Att 1'
+      )
+
+      result = repository.find_attended_event_ids(account.id, [event.id, another_event.id])
+
+      _(result.length).must_equal 1
+      _(result).must_include event.id
+      _(result).wont_include another_event.id
+    end
+
+    it 'excludes attendances from other accounts' do
+      Tyto::Attendance.create(
+        account_id: another_account.id, course_id: course.id, event_id: event.id, name: 'Other Att'
+      )
+
+      result = repository.find_attended_event_ids(account.id, [event.id])
+
+      _(result).must_be_empty
+    end
+  end
+
   describe '#find_all' do
     it 'returns empty array when no attendances exist' do
       result = repository.find_all

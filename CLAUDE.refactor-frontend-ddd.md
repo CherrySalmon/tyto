@@ -64,6 +64,26 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 ---
 
+## Cross-Cutting Decisions
+
+### Response DTOs replace OpenStruct enrichment
+
+**Introduced in**: Slice 5. **Applies to**: all slices that compose multi-entity API responses.
+
+Multiple services currently build `OpenStruct` wrappers to combine data from different repositories (e.g., event + location coordinates, course + enrollment roles). `OpenStruct` has no guaranteed shape — representers must use `respond_to?` guards, and typos silently produce `nil`.
+
+**Convention**: Use `Data.define` response DTOs in `application/responses/`. Each DTO defines the exact shape of a use case's response. The representer can rely on the contract instead of runtime guards.
+
+See the `/ddd` skill → "Response DTOs" for the full pattern and guidelines.
+
+**Migration roadmap** (by slice):
+
+| Slice | Services using OpenStruct | Response DTO |
+| ----- | ------------------------ | ------------ |
+| 5 | `FindActiveEvents`, `ListEvents` | `Response::ActiveEventDetails`, `Response::EventDetails` |
+| 6 | `GetCourse`, `ListUserCourses`, `CreateCourse` | `Response::CourseWithCapabilities` (or similar) |
+| Post-slice | `CreateEvent`, `UpdateEvent` | `Response::EventWithLocation` (or reuse `EventDetails`) |
+
 ## Vertical Slices
 
 ### Slice 1: Geo-fence Attendance Validation

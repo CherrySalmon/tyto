@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'set'
 require_relative '../../../domain/attendance/entities/attendance'
 
 module Tyto
@@ -60,6 +61,18 @@ module Tyto
         return nil unless orm_record
 
         rebuild_entity(orm_record)
+      end
+
+      # Find event IDs that a given account has attended from a set of event IDs
+      # @param account_id [Integer] the account ID
+      # @param event_ids [Array<Integer>] the event IDs to check
+      # @return [Set<Integer>] set of attended event IDs
+      def find_attended_event_ids(account_id, event_ids)
+        return Set.new if event_ids.empty?
+
+        Tyto::Attendance.where(account_id:, event_id: event_ids)
+                        .select_map(:event_id)
+                        .to_set
       end
 
       # Find all attendances

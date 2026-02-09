@@ -82,48 +82,24 @@ export default {
         this.fetchEventData();
     },
     methods: {
-        async fetchEventData() { // Mark the method as async
+        async fetchEventData() {
             try {
                 const response = await api.get(`/current_event/`);
                 console.log('Event Data Fetched Successfully:', response.data.data);
                 this.isEventDataFetched = true;
 
-                const matchingAttendancesEvents = response.data.data.filter(attendance => 
-                    parseInt(attendance.course_id) == this.course_id);
+                const matchingEvents = response.data.data.filter(event =>
+                    parseInt(event.course_id) == this.course_id);
 
-                this.events = await Promise.all(matchingAttendancesEvents.map(async (event) => {
-                    // Use getCourseName to fetch the course name asynchronously
-                    const course_name = await this.getCourseName(event.course_id);
-                    const location_name = await this.getLocationName(event);
-                    const isAttendanceExisted = await this.findAttendance(event);
-                    return {
-                        ...event,
-                        start_at: this.getLocalDateString(event.start_at),
-                        end_at: this.getLocalDateString(event.end_at),
-                        course_name: course_name,
-                        location_name: location_name,
-                        isAttendanceExisted: isAttendanceExisted,
-                    };
+                this.events = matchingEvents.map(event => ({
+                    ...event,
+                    start_at: this.getLocalDateString(event.start_at),
+                    end_at: this.getLocalDateString(event.end_at),
+                    isAttendanceExisted: event.user_attendance_status,
                 }));
             } catch (error) {
                 console.error('Error fetching event data:', error);
             }
-        },
-        getCourseName(course_id) {
-            return api.get(`/course/${course_id}`)
-            .then(response => response.data.data.name) // Assuming the response has this structure
-            .catch(error => {
-                console.error('Error fetching course name:', error);
-                return 'Error fetching course name'; // Provide a fallback or error message
-            });
-        },
-        getLocationName(event) {
-            return api.get(`/course/${event.course_id}/location/${event.location_id}`)
-            .then(response => response.data.data.name) // Assuming the response has this structure
-            .catch(error => {
-                console.error('Error fetching location name:', error);
-                return 'Error fetching location name'; // Provide a fallback or error message
-            });
         },
         getLocalDateString(utcStr) {
             if (!utcStr) {
@@ -223,27 +199,6 @@ export default {
                     loading.close();
                 });
         },
-        findAttendance(event) {
-            // Return a new promise that resolves with the boolean result
-            return new Promise((resolve, reject) => {
-                api.get(`/course/${event.course_id}/attendance`)
-                .then(response => {
-                    const accountId = this.account.id; // Ensure this is set correctly
-                    const eventId = event.id;
-                    const matchingAttendances = response.data.data.filter(attendance => 
-                        parseInt(attendance.account_id) == accountId && parseInt(attendance.event_id) == eventId
-                    );
-
-                    // Resolve the promise with true if any attendances match, otherwise false
-                    resolve(matchingAttendances.length > 0);
-                }).catch(error => {
-                    console.error('Error fetching attendance data:', error);
-                    // Reject the promise in case of an error
-                    reject(error);
-                });
-            });
-        },
-
         updateEventAttendanceStatus(eventId, status) {
             const eventIndex = this.events.findIndex(event => event.id === eventId);
             if (eventIndex !== -1) {

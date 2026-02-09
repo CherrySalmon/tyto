@@ -68,6 +68,16 @@ module Tyto
         rebuild_entity(orm_record, load_events: true, load_locations: true, load_enrollments: true)
       end
 
+      # Find multiple courses by IDs (children not loaded)
+      # @param ids [Array<Integer>] the course IDs
+      # @return [Hash<Integer, Entity::Course>] hash of ID => domain entity
+      def find_ids(ids)
+        return {} if ids.empty?
+
+        Tyto::Course.where(id: ids).all
+                    .each_with_object({}) { |record, hash| hash[record.id] = rebuild_entity(record) }
+      end
+
       # Find all courses (children not loaded)
       # @return [Array<Entity::Course>] array of domain entities
       def find_all

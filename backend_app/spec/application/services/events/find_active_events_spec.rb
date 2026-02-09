@@ -133,6 +133,62 @@ describe 'Service::Events::FindActiveEvents' do
       _(event.latitude).must_equal 40.7128
     end
 
+    it 'includes course_name and location_name in events' do
+      account = create_test_account(roles: ['creator'])
+      course = create_test_course(account, name: 'Ruby 101')
+      location = create_test_location(course, name: 'Room 42')
+      create_test_event(course, location)
+
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
+        requestor:,
+        time: Time.now
+      )
+
+      _(result.success?).must_equal true
+      event = result.value!.message.first
+      _(event.course_name).must_equal 'Ruby 101'
+      _(event.location_name).must_equal 'Room 42'
+    end
+
+    it 'includes user_attendance_status as false when not attended' do
+      account = create_test_account(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+      create_test_event(course, location)
+
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
+        requestor:,
+        time: Time.now
+      )
+
+      _(result.success?).must_equal true
+      event = result.value!.message.first
+      _(event.user_attendance_status).must_equal false
+    end
+
+    it 'includes user_attendance_status as true when attended' do
+      account = create_test_account(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+      event_record = create_test_event(course, location)
+      Tyto::Attendance.create(
+        account_id: account.id, course_id: course.id,
+        event_id: event_record.id, name: 'Attended'
+      )
+
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
+      result = Tyto::Service::Events::FindActiveEvents.new.call(
+        requestor:,
+        time: Time.now
+      )
+
+      _(result.success?).must_equal true
+      event = result.value!.message.first
+      _(event.user_attendance_status).must_equal true
+    end
+
     it 'only returns events where time is within start_at and end_at' do
       account = create_test_account(roles: ['creator'])
       course = create_test_course(account)
