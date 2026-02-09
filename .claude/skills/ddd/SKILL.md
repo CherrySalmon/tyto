@@ -79,6 +79,130 @@ Group related domain rules into a single policy when they answer the same domain
 
 **Evolution:** If a threshold might vary (per course, per campus), make it a value object rather than a constant. The threshold evolves from a constant to a repository-backed lookup without architectural refactoring.
 
+## Entities vs Value Objects
+
+Two building blocks that are often misclassified:
+
+**Entities** have identity — they are distinct *things* the domain recognizes, references, and acts upon. Two entities with identical attributes but different identities are different things.
+
+**Value Objects** are attributes of entities — they describe aspects of entities with no identity of their own. Two value objects with the same attributes are interchangeable.
+
+### The Belongingness Test
+
+Value objects belong to entities. Every value object should have a parent entity it describes:
+
+| Value Object | Describes Entity |
+| --- | --- |
+| `TimeRange` | `Course`, `Event` |
+| `GeoLocation` | `Location`, `Attendance` |
+| `CourseRoles` | `Enrollment` |
+
+**If a domain concept doesn't naturally belong as an attribute of any existing entity, it is likely an entity itself.** A standalone concept that someone reads, references, or acts upon — that's an entity, not a value object.
+
+### Standalone Computed Concepts
+
+Reports, invoices, statements, and similar derived/computed concepts are entities when:
+
+- They stand alone — no parent entity owns them as an attribute
+- The business recognizes them as things ("the attendance report," "invoice #1234")
+- Someone reads, references, shares, or acts upon them
+- They have conceptual identity even if regenerating them produces identical attributes
+
+An invoice regenerated from the same order has the same attributes, yet invoices are canonical DDD entities. The same reasoning applies to reports.
+
+### Entities Don't Require Persistence
+
+Identity is a domain concept, not a storage decision. A computed report that is never persisted can still be a domain entity if the domain expert treats it as a distinct thing. Persistence is an infrastructure concern.
+
+### The Evans `Delivery` Caveat
+
+Evans' DDD Sample models `Delivery` as a value object, but `Delivery` *belongs to* `Cargo` (its parent entity). This pattern applies when a computed concept is an attribute of an aggregate. When a computed concept has no parent entity and stands alone, the entity classification is more appropriate.
+
+### Decision Heuristic
+
+1. Does it describe an aspect of another entity? → **Value object** (attribute of that entity)
+2. Does it stand alone as something the domain recognizes? → **Entity**
+3. Is it a pure formatting/serialization concern with no domain logic? → **Presentation layer** (representer/formatter, not domain at all)
+
+## Entity & Value Object Implementation
+
+Entities and value objects take their collaborators in the constructor and compute derived data on demand via memoized methods. Plain Ruby classes, not `Dry::Struct`.
+
+**Principle:** Objects own their computation. The constructor receives domain objects; derived values are exposed as methods. No procedural factory that pre-computes everything and stuffs it into a passive struct.
+
+**Entity example** — takes dependencies, computes on demand:
+
+```ruby
+class AttendanceReport
+  ReportEvent = Data.define(:id, :name)  # simple immutable data: use Data.define
+
+  attr_reader :course_name, :generated_at
+
+  def initialize(course:, attendances:)
+    @course_name = course.name
+    @generated_at = Time.now
+    @course = course
+    @attendances = attendances
+  end
+
+  def events
+    @events ||= raw_events.map { |e| ReportEvent.new(id: e.id, name: e.name) }
+  end
+
+  def student_records
+    @student_records ||= students.map do |enrollment|
+      StudentAttendanceRecord.new(enrollment:, events: raw_events, lookup: index)
+    end
+  end
+
+  private
+
+  def raw_events  = @course.events_loaded? ? @course.events : []
+  def students    = @course.enrollments_loaded? ? @course.students : []
+  def register    = @register ||= AttendanceRegister.new(attendances: @attendances)
+end
+```
+
+**Value object example** — computes from collaborators, provides value equality:
+
+```ruby
+class StudentAttendanceRecord
+  attr_reader :email
+
+  def initialize(enrollment:, events:, lookup:)
+    @email = enrollment.account_email
+    @account_id = enrollment.account_id
+    @events = events
+    @lookup = lookup
+  end
+
+  def event_attendance
+    @event_attendance ||= @events.each_with_object({}) do |event, hash|
+      hash[event.id] = @lookup.attended?(@account_id, event.id) ? 1 : 0
+    end
+  end
+
+  def attend_sum     = @attend_sum     ||= event_attendance.values.sum
+  def attend_percent = @attend_percent ||= # ...compute from attend_sum and events
+
+  def ==(other)
+    other.is_a?(self.class) && email == other.email && event_attendance == other.event_attendance
+  end
+  alias eql? ==
+  def hash = [email, event_attendance].hash
+end
+```
+
+**When to use what:**
+
+| Need | Use |
+| --- | --- |
+| Object with behavior / computed methods | Plain Ruby class |
+| Simple immutable data holder (2–3 fields, no logic) | `Data.define` |
+| Value equality | Implement `==`, `eql?`, `hash` |
+
+**Anti-pattern:** `Dry::Struct` + `.build` factory that procedurally computes values and stores them as inert attributes. This separates computation from the object that should own it, producing a "dumb struct" filled by an external procedure.
+
 ## Service Pattern
 
 Services are use cases. Each service is a single operation with railway-oriented flow (each step succeeds or short-circuits on failure).
@@ -153,3 +277,24 @@ Request → Controller parses input
               ↓
 Response ← JSON/etc. with status from response DTO
 ```
+
+## References
+
+Seminal DDD resources for deeper exploration.
+
+### Books
+
+- **Eric Evans** — *Domain-Driven Design: Tackling Complexity in the Heart of Software* (2003). The foundational text. Chapter 5 covers entities, value objects, and services. Chapter 6 covers aggregate design.
+- **Vaughn Vernon** — *Implementing Domain-Driven Design* (2013). Practical application of Evans' patterns with concrete examples. Strong coverage of aggregate boundaries, repositories, and domain events.
+- **Eric Evans** — *DDD Reference* (free PDF). Condensed definitions of all DDD patterns: [domainlanguage.com/ddd/reference](https://www.domainlanguage.com/ddd/reference/)
+
+### Online Resources
+
+- **Martin Fowler** — [EvansClassification](https://martinfowler.com/bliki/EvansClassification.html) — concise summary of entity, value object, and service distinctions.
+- **Martin Fowler** — [ValueObject](https://martinfowler.com/bliki/ValueObject.html) — definitive writeup on value object semantics and identity.
+- **Vladimir Khorikov** — [Entity vs Value Object: The Ultimate List of Differences](https://enterprisecraftsmanship.com/posts/entity-vs-value-object-the-ultimate-list-of-differences/) — comprehensive decision criteria with examples.
+- **Vladimir Khorikov** — [Value Objects Explained](https://enterprisecraftsmanship.com/posts/value-objects-explained/) — deep dive into when and how to use value objects.
+
+### Reference Implementations
+
+- **DDD Sample Application** (Citerus / Evans collaborators) — canonical reference implementation. The `Cargo` aggregate with `Delivery` value object and `Itinerary` demonstrates computed domain concepts: [dddsample-core](https://github.com/citerus/dddsample-core) — [characterization](https://dddsample.sourceforge.net/characterization.html)

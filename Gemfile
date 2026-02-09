@@ -29,6 +29,7 @@ gem 'dry-validation', '~>1.10'
 gem 'json_schemer'
 
 # PRESENTATION
+gem 'csv'
 gem 'multi_json'
 gem 'roar', '~>1.2'
 

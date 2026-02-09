@@ -42,6 +42,11 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 | Application authorization test | `spec/application/policies/attendance_authorization_spec.rb` |
 | Domain policy test | `spec/domain/attendance/policies/attendance_proximity_spec.rb` |
 | Domain entity test | `spec/domain/attendance/entities/attendance_spec.rb` |
+| Domain entity test (report) | `spec/domain/attendance/entities/attendance_report_spec.rb` |
+| Domain value test (register) | `spec/domain/attendance/values/attendance_register_spec.rb` |
+| Domain value test (student record) | `spec/domain/attendance/values/student_attendance_record_spec.rb` |
+| Service test (report) | `spec/application/services/attendances/generate_report_spec.rb` |
+| Presentation test (CSV) | `spec/presentation/formatters/attendance_report_csv_spec.rb` |
 
 ## Existing Coverage Analysis
 
@@ -62,7 +67,7 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 | Attendance Recording | Good (geo-fence enforced) | Good | Duplicates |
 | Role Assignment | Excellent | Good | Assignable roles logic |
 | Event Responses | Good | Good | Enriched data |
-| Course Reports | None | None | Everything |
+| Course Reports | Excellent (29 tests) | Good (3 route tests) | — |
 | Repositories | Excellent | — | Duplicate query |
 | Policies | Excellent | Good | Capabilities matrix |
 
@@ -106,11 +111,31 @@ Two levels of testing — domain policy (business rules) and service (orchestrat
 - **Design decision**: Owner CAN assign owner role (matches current frontend; no DB constraint on multiple owners)
 - **Manual verification** (3.5): Confirmed via browser (owner sees 4-role dropdown) and API curl tests (owner→4 roles, instructor→staff+student, student→empty, non-enrolled→403, invalid course→404)
 
-### Slice 4: Attendance Report
+### Slice 4: Attendance Report ✅
 
-- **New file**: `spec/application/services/attendances/generate_report_spec.rb`
-- **Add route test to**: `spec/routes/course_route_spec.rb`
-- **Test scenarios**: Aggregation by event, summary stats, CSV format, staff+ authorization required
+**Status**: Complete. 29 tests across 6 spec files. Implemented on branch `ray/refactor-generate-report` in 3 phases.
+
+**Service spec**: `spec/application/services/attendances/generate_report_spec.rb` (9 tests)
+- Success flows: owner gets report, instructor gets report
+- Authorization: student forbidden, non-enrolled forbidden
+- Statistics: correct aggregation (1 event, 2 students), per-student sums and percentages
+- Edge cases: zero events, invalid course ID
+
+**Domain entity spec**: `spec/domain/attendance/entities/attendance_report_spec.rb` (7 tests)
+- Report construction, event/student data structure
+- Statistics for multiple students/events
+- Zero events, empty enrollments
+- StudentAttendanceRecord type verification
+
+**Domain value specs**:
+- `spec/domain/attendance/values/student_attendance_record_spec.rb` (4 tests) — full attendance (100%), partial (50%), zero events, value equality
+- `spec/domain/attendance/values/attendance_register_spec.rb` (2 tests) — build from attendances, `#attended?` queries
+
+**Presentation spec**: `spec/presentation/formatters/attendance_report_csv_spec.rb` (4 tests)
+- CSV header generation, student rows with attendance, empty report, students with no events
+
+**Route spec** (in `spec/routes/course_route_spec.rb`): 3 tests
+- JSON response format, CSV download with correct headers, forbidden for students
 
 ### Slice 5: Enriched Event Responses
 

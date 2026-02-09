@@ -36,6 +36,7 @@ This approach ensures we only build what the frontend actually needs, with immed
 - [x] Slice 3 backend complete (domain policy, service, route, 18 tests)
 - [x] Slice 3 frontend complete (ManagePeopleCard fetches roles from API)
 - [x] Slice 3 manual verification complete (task 3.5)
+- [x] Slice 4 complete (attendance report endpoint + DDD entity refactoring)
 
 ## Key Findings
 
@@ -162,32 +163,58 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 ---
 
-### Slice 4: Attendance Report Endpoint
+### Slice 4: Attendance Report Endpoint ✅
 
 **Why fourth**: Complexity reduction; removes significant frontend logic.
 
-**Backend changes**:
-- Create `GET /api/courses/:id/attendance_report` endpoint
-- Create `Services::Attendances::GenerateReport` service
-- Return aggregated data: attendance by event, counts by role, percentages
-- Support `?format=csv` query param for direct CSV download
+**Status**: Complete. Implemented in 3 phases on branch `ray/refactor-generate-report` — see `CLAUDE.ray-refactor-generate-report.md` for full branch plan.
+
+**Architecture**:
+```
+Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
+  --> Service::Attendances::GenerateReport  (orchestration only)
+      --> courses_repo.find_full()
+      --> attendances_repo.find_by_course()
+      --> AttendanceAuthorization.can_view_all?
+      --> Entity::AttendanceReport.build(course:, attendances:)  (domain layer)
+            --> AttendanceRegister.build(attendances:)   (index for O(1) queries)
+            --> StudentAttendanceRecord.build(enrollment:, events:, register:)  (per student)
+  --> Representer::AttendanceReport             (JSON, default)
+  --> Presentation::Formatters::AttendanceReportCsv  (CSV, format=csv)
+```
+
+**Domain design**:
+- `Entity::AttendanceReport` — domain entity with `.build` factory; coordinates value objects. Attributes: `course_name`, `generated_at`, `events` (ReportEvent[]), `student_records` (StudentAttendanceRecord[])
+- `AttendanceRegister` — value object wrapping `account_id → Set<event_id>` index for O(1) attendance queries via `#attended?`
+- `StudentAttendanceRecord` — value object with `.build` factory owning its own aggregation (sum, percent, per-event presence)
+
+**Backend files created**:
+- `app/domain/attendance/entities/attendance_report.rb` — entity with `.build` factory
+- `app/domain/attendance/values/attendance_register.rb` — O(1) lookup index
+- `app/domain/attendance/values/student_attendance_record.rb` — per-student stats
+- `app/application/services/attendances/generate_report.rb` — orchestration service
+- `app/presentation/representers/attendance_report.rb` — JSON serialization (Roar)
+- `app/presentation/formatters/attendance_report_csv.rb` — CSV output
 
 **Frontend changes**:
-- Update `AttendanceEventCard.vue` to call report endpoint
-- Remove attendance aggregation and CSV generation logic
-- For CSV: trigger download from API response
+- `AttendanceEventCard.vue` — replaced client-side CSV generation with API call to report endpoint
+- `lib/downloadFile.js` — new utility for blob download via temporary `<a>` element
+
+**Tests**: 29 tests across 6 spec files (see testing doc for details). 763 tests total, 0 failures, 97.99% coverage.
 
 **Tasks**:
-- [ ] 4.1a Create spec file with aggregation tests
-- [ ] 4.1b Add summary statistics tests
-- [ ] 4.1c Add CSV format test
-- [ ] 4.1d Add authorization test
-- [ ] 4.1e Add route integration test
-- [ ] 4.2 Create GenerateReport service with aggregation logic
-- [ ] 4.3 Add CSV formatting support
-- [ ] 4.4 Add route to course routes
-- [ ] 4.5 Update AttendanceEventCard to use report endpoint
-- [ ] 4.6 Manual verification: view report, download CSV
+- [x] 4.1a Create spec file with aggregation tests
+- [x] 4.1b Add summary statistics tests
+- [x] 4.1c Add CSV format test
+- [x] 4.1d Add authorization test
+- [x] 4.1e Add route integration test
+- [x] 4.2 Create GenerateReport service with aggregation logic
+- [x] 4.3 Add CSV formatting support
+- [x] 4.4 Add route to course routes
+- [x] 4.5 Update AttendanceEventCard to use report endpoint
+- [x] 4.6 Domain entity refactoring (AttendanceReport, AttendanceRegister, StudentAttendanceRecord)
+- [x] 4.7 Push aggregation into value objects (`.build` factories)
+- [x] 4.8 Full test suite pass (763 tests, 0 failures, 97.99% coverage)
 
 ---
 
@@ -266,7 +293,7 @@ This approach ensures we only build what the frontend actually needs, with immed
 > Questions must be crossed off when resolved. Note the decision made.
 
 - [x] ~~Should the geo-fence radius be configurable per-course or global?~~ **Decision: Hardcoded policy constant (~55m) for now. Variable per-event fencing deferred to future work.**
-- [ ] Should CSV export be a streaming download or return data for frontend to format?
+- [x] ~~Should CSV export be a streaming download or return data for frontend to format?~~ **Decision: Backend generates CSV via `AttendanceReportCsv` formatter. Frontend receives blob and triggers download via `downloadFile.js` utility.**
 - [ ] What date format should the API return? ISO 8601 with timezone, or pre-formatted locale string?
 - [ ] Should capabilities be embedded in every response or a separate endpoint?
 

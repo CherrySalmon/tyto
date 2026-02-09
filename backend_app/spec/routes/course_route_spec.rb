@@ -842,5 +842,92 @@ describe 'Course Routes' do
         _(json_response['data']).must_be_kind_of Array
       end
     end
+
+    describe 'GET /api/course/:id/attendance/report' do
+      it 'returns JSON report for instructor' do
+        owner_account = create_test_account(roles: ['creator'])
+        course = create_test_course(owner_account)
+        instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
+
+        instructor_role = Tyto::Role.find(name: 'instructor')
+        Tyto::AccountCourse.create(
+          course_id: course.id,
+          account_id: instructor_account.id,
+          role_id: instructor_role.id
+        )
+
+        get "/api/course/#{course.id}/attendance/report", nil, instructor_auth
+
+        _(last_response.status).must_equal 200
+        _(json_response['success']).must_equal true
+        _(json_response['data']).must_include 'course_name'
+        _(json_response['data']).must_include 'events'
+        _(json_response['data']).must_include 'student_records'
+        _(json_response['data']).must_include 'generated_at'
+      end
+
+      it 'returns CSV report when format=csv' do
+        owner_account = create_test_account(roles: ['creator'])
+        course = create_test_course(owner_account)
+        instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
+
+        instructor_role = Tyto::Role.find(name: 'instructor')
+        Tyto::AccountCourse.create(
+          course_id: course.id,
+          account_id: instructor_account.id,
+          role_id: instructor_role.id
+        )
+
+        # Create a student and event with attendance
+        student = create_test_account(name: 'Student', roles: ['member'])
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
+          course_id: course.id,
+          account_id: student.id,
+          role_id: student_role.id
+        )
+
+        location = Tyto::Location.create(
+          course_id: course.id, name: 'Room', latitude: 0, longitude: 0
+        )
+        event = Tyto::Event.create(
+          course_id: course.id, location_id: location.id, name: 'Lecture 1',
+          start_at: Time.now, end_at: Time.now + 3600
+        )
+        Tyto::Attendance.create(
+          course_id: course.id, account_id: student.id,
+          event_id: event.id, role_id: student_role.id,
+          name: 'Test', latitude: 0, longitude: 0
+        )
+
+        get "/api/course/#{course.id}/attendance/report?format=csv", nil, instructor_auth
+
+        _(last_response.status).must_equal 200
+        _(last_response.content_type).must_include 'text/csv'
+        _(last_response.headers['Content-Disposition']).must_include 'attachment'
+
+        csv_lines = last_response.body.split("\n")
+        _(csv_lines.first).must_include 'Student Email'
+        _(csv_lines.first).must_include 'Lecture 1'
+        _(csv_lines.length).must_equal 2 # header + 1 student row
+      end
+
+      it 'returns forbidden for student' do
+        owner_account = create_test_account(roles: ['creator'])
+        course = create_test_course(owner_account)
+        student_account, student_auth = authenticated_header(roles: ['student'])
+
+        student_role = Tyto::Role.find(name: 'student')
+        Tyto::AccountCourse.create(
+          course_id: course.id,
+          account_id: student_account.id,
+          role_id: student_role.id
+        )
+
+        get "/api/course/#{course.id}/attendance/report", nil, student_auth
+
+        _(last_response.status).must_equal 403
+      end
+    end
   end
 end
