@@ -1,7 +1,7 @@
 # Refactor Frontend Domain Logic to Backend DDD API
 
 > **IMPORTANT**: This plan must be kept up-to-date at all times. Assume context can be cleared at any time — this file is the single source of truth for the current state of this work.
-
+>
 > **SYNC REQUIRED**: This document must stay aligned with `CLAUDE.refactor-frontend-ddd[tests].md`. Task IDs must match across both files. When updating tasks in one file, update the other.
 
 ## Branch
@@ -15,6 +15,7 @@ Move all major domain logic from the Vue frontend to the backend's DDD-architect
 ## Strategy: Vertical Slices
 
 Each slice delivers a complete, end-to-end feature:
+
 1. **Backend test** — Write failing test for new behavior
 2. **Backend implementation** — Make the test pass
 3. **Frontend update** — Remove old logic, consume new API
@@ -44,7 +45,7 @@ This approach ensures we only build what the frontend actually needs, with immed
 ### Frontend Domain Logic to Move
 
 | Issue | Location | Priority | Backend Status |
-|-------|----------|----------|----------------|
+| ----- | -------- | -------- | -------------- |
 | **Attendance Geo-fence Validation** | AttendanceTrack, AllCourse | HIGH | `Attendance#within_range?()` exists - not being used! |
 | **Attendance Deduplication** | AttendanceTrack, AllCourse | HIGH | Should be backend validation |
 | **Role-based Permission Hierarchy** | ManagePeopleCard | HIGH | Policies exist but frontend hardcodes role mapping |
@@ -98,11 +99,13 @@ See the `/ddd` skill → "Response DTOs" for the full pattern and guidelines.
 **Boundary**: Geo-fence enforcement applies only to self-reported student attendance (gated by `AttendanceAuthorization.can_create?` → `self_enrolled?`). Teacher/TA/owner/admin manual attendance flagging bypasses geo-fence — deferred to future work.
 
 **Architecture** (domain policy vs. application policy):
+
 - `Policy::AttendanceEligibility` (domain) — actor-agnostic business rule: "attendance is valid when the student is at the right place at the right time." Checks both time window (`Event#active?`) and proximity (Haversine ≤ 55m). Returns `:time_window`, `:proximity`, or `nil` (eligible).
 - `AttendanceAuthorization` (application) — actor-dependent: "who can record attendance?" Checks enrollment/roles.
 - `RecordAttendance` service (application) — orchestrates both: checks who can act, requires coordinates for self-reported attendance, delegates eligibility check to domain policy.
 
 **Backend changes**:
+
 - New domain policy: `domain/attendance/policies/attendance_eligibility.rb`
   - `Policy::AttendanceEligibility.check(attendance:, event:, location:, time:)` — returns `nil` (eligible), `:time_window`, or `:proximity`
   - `MAX_DISTANCE_KM = 0.055` (~55m) — business rule constant
@@ -115,10 +118,12 @@ See the `/ddd` skill → "Response DTOs" for the full pattern and guidelines.
   - Delegates eligibility decision to `Policy::AttendanceEligibility`
 
 **Frontend changes**:
+
 - Remove geo-fence validation from `AttendanceTrack.vue` and `AllCourse.vue`
 - Display backend error message when attendance is rejected
 
 **Tasks**:
+
 - [x] 1.1a Add geo-fence acceptance test (within radius)
 - [x] 1.1b Add geo-fence rejection test (outside radius)
 - [x] 1.1d Add geo-fence rejection test (no coordinates — bypass attempt)
@@ -133,6 +138,7 @@ See the `/ddd` skill → "Response DTOs" for the full pattern and guidelines.
 - [x] 1.6 Manual verification: test inside/outside geo-fence and time-window scenarios
 
 **Dropped** (deferred to future work):
+
 - ~~1.1c Test for event-specific radius~~ — variable fencing deferred
 - ~~1.2 Add `geo_fence_radius_m` migration~~ — no per-event config needed
 - ~~1.3 Add `geo_fence_radius_m` to Event entity and representer~~ — no per-event config needed
@@ -157,6 +163,7 @@ See the `/ddd` skill → "Response DTOs" for the full pattern and guidelines.
 **Design decision**: Owner CAN assign the owner role (matches current frontend behavior; no DB/service restriction on multiple owners per course).
 
 **Role hierarchy** (requestor → assignable roles):
+
 - owner → owner, instructor, staff, student (all course roles)
 - instructor → staff, student
 - staff → student
@@ -164,15 +171,18 @@ See the `/ddd` skill → "Response DTOs" for the full pattern and guidelines.
 - non-enrolled → 403 Forbidden
 
 **Architecture** (domain policy + service):
+
 - `Policy::RoleAssignment` (domain) — actor-agnostic business rule: "which roles can a given role assign?" Owns `HIERARCHY` and `ASSIGNABLE` constants. Raises `UnknownRoleError` for invalid roles. Two entry points: `assignable_roles(role)` for a single role, `for_enrollment(course_roles)` for a CourseRoles collection (uses highest role).
 - `Service::Courses::GetAssignableRoles` (application) — thin orchestrator: validate course_id → find course → authorize (enrolled?) → delegate to `Policy::RoleAssignment.for_enrollment`.
 - Route: `GET /api/course/:id/assignable_roles` → returns `{ success: true, data: ["owner", ...] }`
 
 **Frontend changes**:
+
 - `SingleCourse.vue` fetches assignable roles from API, passes as `assignableRoles` prop
 - `ManagePeopleCard.vue` removed hardcoded `peopleform`/`peopleRoleList`/`checkIsModifable`; role dropdown iterates over `assignableRoles` prop directly
 
 **Tasks**:
+
 - [x] 3.1a Create spec file with owner permission tests
 - [x] 3.1b Add instructor permission tests
 - [x] 3.1c Add student permission tests (+ staff + non-enrolled + invalid course)
@@ -184,14 +194,15 @@ See the `/ddd` skill → "Response DTOs" for the full pattern and guidelines.
 
 ---
 
-### Slice 4: Attendance Report Endpoint ✅
+### Slice 4: Attendance Report Endpoint
 
 **Why fourth**: Complexity reduction; removes significant frontend logic.
 
 **Status**: Complete. Implemented in 3 phases on branch `ray/refactor-generate-report` — see `CLAUDE.ray-refactor-generate-report.md` for full branch plan.
 
 **Architecture**:
-```
+
+```text
 Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
   --> Service::Attendances::GenerateReport  (orchestration only)
       --> courses_repo.find_full()
@@ -205,11 +216,13 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 ```
 
 **Domain design**:
+
 - `Entity::AttendanceReport` — domain entity with `.build` factory; coordinates value objects. Attributes: `course_name`, `generated_at`, `events` (ReportEvent[]), `student_records` (StudentAttendanceRecord[])
 - `AttendanceRegister` — value object wrapping `account_id → Set<event_id>` index for O(1) attendance queries via `#attended?`
 - `StudentAttendanceRecord` — value object with `.build` factory owning its own aggregation (sum, percent, per-event presence)
 
 **Backend files created**:
+
 - `app/domain/attendance/entities/attendance_report.rb` — entity with `.build` factory
 - `app/domain/attendance/values/attendance_register.rb` — O(1) lookup index
 - `app/domain/attendance/values/student_attendance_record.rb` — per-student stats
@@ -218,12 +231,14 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 - `app/presentation/formatters/attendance_report_csv.rb` — CSV output
 
 **Frontend changes**:
+
 - `AttendanceEventCard.vue` — replaced client-side CSV generation with API call to report endpoint
 - `lib/downloadFile.js` — new utility for blob download via temporary `<a>` element
 
 **Tests**: 29 tests across 6 spec files (see testing doc for details). 763 tests total, 0 failures, 97.99% coverage.
 
 **Tasks**:
+
 - [x] 4.1a Create spec file with aggregation tests
 - [x] 4.1b Add summary statistics tests
 - [x] 4.1c Add CSV format test
@@ -239,7 +254,7 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 
 ---
 
-### Slice 5: Enriched Event Responses ✅
+### Slice 5: Enriched Event Responses
 
 **Why fifth**: Performance; eliminates N+1 fetching in frontend.
 
@@ -248,22 +263,26 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 **Problem**: Both `AttendanceTrack.vue` and `AllCourse.vue` fetched active events, then for each event made 3 additional HTTP calls (course, location, attendance). For N events this produced 3N+1 requests. Reduced to **1 request** by embedding all three fields in the event response.
 
 **Architecture**:
+
 - **Batch lookups** in repositories replace N+1 queries: `find_ids(ids) → Hash<id, Entity>` for courses/locations, `find_attended_event_ids(account_id, event_ids) → Set<Integer>` for attendance status
 - **Response DTOs** (`Data.define`) replace `OpenStruct` enrichment: `Response::EventDetails` (list events) and `Response::ActiveEventDetails` (active events + `user_attendance_status`)
 - **Enrichment in service layer**: services compose data from multiple repos into response DTOs — repositories return pure domain entities
 - **`user_attendance_status`** only on requestor-aware endpoint (`FindActiveEvents`); omitted from requestor-agnostic `ListEvents`
 
 **Two endpoints enriched**:
+
 | Endpoint | Service | Response DTO |
 | -------- | ------- | ------------ |
 | `GET /api/current_event/` | `FindActiveEvents` | `Response::ActiveEventDetails` |
 | `GET /api/course/:id/event/` | `ListEvents` | `Response::EventDetails` |
 
 **Backend files created**:
+
 - `app/application/responses/event_details.rb` — `Data.define` DTO for event list endpoints
 - `app/application/responses/active_event_details.rb` — `Data.define` DTO with attendance status
 
 **Backend files modified**:
+
 - `app/infrastructure/database/repositories/locations.rb` — added `find_ids` batch method
 - `app/infrastructure/database/repositories/courses.rb` — added `find_ids` batch method
 - `app/infrastructure/database/repositories/attendances.rb` — added `find_attended_event_ids` method
@@ -272,12 +291,14 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 - `app/presentation/representers/event.rb` — added `course_name`, `location_name`, `user_attendance_status` properties
 
 **Frontend changes**:
+
 - `AttendanceTrack.vue` — removed `getCourseName()`, `getLocationName()`, `findAttendance()`; simplified `fetchEventData()` to use enriched fields
 - `AllCourse.vue` — removed `getCourseName()`, `getLocationName()`, `findAttendance()`; simplified `fetchEventData()` to use enriched fields
 
 **Tests**: 18 new tests across 7 spec files. 795 tests total, 0 failures, 98% coverage.
 
 **Tasks**:
+
 - [x] 5.1a Add `Repository::Locations#find_ids` batch method + tests (3 tests)
 - [x] 5.1b Add `Repository::Courses#find_ids` batch method + tests (4 tests)
 - [x] 5.1c Add `Repository::Attendances#find_attended_event_ids` method + tests (4 tests)
@@ -301,17 +322,22 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 **Why sixth**: Cleaner authorization; frontend uses capabilities instead of role strings.
 
 **Backend changes**:
+
 - Add `capabilities` object to course response:
+
   ```json
   { "can_edit": true, "can_delete": false, "can_manage_enrollments": true }
   ```
+
 - Derive from existing policy infrastructure
 
 **Frontend changes**:
+
 - Replace role string comparisons (`role === 'owner'`) with capability checks
 - Use `course.capabilities.can_edit` pattern
 
 **Tasks**:
+
 - [ ] 6.1a Add capabilities tests for owner
 - [ ] 6.1b Add capabilities tests for instructor
 - [ ] 6.1c Add capabilities tests for student
@@ -326,6 +352,7 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 **Why last**: Pure frontend cleanup; no backend changes.
 
 **Frontend changes**:
+
 - Extract `frontend_app/lib/geolocation.js` utility (shared across components)
 - Extract `frontend_app/lib/dateFormatter.js` utility
 - Extract shared attendance logic (composable or service) — `postAttendance()`, `getLocation()`, `showPosition()`, `showError()`, `updateEventAttendanceStatus()` are duplicated across `AttendanceTrack.vue` and `AllCourse.vue`
@@ -333,6 +360,7 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 - Remove any remaining deprecated domain logic
 
 **Tasks**:
+
 - [ ] 7.1 Create geolocation utility with shared functions
 - [ ] 7.2 Create date formatting utility
 - [ ] 7.3 Extract shared attendance logic from AttendanceTrack and AllCourse
@@ -358,4 +386,4 @@ Route (course.rb)  GET /api/course/:id/attendance/report[?format=csv]
 
 ---
 
-*Last updated: 2026-02-09*
+**Last updated**: 2026-02-09

@@ -1,7 +1,7 @@
 # Testing Strategy for Frontend-to-Backend Refactoring
 
 > **IMPORTANT**: This plan must be kept up-to-date at all times. Assume context can be cleared at any time — this file is the single source of truth for testing during this refactoring.
-
+>
 > **SYNC REQUIRED**: This document must stay aligned with `CLAUDE.refactor-frontend-ddd.md`. Slice numbering and test task IDs (e.g., 1.1a) must match across both files.
 
 ## CI
@@ -36,7 +36,7 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 ### Key Spec Files for Reference
 
 | Purpose | File |
-|---------|------|
+| ------- | ---- |
 | Service test template | `spec/application/services/attendances/record_attendance_spec.rb` |
 | Route test template | `spec/routes/course_route_spec.rb` |
 | Application authorization test | `spec/application/policies/attendance_authorization_spec.rb` |
@@ -70,7 +70,7 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 ### Coverage Summary
 
 | Area | Unit Tests | Integration Tests | Gaps |
-|------|-----------|------------------|------|
+| ---- | ---------- | ----------------- | ---- |
 | Attendance Recording | Good (geo-fence enforced) | Good | Duplicates |
 | Role Assignment | Excellent | Good | Assignable roles logic |
 | Event Responses | Excellent (18 tests) | Good (route tests) | — |
@@ -82,11 +82,12 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 
 Each slice's test tasks (1.1a, 2.1a, etc.) are listed in `CLAUDE.refactor-frontend-ddd.md`. Below are testing-specific notes for each slice.
 
-### Slice 1: Geo-fence + Time-Window Validation ✅
+### Slice 1: Geo-fence + Time-Window Validation
 
 Two levels of testing — domain policy (business rules) and service (orchestration):
 
 **Domain policy spec**: `spec/domain/attendance/policies/attendance_eligibility_spec.rb`
+
 - Merged `AttendanceProximity` + `EventTimeWindow` into single `AttendanceEligibility` policy
 - 13 tests covering both time window and proximity facets:
   - Threshold constant is 0.055 km (~55m)
@@ -94,6 +95,7 @@ Two levels of testing — domain policy (business rules) and service (orchestrat
   - Proximity: eligible at exact location, eligible within 55m, `:proximity` beyond 55m, eligible when location nil, eligible when location has no coordinates, `:proximity` when attendance has no coordinates
 
 **Service spec**: `spec/application/services/attendances/record_attendance_spec.rb`
+
 - Geo-fence tests: accept within radius, reject outside radius, reject missing coordinates
 - Time-window tests: reject ended event, reject future event
 - **Existing tests**: all use active events and pass unchanged
@@ -105,7 +107,7 @@ Two levels of testing — domain policy (business rules) and service (orchestrat
 - **Add to**: `spec/application/services/attendances/record_attendance_spec.rb`
 - **Test scenarios**: Reject same account+event, informative error message, allow different events
 
-### Slice 3: Assignable Roles ✅
+### Slice 3: Assignable Roles
 
 - **Domain policy spec**: `spec/domain/courses/policies/role_assignment_spec.rb` (9 tests)
   - `assignable_roles`: owner→all 4, instructor→staff+student, staff→student, student→empty, unknown→UnknownRoleError
@@ -118,48 +120,56 @@ Two levels of testing — domain policy (business rules) and service (orchestrat
 - **Design decision**: Owner CAN assign owner role (matches current frontend; no DB constraint on multiple owners)
 - **Manual verification** (3.5): Confirmed via browser (owner sees 4-role dropdown) and API curl tests (owner→4 roles, instructor→staff+student, student→empty, non-enrolled→403, invalid course→404)
 
-### Slice 4: Attendance Report ✅
+### Slice 4: Attendance Report
 
 **Status**: Complete. 29 tests across 6 spec files. Implemented on branch `ray/refactor-generate-report` in 3 phases.
 
 **Service spec**: `spec/application/services/attendances/generate_report_spec.rb` (9 tests)
+
 - Success flows: owner gets report, instructor gets report
 - Authorization: student forbidden, non-enrolled forbidden
 - Statistics: correct aggregation (1 event, 2 students), per-student sums and percentages
 - Edge cases: zero events, invalid course ID
 
 **Domain entity spec**: `spec/domain/attendance/entities/attendance_report_spec.rb` (7 tests)
+
 - Report construction, event/student data structure
 - Statistics for multiple students/events
 - Zero events, empty enrollments
 - StudentAttendanceRecord type verification
 
 **Domain value specs**:
+
 - `spec/domain/attendance/values/student_attendance_record_spec.rb` (4 tests) — full attendance (100%), partial (50%), zero events, value equality
 - `spec/domain/attendance/values/attendance_register_spec.rb` (2 tests) — build from attendances, `#attended?` queries
 
 **Presentation spec**: `spec/presentation/formatters/attendance_report_csv_spec.rb` (4 tests)
+
 - CSV header generation, student rows with attendance, empty report, students with no events
 
 **Route spec** (in `spec/routes/course_route_spec.rb`): 3 tests
+
 - JSON response format, CSV download with correct headers, forbidden for students
 
-### Slice 5: Enriched Event Responses ✅
+### Slice 5: Enriched Event Responses
 
 **Status**: Complete. 18 new tests across 7 spec files. 795 tests total, 0 failures, 98% coverage. Implemented on branch `ray/refactor-event-responses`.
 
 Three testing layers: repository batch methods, service enrichment, and route integration.
 
 **Repository specs** (11 tests):
+
 - `spec/infrastructure/database/repositories/locations_spec.rb` — `#find_ids` (3 tests): returns hash keyed by ID, handles empty array, omits missing IDs
 - `spec/infrastructure/database/repositories/courses_spec.rb` — `#find_ids` (4 tests): returns hash keyed by ID, handles empty array, omits missing IDs, returns courses without children loaded
 - `spec/infrastructure/database/repositories/attendances_spec.rb` — `#find_attended_event_ids` (4 tests): returns set of attended event IDs, excludes unattended events, handles empty event_ids, excludes other accounts' attendances
 
 **Service specs** (7 tests):
+
 - `spec/application/services/events/find_active_events_spec.rb` (4 tests): response includes `course_name`, `location_name`, `user_attendance_status` false when no attendance, `user_attendance_status` true when attendance exists
 - `spec/application/services/events/list_events_spec.rb` (3 tests): response includes `course_name`, `location_name`, response does NOT include `user_attendance_status` (requestor-agnostic endpoint)
 
 **Route specs** (expanded existing):
+
 - `spec/routes/current_event_route_spec.rb` — expanded assertions: `course_name`, `location_name` fields with correct values, `user_attendance_status` false/true
 - `spec/routes/event_route_spec.rb` — expanded assertions: `course_name`, `location_name` fields, confirmed `user_attendance_status` is nil
 
@@ -173,7 +183,7 @@ Three testing layers: repository batch methods, service enrichment, and route in
 E2E tests will be added if manual verification proves insufficient. Candidates:
 
 | User Flow | Priority |
-|-----------|----------|
+| --------- | -------- |
 | Record attendance (happy path) | HIGH |
 | Record attendance (outside geo-fence) | HIGH |
 | View attendance report | MEDIUM |
@@ -193,4 +203,4 @@ E2E tests will be added if manual verification proves insufficient. Candidates:
 
 ---
 
-*Last updated: 2026-02-09*
+**Last updated**: 2026-02-09
