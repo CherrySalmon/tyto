@@ -93,11 +93,18 @@ Two levels of testing — domain policy (business rules) and service (orchestrat
 - **Add to**: `spec/application/services/attendances/record_attendance_spec.rb`
 - **Test scenarios**: Reject same account+event, informative error message, allow different events
 
-### Slice 3: Assignable Roles
+### Slice 3: Assignable Roles ✅
 
-- **New file**: `spec/application/services/enrollments/get_assignable_roles_spec.rb`
-- **Add route test to**: `spec/routes/course_route_spec.rb`
-- **Test scenarios**: Owner sees all assignable roles (not owner), instructor sees staff+student, student sees empty, non-enrolled gets forbidden
+- **Domain policy spec**: `spec/domain/courses/policies/role_assignment_spec.rb` (9 tests)
+  - `assignable_roles`: owner→all 4, instructor→staff+student, staff→student, student→empty, unknown→UnknownRoleError
+  - `for_enrollment`: uses highest role, handles multi-role and empty roles
+  - HIERARCHY constant test
+- **Service spec**: `spec/application/services/courses/get_assignable_roles_spec.rb` (6 tests)
+  - owner/instructor/staff/student permissions, non-enrolled→403, invalid course→404
+- **Route tests**: added to `spec/routes/course_route_spec.rb` (3 tests)
+  - owner→all roles, instructor→staff+student, non-enrolled→403
+- **Design decision**: Owner CAN assign owner role (matches current frontend; no DB constraint on multiple owners)
+- **Manual verification** (3.5): Confirmed via browser (owner sees 4-role dropdown) and API curl tests (owner→4 roles, instructor→staff+student, student→empty, non-enrolled→403, invalid course→404)
 
 ### Slice 4: Attendance Report
 
@@ -140,4 +147,4 @@ E2E tests will be added if manual verification proves insufficient. Candidates:
 
 ---
 
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-08*

@@ -18,7 +18,7 @@
                   :course="course"
                   :attendance-events="attendanceEvents" :locations="locations" @create-event="showAttendanceEvent" @edit-event="editAttendanceEvent" @delete-event="deleteAttendanceEvent"
                   @create-location="createNewLocation" @update-location="updateLocation" @delete-location="deleteLocation"
-                  :enrollments="enrollments" @new-enrolls="addEnrollments" @update-enrollment="updateEnrollment" @delete-enrollment="deleteEnrollments" :currentRole="currentRole"
+                  :enrollments="enrollments" :assignableRoles="assignableRoles" @new-enrolls="addEnrollments" @update-enrollment="updateEnrollment" @delete-enrollment="deleteEnrollments" :currentRole="currentRole"
                 >
                 </RouterView>
               </div>
@@ -135,6 +135,7 @@ export default {
       showModifyAttendanceEventDialog: false,
       isAddedValue: false,
       enrollments: [],
+      assignableRoles: [],
       currentEventID: '',
       activeTab: 'events'
     };
@@ -160,6 +161,7 @@ export default {
         this.fetchAttendanceEvents(this.course.id);
         this.fetchLocations();
         this.fetchEnrollments();
+        this.fetchAssignableRoles();
       }
     }
   },
@@ -225,6 +227,13 @@ export default {
         this.fetchCourse(this.course.id);
       }).catch(error => {
         console.error('Error creating course:', error);
+      });
+    },
+    fetchAssignableRoles() {
+      api.get(`/course/${this.course.id}/assignable_roles`).then(response => {
+        this.assignableRoles = response.data.data;
+      }).catch(error => {
+        console.error('Error fetching assignable roles:', error);
       });
     },
     fetchEnrollments() {

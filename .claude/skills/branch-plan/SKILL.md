@@ -6,19 +6,20 @@ disable-model-invocation: true
 
 # Branch Plan Skill
 
-Create a new git branch with an accompanying plan file for tracked, context-preserving work.
+Create an accompanying plan file for current or provided branch to track context-preserving work.
 
 ## Usage
 
 ```
-/branch-plan <branch-name>
+/branch-plan [<branch-name>]
 ```
 
-Example: `/branch-plan ray/refactor-backend-gateway`
+Example 1: `/branch-plan` — creates a plan for the current branch
+Example 2: `/branch-plan ray/refactor-backend-gateway` - creates a plan for a new branch
 
 ## What This Skill Does
 
-1. **Create git branch** with the provided name
+1. **Create git branch** with the provided name if branch name is provided
 2. **Create plan file** at `CLAUDE.<sanitized-branch-name>.md` (slashes become hyphens)
 3. **Update `CLAUDE.local.md`** to reference the new plan file
 4. **Seed the plan** with a template including the "keep up-to-date" requirement

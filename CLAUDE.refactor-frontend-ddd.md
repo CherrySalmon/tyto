@@ -33,6 +33,9 @@ This approach ensures we only build what the frontend actually needs, with immed
 - [x] Slice 1 hardening: event time-window enforcement via domain policy
 - [x] Slice 1 complete (manual verification passed)
 - [x] Slice 2 dropped — idempotent by design (see Slice 2 notes)
+- [x] Slice 3 backend complete (domain policy, service, route, 18 tests)
+- [x] Slice 3 frontend complete (ManagePeopleCard fetches roles from API)
+- [x] Slice 3 manual verification complete (task 3.5)
 
 ## Key Findings
 
@@ -129,26 +132,33 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 **Why third**: Correctness; frontend currently hardcodes role hierarchy.
 
-**Backend changes**:
-- Create `GET /api/courses/:id/assignable_roles` endpoint
-- Create `Services::Enrollments::GetAssignableRoles` service
-- Use existing policy infrastructure to determine what roles the requestor can assign
-- Return array of role objects: `[{ "id": 1, "name": "student" }, ...]`
+**Design decision**: Owner CAN assign the owner role (matches current frontend behavior; no DB/service restriction on multiple owners per course).
+
+**Role hierarchy** (requestor → assignable roles):
+- owner → owner, instructor, staff, student (all course roles)
+- instructor → staff, student
+- staff → student
+- student → [] (empty)
+- non-enrolled → 403 Forbidden
+
+**Architecture** (domain policy + service):
+- `Policy::RoleAssignment` (domain) — actor-agnostic business rule: "which roles can a given role assign?" Owns `HIERARCHY` and `ASSIGNABLE` constants. Raises `UnknownRoleError` for invalid roles. Two entry points: `assignable_roles(role)` for a single role, `for_enrollment(course_roles)` for a CourseRoles collection (uses highest role).
+- `Service::Courses::GetAssignableRoles` (application) — thin orchestrator: validate course_id → find course → authorize (enrolled?) → delegate to `Policy::RoleAssignment.for_enrollment`.
+- Route: `GET /api/course/:id/assignable_roles` → returns `{ success: true, data: ["owner", ...] }`
 
 **Frontend changes**:
-- Update `ManagePeopleCard.vue` to fetch assignable roles from API
-- Remove hardcoded `ROLE_HIERARCHY` constant
-- Populate role dropdown from API response
+- `SingleCourse.vue` fetches assignable roles from API, passes as `assignableRoles` prop
+- `ManagePeopleCard.vue` removed hardcoded `peopleform`/`peopleRoleList`/`checkIsModifable`; role dropdown iterates over `assignableRoles` prop directly
 
 **Tasks**:
-- [ ] 3.1a Create spec file with owner permission tests
-- [ ] 3.1b Add instructor permission tests
-- [ ] 3.1c Add student permission tests
-- [ ] 3.1d Add route integration test
-- [ ] 3.2 Create GetAssignableRoles service
-- [ ] 3.3 Add route to course routes
-- [ ] 3.4 Update ManagePeopleCard to fetch and use API roles
-- [ ] 3.5 Manual verification: test role assignment as different user types
+- [x] 3.1a Create spec file with owner permission tests
+- [x] 3.1b Add instructor permission tests
+- [x] 3.1c Add student permission tests (+ staff + non-enrolled + invalid course)
+- [x] 3.1d Add route integration test (owner, instructor, non-enrolled)
+- [x] 3.2 Create GetAssignableRoles service
+- [x] 3.3 Add route to course routes (`GET /api/course/:id/assignable_roles`)
+- [x] 3.4 Update ManagePeopleCard to fetch and use API roles
+- [x] 3.5 Manual verification: test role assignment as different user types
 
 ---
 
@@ -268,4 +278,4 @@ This approach ensures we only build what the frontend actually needs, with immed
 
 ---
 
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-08*

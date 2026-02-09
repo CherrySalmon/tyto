@@ -33,6 +33,20 @@ module Tyto
 
           r.on String do |course_id|
 
+            r.on 'assignable_roles' do
+              # GET api/course/:course_id/assignable_roles
+              r.get do
+                case Service::Courses::GetAssignableRoles.new.call(requestor:, course_id:)
+                in Success(api_result)
+                  response.status = api_result.http_status_code
+                  { success: true, data: api_result.message }.to_json
+                in Failure(api_result)
+                  response.status = api_result.http_status_code
+                  api_result.to_json
+                end
+              end
+            end
+
             r.on 'enroll' do
               r.on String do |account_id|
                 # POST api/course/:course_id/enroll/:enroll_id

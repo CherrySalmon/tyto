@@ -53,7 +53,7 @@
           </el-form-item>
           <el-form-item label="Roles">
             <el-select v-model="selectedAccount.enroll_identity" placeholder="Select role" multiple style="width:95%;">
-              <el-option v-for="role in peopleRoleList" :key="role" :label="role" :value="role" :disabled="checkIsModifable(role)"></el-option>
+              <el-option v-for="role in assignableRoles" :key="role" :label="role" :value="role"></el-option>
             </el-select>
           </el-form-item>
       </el-form>
@@ -72,8 +72,12 @@ export default {
   props: {
     attendanceEvents: Object,
     locations: Array,
-    enrollments: Object, 
-    currentRole: String
+    enrollments: Object,
+    currentRole: String,
+    assignableRoles: {
+      type: Array,
+      default: () => []
+    }
   },
   data() {
     return {
@@ -81,12 +85,6 @@ export default {
       newEnrollmentEmails: '',
       newEnrolls: [],
       enrollStep: 1,
-      peopleform: {
-        owner: ['owner', 'instructor', 'staff', 'student'],
-        instructor: ['staff', 'student'],
-        staff: ['student']
-      },
-      peopleRoleList: ['owner', 'instructor', 'staff', 'student'],
       editDialogVisible: false,
       selectedAccount: {}
     }
@@ -108,10 +106,6 @@ export default {
       this.selectedAccount = JSON.parse(JSON.stringify(account))
       
       this.editDialogVisible = true;
-    },
-    checkIsModifable(role) {
-      const availableRoles = this.peopleform[this.currentRole]
-      return !availableRoles.includes(role)
     },
     onDialogClose() {
       this.$emit('dialog-closed')
