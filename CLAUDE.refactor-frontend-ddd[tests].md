@@ -76,7 +76,7 @@ Testing is integrated into each vertical slice (see `CLAUDE.refactor-frontend-dd
 | Event Responses | Excellent (18 tests) | Good (route tests) | — |
 | Course Reports | Excellent (29 tests) | Good (3 route tests) | — |
 | Repositories | Excellent | — | Duplicate query |
-| Policies | Excellent | Good | Capabilities matrix |
+| Policies | Excellent | Good (policy summaries in routes) | — |
 
 ## Per-Slice Test Plan
 
@@ -175,8 +175,21 @@ Three testing layers: repository batch methods, service enrichment, and route in
 
 ### Slice 6: Capabilities-Based Visibility
 
-- **Add to**: route spec or new representer spec
-- **Test scenarios**: Owner gets full capabilities, instructor gets partial, student gets limited
+**Status**: Complete (pending manual verification). 4 new route tests. Implemented on branch `ray/refactor-capabilities-visibility`.
+
+**Route spec** (in `spec/routes/course_route_spec.rb`): 4 tests
+
+- `GET /api/course/:id` — owner gets `policies` with `can_update: true, can_delete: true`
+- `GET /api/course/:id` — instructor gets `policies` with `can_update: true, can_delete: false`
+- `GET /api/course/:id` — student gets `policies` with `can_update: false, can_delete: false`
+- `GET /api/course` — list includes `policies` per course (owner: `can_update: true, can_delete: true`)
+
+**Design notes**:
+
+- Tests assert on `policies` key (not `capabilities`) — matches `CoursePolicy#summary` terminology
+- All tests verify the full policy hash structure (`can_view`, `can_update`, `can_delete`)
+- Tests create proper enrollment records (owner via `create_test_course`, instructor/student via `AccountCourse.create`) to ensure realistic authorization paths
+- No separate service or representer specs needed — route integration tests cover the full stack through DTO → representer → JSON
 
 ## E2E Testing (Deferred)
 
