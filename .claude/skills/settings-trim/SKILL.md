@@ -13,9 +13,15 @@ A permission entry is **redundant** if a broader wildcard pattern already covers
 
 2. **Broader wildcard subsumes narrower**: If `Bash(git push:*)` exists, remove `Bash(git push)` (no args variant). If `Bash(Rscript:*)` exists, remove entries like `Bash(SCRATCHPAD="..." Rscript:*)` that are session-specific wrappers around the same command.
 
-3. **Garbled entries**: Remove entries that appear to be fragments of commit messages, PR bodies, or other text that was accidentally saved as a permission (e.g., entries starting mid-sentence or containing prose paragraphs).
+3. **git `-C` worktree consolidation**: Path-specific `git -C <path> <subcommand>` entries (e.g., `Bash(git -C /some/worktree status)`) are subsumed by the wildcard variant `Bash(git -C * <subcommand> *)`. Remove any path-specific `-C` entries. Every `git` subcommand should have two permission lines — the naked form and the `-C` worktree form:
+   ```
+   "Bash(git <subcommand>:*)",
+   "Bash(git -C * <subcommand> *)",
+   ```
 
-4. **Exact duplicates**: Remove duplicate entries, keeping only one copy.
+4. **Garbled entries**: Remove entries that appear to be fragments of commit messages, PR bodies, or other text that was accidentally saved as a permission (e.g., entries starting mid-sentence or containing prose paragraphs).
+
+5. **Exact duplicates**: Remove duplicate entries, keeping only one copy.
 
 ## Steps
 
