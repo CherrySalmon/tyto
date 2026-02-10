@@ -2,7 +2,7 @@
   <div>
     <div style="margin: 40px">
       <h2>Welcome Back, {{account.name}}!</h2>
-      <p>You have access to {{ getFeatures(account.roles) }}!</p>
+      <p>You have access to {{ describeRoles(account.roles) }}!</p>
     </div>
     <div v-if="events.length > 0">
       <div class="page-title">Events</div>
@@ -77,8 +77,10 @@
 </template>
   
 <script>
-import api from '@/lib/tyto-api';
-import cookieManager from '../../lib/cookieManager';
+import api from '@/lib/tytoApi';
+import session from '../../lib/session';
+import { recordAttendance } from '../../lib/attendance';
+import { describeRoles } from '../../lib/roles';
 import { ElNotification, ElMessageBox, ElLoading } from 'element-plus'
 
 export default {
@@ -90,11 +92,6 @@ export default {
         name: [
           { required: true, message: 'Please input course name', trigger: 'blur' }
         ]
-      },
-      features: {
-        admin: 'manage accounts',
-        creator: 'create courses',
-        member: 'mark attendance'
       },
       courses: [],
       account: {
@@ -111,13 +108,14 @@ export default {
     };
   },
   created() {
-    this.account = cookieManager.getAccount()
+    this.account = session.getAccount()
     if (this.account) {
       this.fetchCourses()
       this.fetchEventData()
     }
   },
   methods: {
+    describeRoles,
     async fetchEventData() {
         try {
             const response = await api.get('/current_event/');
@@ -130,98 +128,37 @@ export default {
             console.error('Error fetching event data:', error);
         }
     },
-    getLocation(event) {
-        console.log("start getting location");
-        // Start the loading screen
+    async getLocation(event) {
         const loading = ElLoading.service({
             lock: true,
             text: 'Loading',
             background: 'rgba(0, 0, 0, 0.7)',
         });
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                position => this.showPosition(position, loading, event),
-                error => this.showError(error, loading)
-            );
-        } else {
-            this.locationText = "Geolocation is not supported by this browser.";
-        }
-    },
-    showPosition(position, loading, event) {
-        this.latitude = position.coords.latitude;
-        this.longitude = position.coords.longitude;
-
-        // POST coordinates to backend; geo-fence validated server-side
-        this.postAttendance(loading, event);
-    },
-    showError(error) {
-        switch (error.code) {
-            case error.PERMISSION_DENIED:
-                this.errMessage = "User denied the request for Geolocation.";
-                break;
-            case error.POSITION_UNAVAILABLE:
-                this.errMessage = "Location information is unavailable.";
-                break;
-            case error.TIMEOUT:
-                this.errMessage = "The request to get user location timed out.";
-                break;
-            default:
-                this.errMessage = "An unknown error occurred.";
-                break;
-        }
-    },
-    postAttendance(loading, event) {
-        // Use your actual course ID here
-        const courseId = event.course_id; // Example course ID
-        api.post(`/course/${courseId}/attendance`, {
-            event_id: event.id,
-            name: event.name,
-            latitude: this.latitude,
-            longitude: this.longitude,
-        })
-            .then(response => {
-                // Handle success
-                console.log('Attendance recorded successfully', response.data);
-                this.updateEventAttendanceStatus(event.id, true);
-                ElMessageBox.alert('Attendance recorded successfully', 'Success', {
-                    confirmButtonText: 'OK',
-                    type: 'success',
-                })
-            })
-            .catch(error => {
-                console.error('Error recording attendance', error);
-                const details = error.response?.data?.details || '';
-
-                if (error.response?.status === 403) {
-                    ElMessageBox.alert(details || 'Attendance was rejected', 'Failed', {
+        try {
+            await recordAttendance(event, {
+                onSuccess: (eventId) => {
+                    this.updateEventAttendanceStatus(eventId, true);
+                    ElMessageBox.alert('Attendance recorded successfully', 'Success', {
+                        confirmButtonText: 'OK',
+                        type: 'success',
+                    });
+                },
+                onError: (message) => {
+                    ElMessageBox.alert(message, 'Failed', {
                         confirmButtonText: 'OK',
                         type: 'error',
-                    })
-                } else {
-                    this.updateEventAttendanceStatus(event.id, true);
-                    ElMessageBox.alert('Attendance has already been recorded', 'Warning', {
-                        confirmButtonText: 'OK',
-                        type: 'warning',
-                    })
-                }
-            }).finally(() => {
-                loading.close();
+                    });
+                },
             });
+        } finally {
+            loading.close();
+        }
     },
     updateEventAttendanceStatus(eventId, status) {
         const eventIndex = this.events.findIndex(event => event.id === eventId);
         if (eventIndex !== -1) {
-            // Vue 2 reactivity caveat workaround
-            // this.$set(this.events[eventIndex], 'isAttendanceExisted', status);
-            // For Vue 3, you can directly assign the value:
             this.events[eventIndex].isAttendanceExisted = status;
         }
-    },
-    getFeatures(roles) {
-      let features = roles.map((role) => {
-        return this.features[role]
-      })
-      return features.join(', ')
     },
     changeRoute(route) {
       this.$router.push(route)

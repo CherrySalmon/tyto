@@ -54,7 +54,7 @@ module Tyto
           course_roles = Domain::Courses::Values::CourseRoles.from(roles)
           enrollment = Entity::Enrollment.new(
             id: nil, account_id: requestor.account_id, course_id: course.id,
-            account_email: nil, account_name: nil,
+            participant: Domain::Courses::Values::Participant.new(email: nil, name: nil),
             roles: course_roles, created_at: nil, updated_at: nil
           )
           policy = CoursePolicy.new(requestor, enrollment)

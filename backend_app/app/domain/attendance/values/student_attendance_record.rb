@@ -11,7 +11,7 @@ module Tyto
           attr_reader :email
 
           def initialize(enrollment:, events:, register:)
-            @email = enrollment.account_email
+            @email = enrollment.participant.email
             @account_id = enrollment.account_id
             @events = events
             @register = register

@@ -42,18 +42,15 @@
 
 
 <script>
-import api from '@/lib/tyto-api'
+import api from '@/lib/tytoApi'
+import { roleOptions } from '@/lib/roles'
 
 export default {
     data() {
         return {
             user_id: '',
             accounts: [],
-            roleOptions: [
-                { label: 'Admin', value: 'admin' },
-                { label: 'Creator', value: 'creator' },
-                { label: 'Member', value: 'member' }
-            ],
+            roleOptions,
             editDialogVisible: false,
             selectedAccount: {}
         };

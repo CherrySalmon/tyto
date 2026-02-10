@@ -12,8 +12,9 @@ describe Tyto::LocationPolicy do
       id: 1,
       account_id: account.id,
       course_id: course.id,
-      account_email: account.email,
-      account_name: account.name,
+      participant: Tyto::Domain::Courses::Values::Participant.new(
+        email: account.email, name: account.name
+      ),
       roles: Tyto::Domain::Courses::Values::CourseRoles.from(roles),
       created_at: nil,
       updated_at: nil

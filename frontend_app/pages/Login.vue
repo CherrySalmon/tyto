@@ -9,7 +9,7 @@
 </template>
 
 <script>
-import api from '@/lib/tyto-api'
+import api from '@/lib/tytoApi'
 import Cookies from 'js-cookie'
 import { ElNotification } from 'element-plus'
 import { googleTokenLogin } from 'vue3-google-login'

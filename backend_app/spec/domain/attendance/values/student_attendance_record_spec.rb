@@ -14,7 +14,7 @@ describe 'Domain::Attendance::Values::StudentAttendanceRecord' do
   def build_enrollment(account_id:, email:)
     Tyto::Entity::Enrollment.new(
       id: account_id, account_id: account_id, course_id: 1,
-      account_email: email, account_name: 'Test',
+      participant: Tyto::Domain::Courses::Values::Participant.new(email: email, name: 'Test'),
       roles: Tyto::Domain::Courses::Values::CourseRoles.from(['student']),
       created_at: Time.now, updated_at: Time.now
     )
