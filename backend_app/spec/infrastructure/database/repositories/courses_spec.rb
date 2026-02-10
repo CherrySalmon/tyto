@@ -294,7 +294,7 @@ describe 'Tyto::Repository::Courses' do
       _(enrollment.roles.count).must_equal 2
       _(enrollment.roles).must_include 'instructor'
       _(enrollment.roles).must_include 'student'
-      _(enrollment.account_email).must_equal 'multi@example.com'
+      _(enrollment.participant.email).must_equal 'multi@example.com'
     end
 
     it 'returns empty array for course with no enrollments' do
@@ -337,8 +337,8 @@ describe 'Tyto::Repository::Courses' do
       _(result).must_be_instance_of Tyto::Entity::Enrollment
       _(result.account_id).must_equal account.id
       _(result.course_id).must_equal orm_course.id
-      _(result.account_email).must_equal 'student@example.com'
-      _(result.account_name).must_equal 'Student'
+      _(result.participant.email).must_equal 'student@example.com'
+      _(result.participant.name).must_equal 'Student'
       _(result.roles.to_a).must_equal ['student']
     end
 

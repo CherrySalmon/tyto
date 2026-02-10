@@ -2,6 +2,7 @@
 
 require_relative '../../types'
 require_relative '../values/course_roles'
+require_relative '../values/participant'
 
 module Tyto
   module Entity
@@ -16,9 +17,7 @@ module Tyto
       attribute :id, Types::Integer.optional
       attribute :account_id, Types::Integer
       attribute :course_id, Types::Integer
-      attribute :account_email, Types::Email.optional
-      attribute :account_name, Types::String.optional
-      attribute? :account_avatar, Types::String.optional
+      attribute :participant, Domain::Courses::Values::Participant
       attribute :roles, RolesType
       attribute :created_at, Types::Time.optional
       attribute :updated_at, Types::Time.optional

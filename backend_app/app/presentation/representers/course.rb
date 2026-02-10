@@ -114,9 +114,9 @@ module Tyto
       def account
         {
           id: represented.account_id,
-          email: represented.account_email,
-          name: represented.account_name,
-          avatar: represented.account_avatar
+          email: represented.participant.email,
+          name: represented.participant.name,
+          avatar: represented.participant.avatar
         }
       end
 

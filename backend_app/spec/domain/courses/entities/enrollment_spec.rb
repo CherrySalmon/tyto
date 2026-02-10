@@ -8,13 +8,18 @@ describe 'Tyto::Entity::Enrollment' do
   # Helper to create CourseRoles
   let(:course_roles) { ->(arr) { Tyto::Domain::Courses::Values::CourseRoles.from(arr) } }
 
+  let(:participant) do
+    Tyto::Domain::Courses::Values::Participant.new(
+      email: 'student@example.com', name: 'Test Student'
+    )
+  end
+
   let(:valid_attributes) do
     {
       id: 1,
       account_id: 10,
       course_id: 20,
-      account_email: 'student@example.com',
-      account_name: 'Test Student',
+      participant: participant,
       roles: course_roles.call(['student']),
       created_at: now,
       updated_at: now
@@ -28,7 +33,7 @@ describe 'Tyto::Entity::Enrollment' do
       _(enrollment.id).must_equal 1
       _(enrollment.account_id).must_equal 10
       _(enrollment.course_id).must_equal 20
-      _(enrollment.account_email).must_equal 'student@example.com'
+      _(enrollment.participant.email).must_equal 'student@example.com'
       _(enrollment.roles.to_a).must_equal ['student']
     end
 
@@ -51,8 +56,7 @@ describe 'Tyto::Entity::Enrollment' do
         id: nil,
         account_id: 10,
         course_id: 20,
-        account_email: nil,
-        account_name: nil,
+        participant: Tyto::Domain::Courses::Values::Participant.new(email: nil, name: nil),
         roles: course_roles.call([]),
         created_at: nil,
         updated_at: nil
@@ -83,8 +87,8 @@ describe 'Tyto::Entity::Enrollment' do
         .must_raise Dry::Struct::Error
     end
 
-    it 'rejects invalid email format' do
-      _ { Tyto::Entity::Enrollment.new(valid_attributes.merge(account_email: 'invalid-email')) }
+    it 'rejects invalid email format in participant' do
+      _ { Tyto::Domain::Courses::Values::Participant.new(email: 'invalid-email', name: 'Test') }
         .must_raise Dry::Struct::Error
     end
   end

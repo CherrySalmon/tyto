@@ -138,13 +138,14 @@ A server 500, network timeout, or any unexpected error calls `onDuplicate`, whic
 - Extract `frontend_app/lib/roles.js` — consolidated role definitions (labels + descriptions) used by multiple components
 - Update `AttendanceTrack.vue`, `AllCourse.vue`, `CourseInfoCard.vue`, `ManageAccount.vue` to use shared utilities
 - Remove duplicated method definitions from components
+- Extract `Participant` value object for `Enrollment` entity — replace `account_email`/`account_name`/`account_avatar` with a proper Courses-context value object
 
 **Out of scope**:
 
 - Refactoring `LocationCard.vue` map initialization flow
-- Backend changes (none needed — this is Slice 7)
 - Date format changes (the open question about ISO 8601 vs. locale strings from the parent plan is deferred)
 - Adding frontend tests (no test infrastructure exists; E2E deferred per parent test plan)
+- Remove redundant `course_id` from `Enrollment` entity — enrollments are always accessed through a Course, so `course_id` is never read in production code. Separate cleanup to assess impact on tests and any future direct-query use cases.
 
 **Frontend changes**:
 
@@ -187,6 +188,8 @@ Modified files:
 - [x] 7e Fix `getGeolocationErrorMessage` to handle plain `Error` objects — check for `error.message` before falling through to generic message
 - [x] 7f Fix missing `avatar` in Enrollment representer — add `account_avatar` to entity, repository, and representer so Manage People shows profile images
 - [x] 6 Manual verification: test attendance recording from both AttendanceTrack and AllCourse views, verify date display on CourseInfoCard, verify role descriptions on AllCourse and role dropdown on ManageAccount
+- [x] 8 Extract `Participant` value object — replace `account_email`/`account_name`/`account_avatar` on Enrollment with a `Participant` value object in the Courses bounded context
+- [x] 9 ~~Manual verification~~ — not needed; `course_route_spec.rb` integration test exercises the full enrollment serialization path (route → service → repository → entity → representer → JSON) and asserts `enrollment['account']` includes `email`, `name`, and `id` keys
 
 ## Completed
 
@@ -208,6 +211,7 @@ Modified files:
 - Task 7e: Fixed `getGeolocationErrorMessage` to check for `error.message` on plain `Error` objects before falling through to generic message
 - Task 7f: Fixed missing avatar in Manage People — added `account_avatar` attribute (optional) to `Enrollment` entity, passed `account.avatar` in both repository enrollment-building locations, added `avatar` to the `Enrollment` representer's account hash. All 799 backend tests pass.
 - Task 6: Manual verification complete — login/session, role descriptions, role dropdown, date display, avatars (App.vue + Manage People), attendance flow all verified working. Production build clean.
+- Task 8: Extracted `Participant` value object (`domain/courses/values/participant.rb`) — Dry::Struct with `email`, `name`, `avatar`, and `display_name` method. Replaced 3 `account_*` attributes on Enrollment with required `participant` attribute. Updated repository (2 methods), representer, `StudentAttendanceRecord`, `list_user_courses` service, and 10 test files. Added `participant_spec.rb`. All 807 tests pass.
 
 ---
 

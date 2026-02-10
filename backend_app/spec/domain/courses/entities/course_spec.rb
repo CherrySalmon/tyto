@@ -369,10 +369,12 @@ describe 'Tyto::Entity::Course' do
     # Helper to create CourseRoles
     let(:course_roles) { ->(arr) { Tyto::Domain::Courses::Values::CourseRoles.from(arr) } }
 
+    let(:participant) { ->(email, name) { Tyto::Domain::Courses::Values::Participant.new(email:, name:) } }
+
     let(:owner_enrollment) do
       Tyto::Entity::Enrollment.new(
         id: 1, account_id: 10, course_id: 1,
-        account_email: 'owner@example.com', account_name: 'Owner',
+        participant: participant.call('owner@example.com', 'Owner'),
         roles: course_roles.call(['owner']),
         created_at: now, updated_at: now
       )
@@ -381,7 +383,7 @@ describe 'Tyto::Entity::Course' do
     let(:instructor_enrollment) do
       Tyto::Entity::Enrollment.new(
         id: 2, account_id: 20, course_id: 1,
-        account_email: 'instructor@example.com', account_name: 'Instructor',
+        participant: participant.call('instructor@example.com', 'Instructor'),
         roles: course_roles.call(['instructor']),
         created_at: now, updated_at: now
       )
@@ -390,7 +392,7 @@ describe 'Tyto::Entity::Course' do
     let(:student_enrollment) do
       Tyto::Entity::Enrollment.new(
         id: 3, account_id: 30, course_id: 1,
-        account_email: 'student@example.com', account_name: 'Student',
+        participant: participant.call('student@example.com', 'Student'),
         roles: course_roles.call(['student']),
         created_at: now, updated_at: now
       )
@@ -399,7 +401,7 @@ describe 'Tyto::Entity::Course' do
     let(:multi_role_enrollment) do
       Tyto::Entity::Enrollment.new(
         id: 4, account_id: 40, course_id: 1,
-        account_email: 'ta@example.com', account_name: 'TA',
+        participant: participant.call('ta@example.com', 'TA'),
         roles: course_roles.call(%w[staff student]),
         created_at: now, updated_at: now
       )
@@ -437,7 +439,7 @@ describe 'Tyto::Entity::Course' do
         course = Tyto::Entity::Course.new(valid_attributes.merge(enrollments:))
 
         found = course.find_enrollment(30)
-        _(found.account_email).must_equal 'student@example.com'
+        _(found.participant.email).must_equal 'student@example.com'
       end
 
       it 'returns nil when enrollment not found' do
