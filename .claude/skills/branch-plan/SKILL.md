@@ -108,7 +108,7 @@ Deliver a complete, testable feature end-to-end:
 
 ---
 
-*Last updated: [date]*
+Last updated: [date]
 ```
 
 ## Example

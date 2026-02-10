@@ -7,7 +7,9 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
     Tyto::Entity::Course.new(
       id: 1, name: name, logo: nil, start_at: nil, end_at: nil,
       created_at: Time.now, updated_at: Time.now,
-      events: events, locations: [], enrollments: enrollments
+      events: Tyto::Domain::Courses::Values::Events.from(events),
+      locations: Tyto::Domain::Courses::Values::Locations.from([]),
+      enrollments: Tyto::Domain::Courses::Values::Enrollments.from(enrollments)
     )
   end
 

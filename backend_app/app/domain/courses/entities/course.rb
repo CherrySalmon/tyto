@@ -3,6 +3,9 @@
 require_relative '../../types'
 require_relative '../../shared/values/time_range'
 require_relative '../../shared/values/null_time_range'
+require_relative '../values/events'
+require_relative '../values/locations'
+require_relative '../values/enrollments'
 
 module Tyto
   module Entity
@@ -10,12 +13,11 @@ module Tyto
     # Pure domain object with no infrastructure dependencies.
     # Immutable - updates create new instances via `new()`.
     #
-    # Child collections (events, locations) follow this convention:
-    #   nil = not loaded (methods requiring them will raise)
-    #   []  = loaded but empty
+    # Child collections use typed collection value objects:
+    #   nil  = not loaded (calling methods on nil raises NoMethodError)
+    #   collection = loaded (Events, Locations, Enrollments)
+    # Callers must construct collection objects explicitly via .from().
     class Course < Dry::Struct
-      # Error raised when accessing children that weren't loaded
-      class ChildrenNotLoadedError < StandardError; end
 
       attribute :id, Types::Integer.optional
       attribute :name, Types::CourseName
@@ -25,10 +27,11 @@ module Tyto
       attribute :created_at, Types::Time.optional
       attribute :updated_at, Types::Time.optional
 
-      # Child collections - nil means not loaded (default)
-      attribute :events, Types::Array.optional.default(nil)
-      attribute :locations, Types::Array.optional.default(nil)
-      attribute :enrollments, Types::Array.optional.default(nil)
+      # Child collections - nil means not loaded (default).
+      # Callers must construct collection value objects explicitly via .from().
+      attribute :events, Types.Instance(Domain::Courses::Values::Events).optional.default(nil)
+      attribute :locations, Types.Instance(Domain::Courses::Values::Locations).optional.default(nil)
+      attribute :enrollments, Types.Instance(Domain::Courses::Values::Enrollments).optional.default(nil)
 
       # Returns a TimeRange value object, or NullTimeRange if dates are missing.
       # Uses Null Object pattern to eliminate nil checks in delegating methods.
@@ -50,75 +53,50 @@ module Tyto
       def enrollments_loaded? = !enrollments.nil?
 
       # Find an event by ID within this course's events
-      # @raise [ChildrenNotLoadedError] if events weren't loaded
+      # Delegates to Events
       def find_event(event_id)
-        require_events_loaded!
-        events.find { |e| e.id == event_id }
+        events.find(event_id)
       end
 
       # Find a location by ID within this course's locations
-      # @raise [ChildrenNotLoadedError] if locations weren't loaded
+      # Delegates to Locations
       def find_location(location_id)
-        require_locations_loaded!
-        locations.find { |l| l.id == location_id }
+        locations.find(location_id)
       end
 
-      # Count of events (raises if not loaded)
+      # Count of events — delegates to Events
       def event_count
-        require_events_loaded!
-        events.size
+        events.count
       end
 
-      # Count of locations (raises if not loaded)
+      # Count of locations — delegates to Locations
       def location_count
-        require_locations_loaded!
-        locations.size
+        locations.count
       end
 
-      # Find an enrollment by account ID within this course
-      # @raise [ChildrenNotLoadedError] if enrollments weren't loaded
+      # Find an enrollment by account ID — delegates to Enrollments
       def find_enrollment(account_id)
-        require_enrollments_loaded!
-        enrollments.find { |e| e.account_id == account_id }
+        enrollments.find_by_account(account_id)
       end
 
-      # Count of enrollments (raises if not loaded)
+      # Count of enrollments — delegates to Enrollments
       def enrollment_count
-        require_enrollments_loaded!
-        enrollments.size
+        enrollments.count
       end
 
-      # Get all enrollments with a specific role
-      # @raise [ChildrenNotLoadedError] if enrollments weren't loaded
+      # Get all enrollments with a specific role — delegates to Enrollments
       def enrollments_with_role(role_name)
-        require_enrollments_loaded!
-        enrollments.select { |e| e.has_role?(role_name) }
+        enrollments.with_role(role_name)
       end
 
-      # Get all teaching staff (owners, instructors, staff)
+      # Get all teaching staff — delegates to Enrollments
       def teaching_staff
-        require_enrollments_loaded!
-        enrollments.select(&:teaching?)
+        enrollments.teaching_staff
       end
 
-      # Get all students
+      # Get all students — delegates to Enrollments
       def students
-        require_enrollments_loaded!
-        enrollments.select(&:student?)
-      end
-
-      private
-
-      def require_events_loaded!
-        raise ChildrenNotLoadedError, 'Events not loaded for this course' if events.nil?
-      end
-
-      def require_locations_loaded!
-        raise ChildrenNotLoadedError, 'Locations not loaded for this course' if locations.nil?
-      end
-
-      def require_enrollments_loaded!
-        raise ChildrenNotLoadedError, 'Enrollments not loaded for this course' if enrollments.nil?
+        enrollments.students
       end
     end
   end

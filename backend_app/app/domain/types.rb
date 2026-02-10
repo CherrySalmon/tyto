@@ -25,9 +25,7 @@ module Tyto
     Latitude = Types::Float.constrained(gteq: -90.0, lteq: 90.0).optional
 
     # Account types
-    Email = Types::String.constrained(
-      format: /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
-    )
+    Email = Types::String.constrained(format: /\A.+@.+\z/)
 
     # System roles: assigned at account level
     SystemRole = Types::String.enum('admin', 'creator', 'member')
@@ -36,9 +34,6 @@ module Tyto
     CourseRole = Types::String.enum('owner', 'instructor', 'staff', 'student')
 
     # All roles (system + course)
-    Role = Types::String.enum(
-      'admin', 'creator', 'member',
-      'owner', 'instructor', 'staff', 'student'
-    )
+    Role = Types::String.enum(*SystemRole.values, *CourseRole.values)
   end
 end
