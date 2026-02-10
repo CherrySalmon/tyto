@@ -28,7 +28,7 @@ No backend changes. This slice extracts duplicated Vue component logic into shar
 - [x] Shared attendance logic extracted
 - [x] Components updated to use utilities
 - [x] Deprecated logic removed
-- [ ] Pre-existing issues fixed (see Issues Found During Review)
+- [x] Pre-existing issues fixed (see Issues Found During Review)
 - [ ] Manual verification
 
 ## Key Findings
@@ -97,7 +97,7 @@ Post-extraction code review identified pre-existing issues across the frontend. 
 }
 ```
 
-A server 500, network timeout, or any unexpected error calls `onDuplicate`, which tells the user "Attendance has already been recorded" and marks the event as attended in the UI — silent data corruption.
+A server 500, network timeout, or any unexpected error calls `onDuplicate`, which tells the user "Attendance has already been recorded" and marks the event as attended in the UI — silent data corruption. Furthermore, the backend uses `find_or_create` for attendance (idempotent), so duplicate attendance is never an error condition — the `onDuplicate` concept is unnecessary.
 
 #### 3. `!account.img == ''` — works by accident
 
@@ -180,11 +180,11 @@ Modified files:
 - [x] 4c Update `CourseInfoCard.vue` — remove `getLocalDateString`, import `formatLocalDateTime`
 - [x] 5 Remove any remaining deprecated logic from components
 - [x] 5b Consolidate duplicated role definitions — extract `lib/roles.js`, update `AllCourse.vue` and `ManageAccount.vue`
-- [ ] 7a Fix missing `ElNotification` import in `AttendanceTrack.vue` — add to line 35 import statement
-- [ ] 7b Fix `attendance.js` error handling — distinguish duplicate (409 or specific response) from unexpected errors; call `onError` for 500s/network failures instead of `onDuplicate`
-- [ ] 7c Fix `!account.img == ''` in `App.vue` (lines 39, 40, 48) — replace with truthy check `account.img`
-- [ ] 7d Fix loose equality in `AttendanceTrack.vue:90` — use `String(event.course_id) === String(this.course_id)` or consistent `parseInt` on both sides with `===`
-- [ ] 7e Fix `getGeolocationErrorMessage` to handle plain `Error` objects — check for `error.message` before falling through to generic message
+- [x] 7a Fix missing `ElNotification` import in `AttendanceTrack.vue` — add to line 35 import statement
+- [x] 7b Fix `attendance.js` error handling — remove `onDuplicate` (backend is idempotent via `find_or_create`); call `onError` for all non-403 failures
+- [x] 7c Fix `!account.img == ''` in `App.vue` (lines 39, 40, 48) — replace with truthy check `account.img`
+- [x] 7d Fix loose equality in `AttendanceTrack.vue:90` — use `String(event.course_id) === String(this.course_id)` or consistent `parseInt` on both sides with `===`
+- [x] 7e Fix `getGeolocationErrorMessage` to handle plain `Error` objects — check for `error.message` before falling through to generic message
 - [ ] 6 Manual verification: test attendance recording from both AttendanceTrack and AllCourse views, verify date display on CourseInfoCard, verify role descriptions on AllCourse and role dropdown on ManageAccount
 
 ## Completed
@@ -200,6 +200,11 @@ Modified files:
 - Task 5b: Created `lib/roles.js` with `SYSTEM_ROLES`, `roleOptions`, and `describeRoles()`; updated `AllCourse.vue` (removed `features` data + `getFeatures` method) and `ManageAccount.vue` (removed hardcoded `roleOptions` array)
 - Production build verified: `npm run prod` compiles successfully
 - Code review: identified 7 pre-existing issues (2 bugs, 3 fragile patterns to fix, 2 documented-only out-of-scope)
+- Task 7a: Added missing `ElNotification` import to `AttendanceTrack.vue`
+- Task 7b: Removed `onDuplicate` from `attendance.js`, `AttendanceTrack.vue`, and `AllCourse.vue` — backend attendance is idempotent (`find_or_create`), so duplicates aren't an error condition. Error handling now: 403 → `onError` with details, everything else → `onError` with generic message
+- Task 7c: Fixed `!account.img == ''` → `account.img` in `App.vue` (3 occurrences)
+- Task 7d: Fixed loose equality in `AttendanceTrack.vue` event filter — `String(event.course_id) === String(this.course_id)`
+- Task 7e: Fixed `getGeolocationErrorMessage` to check for `error.message` on plain `Error` objects before falling through to generic message
 
 ---
 

@@ -36,8 +36,8 @@
               <img class="icon-img" src="./static/icon.png" width="50" height="50"/>
               <span class="icon-text">TYTO</span>
             </div>
-            <span class="avatar-name" v-if="!account.img == ''">{{ account.name }} - {{ account.roles.join(", ") }}</span>
-            <template v-if="!account.img == ''">
+            <span class="avatar-name" v-if="account.img">{{ account.name }} - {{ account.roles.join(", ") }}</span>
+            <template v-if="account.img">
               <el-popover
                 trigger="hover"
                 >
@@ -45,7 +45,7 @@
                   <el-avatar class="avatar-btn" :src="account.img"/>
                 </template>
                 <template #default>
-                  <span class="avatar-mobile-name" v-if="!account.img == ''">{{ account.name }} <br> {{ account.roles.join(", ") }}</span>
+                  <span class="avatar-mobile-name" v-if="account.img">{{ account.name }} <br> {{ account.roles.join(", ") }}</span>
                   <template v-if="account.roles.includes('admin')">
                     <div v-for="item in menuItems" :key="item.index" :index="item.index" @click="changeRoute(item.index)" class="menu-mobile-btn">{{ item.title }}</div>
                   </template>

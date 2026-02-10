@@ -149,13 +149,6 @@ export default {
                         type: 'error',
                     });
                 },
-                onDuplicate: (eventId) => {
-                    this.updateEventAttendanceStatus(eventId, true);
-                    ElMessageBox.alert('Attendance has already been recorded', 'Warning', {
-                        confirmButtonText: 'OK',
-                        type: 'warning',
-                    });
-                },
             });
         } finally {
             loading.close();

@@ -10,6 +10,10 @@ export function getCurrentPosition() {
 }
 
 export function getGeolocationErrorMessage(error) {
+  if (!error.code) {
+    return error.message || 'An unknown error occurred.'
+  }
+
   switch (error.code) {
     case error.PERMISSION_DENIED:
       return 'User denied the request for Geolocation.'

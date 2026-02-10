@@ -32,7 +32,7 @@ import api from '@/lib/tytoApi';
 import session from '../../lib/session';
 import { formatLocalDateTime } from '../../lib/dates';
 import { recordAttendance } from '../../lib/attendance';
-import { ElMessageBox, ElLoading } from 'element-plus';
+import { ElMessageBox, ElLoading, ElNotification } from 'element-plus';
 
 export default {
     name: 'AttendanceTrack',
@@ -87,7 +87,7 @@ export default {
                 this.isEventDataFetched = true;
 
                 const matchingEvents = response.data.data.filter(event =>
-                    parseInt(event.course_id) == this.course_id);
+                    String(event.course_id) === String(this.course_id));
 
                 this.events = matchingEvents.map(event => ({
                     ...event,
@@ -118,13 +118,6 @@ export default {
                         ElMessageBox.alert(message, 'Failed', {
                             confirmButtonText: 'OK',
                             type: 'error',
-                        });
-                    },
-                    onDuplicate: (eventId) => {
-                        this.updateEventAttendanceStatus(eventId, true);
-                        ElMessageBox.alert('Attendance has already been recorded', 'Warning', {
-                            confirmButtonText: 'OK',
-                            type: 'warning',
                         });
                     },
                 });
