@@ -203,6 +203,40 @@ end
 
 **Anti-pattern:** `Dry::Struct` + `.build` factory that procedurally computes values and stores them as inert attributes. This separates computation from the object that should own it, producing a "dumb struct" filled by an external procedure.
 
+## Collection Value Objects
+
+When an entity holds a collection of children (e.g., a Course has Events), wrap the collection in a typed value object rather than using a raw `Types::Array`:
+
+```ruby
+class EventCollection
+  attr_reader :items
+
+  def initialize(items)
+    @items = items.freeze
+  end
+
+  def find(id) = items.find { |e| e.id == id }
+  def count = items.size
+  def to_a = items.dup
+  # ...domain-specific queries
+end
+```
+
+**Benefits:** type safety (only `Entity::Event` members), encapsulated query logic (move `find_event`, `event_count` off the parent entity), and the parent entity stays focused on its own concerns.
+
+**Coercion for ergonomics:** Use a type constructor that auto-wraps raw arrays into the collection object. This keeps test construction simple (`events: [event1, event2]`) while repositories use the explicit form (`EventCollection.new(events)`).
+
+### When to use Null Object collections vs. nil
+
+Not all "not loaded" states need a Null Object. The decision depends on **how the collection flows through the system**:
+
+| Pattern | When to use | Example |
+| --- | --- | --- |
+| **Null Object** | The attribute is passed polymorphically across layers (policies, auth, services) and callers shouldn't need to check for presence | `SystemRoles` / `NullSystemRoles` — Account.roles flows through policies and auth adapters that call `.admin?`, `.has?()` etc. |
+| **Optional nil** | The attribute is accessed only after deliberate loading; callers choose their loading method upfront and know what they have | Course child collections — services call `find_with_events` or `find_id` and know whether children are present |
+
+**Heuristic:** If the object crosses module boundaries and receivers call methods on it without knowing whether it was loaded, use a Null Object. If access is local and the caller controls loading, `nil` is simpler — a `NoMethodError` on nil clearly signals "you forgot to load."
+
 ## Service Pattern
 
 Services are use cases. Each service is a single operation with railway-oriented flow (each step succeeds or short-circuits on failure).
