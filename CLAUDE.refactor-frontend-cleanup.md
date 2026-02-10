@@ -28,6 +28,7 @@ No backend changes. This slice extracts duplicated Vue component logic into shar
 - [x] Shared attendance logic extracted
 - [x] Components updated to use utilities
 - [x] Deprecated logic removed
+- [ ] Pre-existing issues fixed (see Issues Found During Review)
 - [ ] Manual verification
 
 ## Key Findings
@@ -73,6 +74,50 @@ The attendance functions reference component-level `data()` properties:
 - `this.errMessage` / `this.locationText` — set by `showError`
 
 **Design choice**: The extracted module will accept an `events` ref/array and return a function that handles the full flow. Component state (`latitude`, `longitude`) becomes internal to the module. The `events` array mutation and error display remain callbacks/return values so components stay in control of their own state.
+
+### Issues Found During Review
+
+Post-extraction code review identified pre-existing issues across the frontend. Two are bugs (items 1–2), the rest are fragile patterns worth fixing while we're in this code.
+
+#### 1. Missing `ElNotification` import — runtime crash
+
+**`AttendanceTrack.vue:57`** — `ElNotification({...})` is called in the `events` watcher but never imported. Line 35 imports `ElMessageBox` and `ElLoading` but not `ElNotification`. Element Plus auto-import only covers template components, not imperative JS APIs. This throws `ReferenceError` at runtime when a user navigates to the attendance page with no matching events.
+
+#### 2. Non-403 errors silently treated as "duplicate attendance"
+
+**`attendance.js:23-29`** — The catch block assumes any non-403 error means a duplicate:
+
+```js
+} catch (error) {
+    if (error.response?.status === 403) {
+      onError(details)
+    } else {
+      onDuplicate(event.id)  // ← 500s, network errors, timeouts all land here
+    }
+}
+```
+
+A server 500, network timeout, or any unexpected error calls `onDuplicate`, which tells the user "Attendance has already been recorded" and marks the event as attended in the UI — silent data corruption.
+
+#### 3. `!account.img == ''` — works by accident
+
+**`App.vue:39, 40, 48`** — Due to operator precedence, `!account.img == ''` evaluates as `(!account.img) == ''`. This produces the correct result only through a chain of JS type coercion coincidences (`!false` → `true`, `true == ''` → `false` via numeric coercion `1 == 0`). The conventional expression is `account.img` (truthy check).
+
+#### 4. `session.getAccount()` mixed return type: object or `false`
+
+**`session.js:16-35`** — Returns an object when authenticated, `false` when not. Individual fields also use `false` as their "missing" value (lines 20–24). `App.vue` declares `account` data as an object with `img: ''` and `roles: []`, but after `created()` runs it can become `false`. Lines 39/40/48 access `account.img` outside the `v-if="account"` guard — works due to issue #3 above but is fragile. **Out of scope for this slice** — documenting only; fixing the session module's return types is a broader refactor.
+
+#### 5. Loose equality in event filter
+
+**`AttendanceTrack.vue:90`** — `parseInt(event.course_id) == this.course_id` compares a number to a string (from `$route.params.id`) using `==`. Works via coercion but `===` with consistent types is conventional.
+
+#### 6. Geolocation-not-supported error message lost
+
+**`geolocation.js` + `attendance.js:8-9`** — When the browser lacks geolocation support, `getCurrentPosition()` rejects with `new Error('Geolocation is not supported...')`. But `getGeolocationErrorMessage()` reads `error.code` / `error.PERMISSION_DENIED`, which are `undefined` on a plain `Error`, so it falls through to the generic "An unknown error occurred" and the specific message is lost.
+
+#### 7. Global `ResizeObserver` monkey-patch
+
+**`App.vue:87-93`** — Replaces `window.ResizeObserver` globally with a debounced version. Likely a workaround for the "ResizeObserver loop limit exceeded" warning. Affects all code including Element Plus internals. Undocumented. **Out of scope for this slice** — documenting only; removing it risks reintroducing the warning without a replacement strategy.
 
 ## Questions
 
@@ -135,6 +180,11 @@ Modified files:
 - [x] 4c Update `CourseInfoCard.vue` — remove `getLocalDateString`, import `formatLocalDateTime`
 - [x] 5 Remove any remaining deprecated logic from components
 - [x] 5b Consolidate duplicated role definitions — extract `lib/roles.js`, update `AllCourse.vue` and `ManageAccount.vue`
+- [ ] 7a Fix missing `ElNotification` import in `AttendanceTrack.vue` — add to line 35 import statement
+- [ ] 7b Fix `attendance.js` error handling — distinguish duplicate (409 or specific response) from unexpected errors; call `onError` for 500s/network failures instead of `onDuplicate`
+- [ ] 7c Fix `!account.img == ''` in `App.vue` (lines 39, 40, 48) — replace with truthy check `account.img`
+- [ ] 7d Fix loose equality in `AttendanceTrack.vue:90` — use `String(event.course_id) === String(this.course_id)` or consistent `parseInt` on both sides with `===`
+- [ ] 7e Fix `getGeolocationErrorMessage` to handle plain `Error` objects — check for `error.message` before falling through to generic message
 - [ ] 6 Manual verification: test attendance recording from both AttendanceTrack and AllCourse views, verify date display on CourseInfoCard, verify role descriptions on AllCourse and role dropdown on ManageAccount
 
 ## Completed
@@ -149,6 +199,7 @@ Modified files:
 - Task 5: No remaining deprecated logic found — all duplicated code removed during tasks 4a–4c
 - Task 5b: Created `lib/roles.js` with `SYSTEM_ROLES`, `roleOptions`, and `describeRoles()`; updated `AllCourse.vue` (removed `features` data + `getFeatures` method) and `ManageAccount.vue` (removed hardcoded `roleOptions` array)
 - Production build verified: `npm run prod` compiles successfully
+- Code review: identified 7 pre-existing issues (2 bugs, 3 fragile patterns to fix, 2 documented-only out-of-scope)
 
 ---
 
