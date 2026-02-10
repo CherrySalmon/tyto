@@ -29,7 +29,7 @@ No backend changes. This slice extracts duplicated Vue component logic into shar
 - [x] Components updated to use utilities
 - [x] Deprecated logic removed
 - [x] Pre-existing issues fixed (see Issues Found During Review)
-- [ ] Manual verification
+- [x] Manual verification
 
 ## Key Findings
 
@@ -185,7 +185,8 @@ Modified files:
 - [x] 7c Fix `!account.img == ''` in `App.vue` (lines 39, 40, 48) — replace with truthy check `account.img`
 - [x] 7d Fix loose equality in `AttendanceTrack.vue:90` — use `String(event.course_id) === String(this.course_id)` or consistent `parseInt` on both sides with `===`
 - [x] 7e Fix `getGeolocationErrorMessage` to handle plain `Error` objects — check for `error.message` before falling through to generic message
-- [ ] 6 Manual verification: test attendance recording from both AttendanceTrack and AllCourse views, verify date display on CourseInfoCard, verify role descriptions on AllCourse and role dropdown on ManageAccount
+- [x] 7f Fix missing `avatar` in Enrollment representer — add `account_avatar` to entity, repository, and representer so Manage People shows profile images
+- [x] 6 Manual verification: test attendance recording from both AttendanceTrack and AllCourse views, verify date display on CourseInfoCard, verify role descriptions on AllCourse and role dropdown on ManageAccount
 
 ## Completed
 
@@ -205,6 +206,8 @@ Modified files:
 - Task 7c: Fixed `!account.img == ''` → `account.img` in `App.vue` (3 occurrences)
 - Task 7d: Fixed loose equality in `AttendanceTrack.vue` event filter — `String(event.course_id) === String(this.course_id)`
 - Task 7e: Fixed `getGeolocationErrorMessage` to check for `error.message` on plain `Error` objects before falling through to generic message
+- Task 7f: Fixed missing avatar in Manage People — added `account_avatar` attribute (optional) to `Enrollment` entity, passed `account.avatar` in both repository enrollment-building locations, added `avatar` to the `Enrollment` representer's account hash. All 799 backend tests pass.
+- Task 6: Manual verification complete — login/session, role descriptions, role dropdown, date display, avatars (App.vue + Manage People), attendance flow all verified working. Production build clean.
 
 ---
 

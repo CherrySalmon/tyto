@@ -101,6 +101,7 @@ module Tyto
           course_id:,
           account_email: account.email,
           account_name: account.name,
+          account_avatar: account.avatar,
           roles: Domain::Courses::Values::CourseRoles.from(role_names),
           created_at: nil,
           updated_at: nil
@@ -317,6 +318,7 @@ module Tyto
             course_id: orm_course.id,
             account_email: account.email,
             account_name: account.name,
+            account_avatar: account.avatar,
             roles: Domain::Courses::Values::CourseRoles.from(role_names),
             created_at: nil, # account_course_roles table has no timestamps
             updated_at: nil
