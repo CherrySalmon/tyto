@@ -2,7 +2,7 @@
   <div>
     <div style="margin: 40px">
       <h2>Welcome Back, {{account.name}}!</h2>
-      <p>You have access to {{ getFeatures(account.roles) }}!</p>
+      <p>You have access to {{ describeRoles(account.roles) }}!</p>
     </div>
     <div v-if="events.length > 0">
       <div class="page-title">Events</div>
@@ -80,6 +80,7 @@
 import api from '@/lib/tyto-api';
 import cookieManager from '../../lib/cookie-manager';
 import { recordAttendance } from '../../lib/attendance-manager';
+import { describeRoles } from '../../lib/roles';
 import { ElNotification, ElMessageBox, ElLoading } from 'element-plus'
 
 export default {
@@ -91,11 +92,6 @@ export default {
         name: [
           { required: true, message: 'Please input course name', trigger: 'blur' }
         ]
-      },
-      features: {
-        admin: 'manage accounts',
-        creator: 'create courses',
-        member: 'mark attendance'
       },
       courses: [],
       account: {
@@ -119,6 +115,7 @@ export default {
     }
   },
   methods: {
+    describeRoles,
     async fetchEventData() {
         try {
             const response = await api.get('/current_event/');
@@ -169,12 +166,6 @@ export default {
         if (eventIndex !== -1) {
             this.events[eventIndex].isAttendanceExisted = status;
         }
-    },
-    getFeatures(roles) {
-      let features = roles.map((role) => {
-        return this.features[role]
-      })
-      return features.join(', ')
     },
     changeRoute(route) {
       this.$router.push(route)
