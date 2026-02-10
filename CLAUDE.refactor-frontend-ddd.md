@@ -381,7 +381,7 @@ Key mapping: `can_update` replaces all frontend role string comparisons for teac
 - [x] 6.2d Update `CourseWithEnrollment` representer — add `policies` property
 - [x] 6.3a `SingleCourse.vue` — replace role comparisons with `course.policies.can_update`
 - [x] 6.3b `CourseInfoCard.vue` — replace `currentRole != 'student'` with `policies.can_update`
-- [ ] 6.4 Manual verification: test as owner, instructor, staff, student
+- [x] 6.4 Manual verification: test as owner, instructor, staff, student
 
 ---
 
