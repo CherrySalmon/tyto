@@ -78,7 +78,8 @@
   
 <script>
 import api from '@/lib/tyto-api';
-import cookieManager from '../../lib/cookieManager';
+import cookieManager from '../../lib/cookie-manager';
+import { recordAttendance } from '../../lib/attendance-manager';
 import { ElNotification, ElMessageBox, ElLoading } from 'element-plus'
 
 export default {
@@ -130,90 +131,42 @@ export default {
             console.error('Error fetching event data:', error);
         }
     },
-    getLocation(event) {
-        console.log("start getting location");
-        // Start the loading screen
+    async getLocation(event) {
         const loading = ElLoading.service({
             lock: true,
             text: 'Loading',
             background: 'rgba(0, 0, 0, 0.7)',
         });
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                position => this.showPosition(position, loading, event),
-                error => this.showError(error, loading)
-            );
-        } else {
-            this.locationText = "Geolocation is not supported by this browser.";
-        }
-    },
-    showPosition(position, loading, event) {
-        this.latitude = position.coords.latitude;
-        this.longitude = position.coords.longitude;
-
-        // POST coordinates to backend; geo-fence validated server-side
-        this.postAttendance(loading, event);
-    },
-    showError(error) {
-        switch (error.code) {
-            case error.PERMISSION_DENIED:
-                this.errMessage = "User denied the request for Geolocation.";
-                break;
-            case error.POSITION_UNAVAILABLE:
-                this.errMessage = "Location information is unavailable.";
-                break;
-            case error.TIMEOUT:
-                this.errMessage = "The request to get user location timed out.";
-                break;
-            default:
-                this.errMessage = "An unknown error occurred.";
-                break;
-        }
-    },
-    postAttendance(loading, event) {
-        // Use your actual course ID here
-        const courseId = event.course_id; // Example course ID
-        api.post(`/course/${courseId}/attendance`, {
-            event_id: event.id,
-            name: event.name,
-            latitude: this.latitude,
-            longitude: this.longitude,
-        })
-            .then(response => {
-                // Handle success
-                console.log('Attendance recorded successfully', response.data);
-                this.updateEventAttendanceStatus(event.id, true);
-                ElMessageBox.alert('Attendance recorded successfully', 'Success', {
-                    confirmButtonText: 'OK',
-                    type: 'success',
-                })
-            })
-            .catch(error => {
-                console.error('Error recording attendance', error);
-                const details = error.response?.data?.details || '';
-
-                if (error.response?.status === 403) {
-                    ElMessageBox.alert(details || 'Attendance was rejected', 'Failed', {
+        try {
+            await recordAttendance(event, {
+                onSuccess: (eventId) => {
+                    this.updateEventAttendanceStatus(eventId, true);
+                    ElMessageBox.alert('Attendance recorded successfully', 'Success', {
+                        confirmButtonText: 'OK',
+                        type: 'success',
+                    });
+                },
+                onError: (message) => {
+                    ElMessageBox.alert(message, 'Failed', {
                         confirmButtonText: 'OK',
                         type: 'error',
-                    })
-                } else {
-                    this.updateEventAttendanceStatus(event.id, true);
+                    });
+                },
+                onDuplicate: (eventId) => {
+                    this.updateEventAttendanceStatus(eventId, true);
                     ElMessageBox.alert('Attendance has already been recorded', 'Warning', {
                         confirmButtonText: 'OK',
                         type: 'warning',
-                    })
-                }
-            }).finally(() => {
-                loading.close();
+                    });
+                },
             });
+        } finally {
+            loading.close();
+        }
     },
     updateEventAttendanceStatus(eventId, status) {
         const eventIndex = this.events.findIndex(event => event.id === eventId);
         if (eventIndex !== -1) {
-            // Vue 2 reactivity caveat workaround
-            // this.$set(this.events[eventIndex], 'isAttendanceExisted', status);
-            // For Vue 3, you can directly assign the value:
             this.events[eventIndex].isAttendanceExisted = status;
         }
     },

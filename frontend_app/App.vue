@@ -71,7 +71,7 @@
 </template>
 
 <script>
-import cookieManager from './lib/cookieManager';
+import cookieManager from './lib/cookie-manager';
 // Debounce function to limit the rate at which a function is executed
 const debounce = (callback, delay) => {
   let tid;

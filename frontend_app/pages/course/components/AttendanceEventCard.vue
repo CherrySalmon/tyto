@@ -33,8 +33,8 @@
   
 <script>
 import api from '@/lib/tyto-api';
-import cookieManager from '../../../lib/cookieManager';
-import downloadFile from '../../../lib/downloadFile';
+import cookieManager from '../../../lib/cookie-manager';
+import downloadFile from '../../../lib/download-file';
 import AttendanceMap from './AttendanceMap.vue';
   export default {
     emits: ['create-event', 'edit-event', 'delete-event', 'create-location', 'update-location', 'delete-location', 'new-enrolls', 'update-enrollment', 'delete-enrollment'],

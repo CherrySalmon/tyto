@@ -94,7 +94,7 @@
 
 <script>
 import api from '@/lib/tyto-api';
-import cookieManager from '../../lib/cookieManager';
+import cookieManager from '../../lib/cookie-manager';
 import CourseInfoCard from './components/CourseInfoCard.vue';
 import ModifyCourseDialog from './components/ModifyCourseDialog.vue';
 import ManagePeopleCard from './components/ManagePeopleCard.vue';
