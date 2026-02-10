@@ -77,9 +77,9 @@
 </template>
   
 <script>
-import api from '@/lib/tyto-api';
-import cookieManager from '../../lib/cookie-manager';
-import { recordAttendance } from '../../lib/attendance-manager';
+import api from '@/lib/tytoApi';
+import cookieManager from '../../lib/cookieManager';
+import { recordAttendance } from '../../lib/attendanceManager';
 import { describeRoles } from '../../lib/roles';
 import { ElNotification, ElMessageBox, ElLoading } from 'element-plus'
 

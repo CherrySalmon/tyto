@@ -42,7 +42,7 @@
 
 
 <script>
-import api from '@/lib/tyto-api'
+import api from '@/lib/tytoApi'
 import { roleOptions } from '@/lib/roles'
 
 export default {

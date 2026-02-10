@@ -28,10 +28,10 @@
 </template>
   
 <script>
-import api from '@/lib/tyto-api';
-import cookieManager from '../../lib/cookie-manager';
-import { formatLocalDateTime } from '../../lib/date-formatter';
-import { recordAttendance } from '../../lib/attendance-manager';
+import api from '@/lib/tytoApi';
+import cookieManager from '../../lib/cookieManager';
+import { formatLocalDateTime } from '../../lib/dateFormatter';
+import { recordAttendance } from '../../lib/attendanceManager';
 import { ElMessageBox, ElLoading } from 'element-plus';
 
 export default {

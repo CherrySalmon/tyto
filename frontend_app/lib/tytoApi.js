@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import cookieManager from './cookie-manager'
+import cookieManager from './cookieManager'
 
 const api = axios.create({
   baseURL: '/api'

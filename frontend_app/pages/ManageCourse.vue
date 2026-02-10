@@ -41,7 +41,7 @@
 
 
 <script>
-import api from '@/lib/tyto-api'
+import api from '@/lib/tytoApi'
 
 export default {
     data() {

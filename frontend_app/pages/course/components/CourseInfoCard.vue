@@ -18,7 +18,7 @@
 </template>
   
 <script>
-import { formatLocalDateTime } from '../../../lib/date-formatter';
+import { formatLocalDateTime } from '../../../lib/dateFormatter';
 
 export default {
   props: ['course', 'currentRole'],

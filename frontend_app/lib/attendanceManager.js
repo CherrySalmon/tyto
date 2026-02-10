@@ -1,4 +1,4 @@
-import api from './tyto-api'
+import api from './tytoApi'
 import { getCurrentPosition, getGeolocationErrorMessage } from './geolocation'
 
 export async function recordAttendance(event, { onSuccess, onError, onDuplicate }) {
