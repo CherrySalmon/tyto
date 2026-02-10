@@ -197,13 +197,13 @@ describe 'Tyto::Repository::Courses' do
       _(result.events.map(&:name)).must_include 'Event 2'
     end
 
-    it 'returns empty array for course with no events' do
+    it 'returns empty collection for course with no events' do
       orm_course = Tyto::Course.create(name: 'Test Course')
 
       result = repository.find_with_events(orm_course.id)
 
       _(result.events_loaded?).must_equal true
-      _(result.events).must_equal []
+      _(result.events.empty?).must_equal true
     end
 
     it 'does not load locations' do
@@ -235,13 +235,13 @@ describe 'Tyto::Repository::Courses' do
       _(result.locations.map(&:name)).must_include 'Room B'
     end
 
-    it 'returns empty array for course with no locations' do
+    it 'returns empty collection for course with no locations' do
       orm_course = Tyto::Course.create(name: 'Test Course')
 
       result = repository.find_with_locations(orm_course.id)
 
       _(result.locations_loaded?).must_equal true
-      _(result.locations).must_equal []
+      _(result.locations.empty?).must_equal true
     end
 
     it 'does not load events' do
@@ -297,13 +297,13 @@ describe 'Tyto::Repository::Courses' do
       _(enrollment.participant.email).must_equal 'multi@example.com'
     end
 
-    it 'returns empty array for course with no enrollments' do
+    it 'returns empty collection for course with no enrollments' do
       orm_course = Tyto::Course.create(name: 'Test Course')
 
       result = repository.find_with_enrollments(orm_course.id)
 
       _(result.enrollments_loaded?).must_equal true
-      _(result.enrollments).must_equal []
+      _(result.enrollments.empty?).must_equal true
     end
 
     it 'does not load events or locations' do
@@ -528,14 +528,14 @@ describe 'Tyto::Repository::Courses' do
       _(result.enrollments.length).must_equal 1
     end
 
-    it 'returns empty arrays for course with no children' do
+    it 'returns empty collections for course with no children' do
       orm_course = Tyto::Course.create(name: 'Test Course')
 
       result = repository.find_full(orm_course.id)
 
-      _(result.events).must_equal []
-      _(result.locations).must_equal []
-      _(result.enrollments).must_equal []
+      _(result.events.empty?).must_equal true
+      _(result.locations.empty?).must_equal true
+      _(result.enrollments.empty?).must_equal true
     end
 
     it 'returns nil for non-existent course' do

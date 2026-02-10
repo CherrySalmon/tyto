@@ -237,7 +237,6 @@ module Tyto
       # @param load_locations [Boolean] whether to load locations
       # @param load_enrollments [Boolean] whether to load enrollments
       # @return [Entity::Course] the domain entity
-      # rubocop:disable Metrics/ParameterLists
       def rebuild_entity(orm_record, load_events: false, load_locations: false, load_enrollments: false)
         Entity::Course.new(
           id: orm_record.id,
@@ -247,12 +246,11 @@ module Tyto
           end_at: orm_record.end_at,
           created_at: orm_record.created_at,
           updated_at: orm_record.updated_at,
-          events: load_events ? rebuild_events(orm_record) : nil,
-          locations: load_locations ? rebuild_locations(orm_record) : nil,
-          enrollments: load_enrollments ? rebuild_enrollments(orm_record) : nil
+          events: load_events ? Domain::Courses::Values::Events.from(rebuild_events(orm_record)) : nil,
+          locations: load_locations ? Domain::Courses::Values::Locations.from(rebuild_locations(orm_record)) : nil,
+          enrollments: load_enrollments ? Domain::Courses::Values::Enrollments.from(rebuild_enrollments(orm_record)) : nil
         )
       end
-      # rubocop:enable Metrics/ParameterLists
 
       def rebuild_events(orm_course)
         Tyto::Event

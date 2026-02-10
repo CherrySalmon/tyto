@@ -208,7 +208,7 @@ end
 When an entity holds a collection of children (e.g., a Course has Events), wrap the collection in a typed value object rather than using a raw `Types::Array`:
 
 ```ruby
-class EventCollection
+class Events
   attr_reader :items
 
   def initialize(items)
@@ -222,9 +222,11 @@ class EventCollection
 end
 ```
 
+**Naming:** Use plural nouns (`Events`, `Locations`, `Enrollments`) — consistent with the existing `SystemRoles` and `CourseRoles` convention, and natural in domain language (`course.events.find(id)`).
+
 **Benefits:** type safety (only `Entity::Event` members), encapsulated query logic (move `find_event`, `event_count` off the parent entity), and the parent entity stays focused on its own concerns.
 
-**Coercion for ergonomics:** Use a type constructor that auto-wraps raw arrays into the collection object. This keeps test construction simple (`events: [event1, event2]`) while repositories use the explicit form (`EventCollection.new(events)`).
+**Coercion for ergonomics:** Use a type constructor that auto-wraps raw arrays into the collection object. This keeps test construction simple (`events: [event1, event2]`) while repositories use the explicit form (`Events.new(events)`).
 
 ### When to use Null Object collections vs. nil
 
