@@ -39,7 +39,7 @@ When populating or updating a plan:
 
 **Scope decisions**: Record deferrals and rationale. Cross off resolved Questions with the decision made.
 
-**Markdownlint clean**: The final plan document must have no markdownlint warnings. Verify before finishing.
+**Markdownlint clean**: The final plan document must have no markdownlint warnings. Verify before finishing. Note: line-length limits (MD013) are disabled — do not wrap lines to 80 characters. If a `.markdownlint.json` does not already exist in the project root, create one to codify these and any other deliberate rule exclusions from this skill.
 
 ## Plan File Template
 
