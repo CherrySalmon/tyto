@@ -1,6 +1,6 @@
 ---
 name: branch-plan
-description: Create a new git branch with an accompanying plan file for tracked, context-preserving work
+description: Create a plan document for the current branch, or for a specified new/existing branch. The complete template and all instructions are provided below — do not search for examples elsewhere.
 disable-model-invocation: true
 ---
 
@@ -38,6 +38,8 @@ When populating or updating a plan:
 **Update after each phase**: After each phase completes (tests written, implementation passing, frontend updated, verification), immediately update the plan: mark completed tasks, record findings/decisions, update Current State.
 
 **Scope decisions**: Record deferrals and rationale. Cross off resolved Questions with the decision made.
+
+**Markdownlint clean**: The final plan document must have no markdownlint warnings. Verify before finishing.
 
 ## Plan File Template
 
