@@ -33,7 +33,7 @@
   
 <script>
 import api from '@/lib/tytoApi';
-import cookieManager from '../../../lib/cookieManager';
+import session from '../../../lib/session';
 import downloadFile from '../../../lib/downloadFile';
 import AttendanceMap from './AttendanceMap.vue';
   export default {
@@ -59,7 +59,7 @@ import AttendanceMap from './AttendanceMap.vue';
         }
     },
     created() {
-      this.account = cookieManager.getAccount();
+      this.account = session.getAccount();
     },
     mounted() {
       window.onresize = () => {

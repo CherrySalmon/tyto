@@ -94,7 +94,7 @@
 
 <script>
 import api from '@/lib/tytoApi';
-import cookieManager from '../../lib/cookieManager';
+import session from '../../lib/session';
 import CourseInfoCard from './components/CourseInfoCard.vue';
 import ModifyCourseDialog from './components/ModifyCourseDialog.vue';
 import ManagePeopleCard from './components/ManagePeopleCard.vue';
@@ -150,7 +150,7 @@ export default {
   },
   created() {
     this.course.id = this.$route.params.id;
-    this.account = cookieManager.getAccount()
+    this.account = session.getAccount()
     if (this.account) {
       this.fetchCourse(this.course.id);
     }

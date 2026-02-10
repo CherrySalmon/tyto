@@ -12,7 +12,7 @@ Extract duplicated frontend utility code (geolocation, date formatting, attendan
 
 ## Strategy: Frontend-Only Cleanup
 
-No backend changes. This slice extracts duplicated Vue component logic into shared utilities under `frontend_app/lib/`. File naming convention: **PascalCase** for `.vue` components (Vue standard), **camelCase** for `.js` utility modules (matches JS variable/import naming).
+No backend changes. This slice extracts duplicated Vue component logic into shared utilities under `frontend_app/lib/`. File naming: **PascalCase** for `.vue` components (Vue standard), **concern-based names** for `.js` modules (e.g., `session.js`, `attendance.js`, `dates.js` — named by domain concern, not by mechanism or pattern suffix).
 
 1. **Analyze** — Identify all duplicated code across components
 2. **Extract** — Create shared utility modules
@@ -81,15 +81,15 @@ The attendance functions reference component-level `data()` properties:
 - [x] ~~Module style: ES module functions vs. Vue composable?~~ **Decision: Plain ES module functions in `lib/`. Vue composables (`useX`) would add coupling to Vue's reactivity system for what are essentially stateless utilities. The attendance flow function accepts callbacks for state mutation. This matches the existing `lib/` convention.**
 - [x] ~~Should `LocationCard.vue` geolocation be refactored too?~~ **Decision: Only extract the low-level geolocation promise wrapper that `LocationCard` could optionally adopt. Don't refactor `LocationCard`'s map initialization flow — it's a different use case and out of scope for this cleanup slice.**
 - [x] ~~`getLocalDateString` null return value: `'Invalid Date'` vs `false` vs `null`?~~ **Decision: Return `null` for invalid/missing input. More idiomatic for Vue templates (`v-if="formattedDate"`) and avoids rendering the literal string `'Invalid Date'`.**
-- [x] ~~File naming convention for `lib/` modules: camelCase vs kebab-case?~~ **Decision: Use camelCase for `.js` utility modules (matches JS variable/import naming conventions and is typical in Vue projects). PascalCase for `.vue` components (Vue standard). Initially switched to kebab-case but reverted — camelCase gives a natural match between filename and import variable name (e.g., `import cookieManager from './lib/cookieManager'`).**
+- [x] ~~File naming convention for `lib/` modules: camelCase vs kebab-case?~~ **Decision: Name `.js` modules by domain concern (e.g., `session.js`, `attendance.js`, `dates.js`), not by mechanism or pattern suffix (`-Manager`, `Formatter`). Went through kebab-case → camelCase → concern-based naming. Final convention: short, descriptive names that match JS import style (`import session from './lib/session'`). PascalCase for `.vue` components (Vue standard).**
 
 ## Scope
 
 **In scope**:
 
 - Extract `frontend_app/lib/geolocation.js` — promise-based geolocation wrapper + error message mapper
-- Extract `frontend_app/lib/dateFormatter.js` — `formatLocalDateTime(utcStr)` utility
-- Extract `frontend_app/lib/attendanceManager.js` — full attendance-recording flow (`recordAttendance`)
+- Extract `frontend_app/lib/dates.js` — `formatLocalDateTime(utcStr)` utility
+- Extract `frontend_app/lib/attendance.js` — full attendance-recording flow (`recordAttendance`)
 - Extract `frontend_app/lib/roles.js` — consolidated role definitions (labels + descriptions) used by multiple components
 - Update `AttendanceTrack.vue`, `AllCourse.vue`, `CourseInfoCard.vue`, `ManageAccount.vue` to use shared utilities
 - Remove duplicated method definitions from components
@@ -106,9 +106,14 @@ The attendance functions reference component-level `data()` properties:
 New files:
 
 - `frontend_app/lib/geolocation.js` — `getCurrentPosition()` returns Promise; `getGeolocationErrorMessage(error)` maps error codes
-- `frontend_app/lib/dateFormatter.js` — `formatLocalDateTime(utcStr)` returns `'YYYY-MM-DD HH:MM'` or `null`
-- `frontend_app/lib/attendanceManager.js` — `recordAttendance(event, { onSuccess, onError, onDuplicate })` orchestrates the full flow: get location → POST attendance → invoke callback
+- `frontend_app/lib/dates.js` — `formatLocalDateTime(utcStr)` returns `'YYYY-MM-DD HH:MM'` or `null`
+- `frontend_app/lib/attendance.js` — `recordAttendance(event, { onSuccess, onError, onDuplicate })` orchestrates the full flow: get location → POST attendance → invoke callback
 - `frontend_app/lib/roles.js` — `SYSTEM_ROLES` definitions, `roleOptions` for dropdowns, `describeRoles(roles)` for display
+
+Renamed files:
+
+- `frontend_app/lib/cookieManager.js` → `frontend_app/lib/session.js` (named by concern: auth session management)
+- `frontend_app/lib/tyto-api.js` → `frontend_app/lib/tytoApi.js` (camelCase consistency)
 
 Modified files:
 
@@ -123,8 +128,8 @@ Modified files:
 
 - [x] ~~0 Rename `cookieManager.js` → `cookie-manager.js`, `downloadFile.js` → `download-file.js`~~ (reverted — camelCase adopted as convention)
 - [x] 1 Create `frontend_app/lib/geolocation.js` with `getCurrentPosition()` promise wrapper and `getGeolocationErrorMessage(error)` mapper
-- [x] 2 Create `frontend_app/lib/dateFormatter.js` with `formatLocalDateTime(utcStr)` utility
-- [x] 3 Create `frontend_app/lib/attendanceManager.js` with `recordAttendance(event, callbacks)` that orchestrates geolocation → POST → status update
+- [x] 2 Create `frontend_app/lib/dates.js` with `formatLocalDateTime(utcStr)` utility
+- [x] 3 Create `frontend_app/lib/attendance.js` with `recordAttendance(event, callbacks)` that orchestrates geolocation → POST → status update
 - [x] 4a Update `AttendanceTrack.vue` — remove duplicated methods, import and use shared modules
 - [x] 4b Update `AllCourse.vue` — remove duplicated methods, import and use shared modules
 - [x] 4c Update `CourseInfoCard.vue` — remove `getLocalDateString`, import `formatLocalDateTime`
@@ -134,10 +139,10 @@ Modified files:
 
 ## Completed
 
-- Task 0: ~~Renamed to kebab-case~~ — reverted to camelCase convention. Also renamed `tyto-api.js` → `tytoApi.js` for consistency. All `lib/` files now use camelCase.
+- Task 0: Renamed lib/ files to concern-based names: `cookieManager` → `session`, `attendanceManager` → `attendance`, `dateFormatter` → `dates`, `tyto-api` → `tytoApi`. Updated all imports and variable references across 8 files.
 - Task 1: Created `lib/geolocation.js` — `getCurrentPosition()` promise wrapper + `getGeolocationErrorMessage()` error mapper
-- Task 2: Created `lib/date-formatter.js` — `formatLocalDateTime(utcStr)` returns `YYYY-MM-DD HH:MM` or `null`
-- Task 3: Created `lib/attendance-manager.js` — `recordAttendance(event, {onSuccess, onError, onDuplicate})` orchestrates geolocation → POST → callbacks
+- Task 2: Created `lib/dates.js` — `formatLocalDateTime(utcStr)` returns `YYYY-MM-DD HH:MM` or `null`
+- Task 3: Created `lib/attendance.js` — `recordAttendance(event, {onSuccess, onError, onDuplicate})` orchestrates geolocation → POST → callbacks
 - Task 4a: Updated `AttendanceTrack.vue` — replaced 5 methods with imports from shared modules; removed unused data properties (`latitude`, `longitude`, `errMessage`, `locationText`)
 - Task 4b: Updated `AllCourse.vue` — replaced 4 methods with imports from shared modules
 - Task 4c: Updated `CourseInfoCard.vue` — replaced inline `getLocalDateString` with `formatLocalDateTime` import; removed empty `data()`

@@ -71,7 +71,7 @@
 </template>
 
 <script>
-import cookieManager from './lib/cookieManager';
+import session from './lib/session';
 // Debounce function to limit the rate at which a function is executed
 const debounce = (callback, delay) => {
   let tid;
@@ -109,7 +109,7 @@ export default {
         };
     },
     created() {
-      this.account = cookieManager.getAccount()
+      this.account = session.getAccount()
       if(!this.account) {
         this.logout()
         if (window.location.pathname!='/login') {
@@ -120,7 +120,7 @@ export default {
     watch: {
       $route(to, from) {
         if (from.name == 'Login' || to.name == 'Login') {
-          this.account = cookieManager.getAccount()
+          this.account = session.getAccount()
         }
       }
     },
@@ -134,7 +134,7 @@ export default {
         }
       },
       logout() {
-        cookieManager.onLogout()
+        session.onLogout()
         this.$router.push('/login?redirect='+this.$route.fullPath)
       }
     }

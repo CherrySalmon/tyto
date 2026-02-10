@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import cookieManager from './cookieManager'
+import session from './session'
 
 const api = axios.create({
   baseURL: '/api'
@@ -8,7 +8,7 @@ const api = axios.create({
 
 // Request interceptor: attach auth
 api.interceptors.request.use(config => {
-  const account = cookieManager.getAccount()
+  const account = session.getAccount()
   if (account?.credential) {
     config.headers.Authorization = `Bearer ${account.credential}`
   }
@@ -20,7 +20,7 @@ api.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      cookieManager.onLogout()
+      session.onLogout()
       window.location.href = '/login'
     } else if (error.response?.status === 422) {
       ElMessage.warning(error.response.data?.message || 'Validation error')

@@ -29,9 +29,9 @@
   
 <script>
 import api from '@/lib/tytoApi';
-import cookieManager from '../../lib/cookieManager';
-import { formatLocalDateTime } from '../../lib/dateFormatter';
-import { recordAttendance } from '../../lib/attendanceManager';
+import session from '../../lib/session';
+import { formatLocalDateTime } from '../../lib/dates';
+import { recordAttendance } from '../../lib/attendance';
 import { ElMessageBox, ElLoading } from 'element-plus';
 
 export default {
@@ -74,7 +74,7 @@ export default {
     },
 
     created() {
-        this.account = cookieManager.getAccount();
+        this.account = session.getAccount();
         this.course_id = this.$route.params.id;
         this.fullscreenLoading = true;
         this.fetchEventData();

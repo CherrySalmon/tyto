@@ -78,8 +78,8 @@
   
 <script>
 import api from '@/lib/tytoApi';
-import cookieManager from '../../lib/cookieManager';
-import { recordAttendance } from '../../lib/attendanceManager';
+import session from '../../lib/session';
+import { recordAttendance } from '../../lib/attendance';
 import { describeRoles } from '../../lib/roles';
 import { ElNotification, ElMessageBox, ElLoading } from 'element-plus'
 
@@ -108,7 +108,7 @@ export default {
     };
   },
   created() {
-    this.account = cookieManager.getAccount()
+    this.account = session.getAccount()
     if (this.account) {
       this.fetchCourses()
       this.fetchEventData()
