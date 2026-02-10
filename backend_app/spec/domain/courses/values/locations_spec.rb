@@ -6,7 +6,7 @@ describe Tyto::Domain::Courses::Values::Locations do
   let(:now) { Time.now }
 
   let(:location1) do
-    Tyto::Entity::Location.new(
+    Tyto::Domain::Courses::Entities::Location.new(
       id: 1, course_id: 1, name: 'Room A',
       longitude: 121.5654, latitude: 25.0330,
       created_at: now, updated_at: now
@@ -14,7 +14,7 @@ describe Tyto::Domain::Courses::Values::Locations do
   end
 
   let(:location2) do
-    Tyto::Entity::Location.new(
+    Tyto::Domain::Courses::Entities::Location.new(
       id: 2, course_id: 1, name: 'Room B',
       longitude: 121.5700, latitude: 25.0400,
       created_at: now, updated_at: now

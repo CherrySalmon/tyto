@@ -2,7 +2,7 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Tyto::Entity::Course' do
+describe 'Tyto::Domain::Courses::Entities::Course' do
   let(:now) { Time.now }
   let(:one_hour) { 3600 }
   let(:one_day) { 24 * 60 * 60 }
@@ -21,7 +21,7 @@ describe 'Tyto::Entity::Course' do
 
   describe 'creation' do
     it 'creates a valid course' do
-      course = Tyto::Entity::Course.new(valid_attributes)
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
       _(course.id).must_equal 1
       _(course.name).must_equal 'Ruby Programming'
@@ -29,7 +29,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'creates a course with minimal attributes' do
-      course = Tyto::Entity::Course.new(
+      course = Tyto::Domain::Courses::Entities::Course.new(
         id: nil,
         name: 'Minimal Course',
         logo: nil,
@@ -44,19 +44,19 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'rejects empty course name' do
-      _ { Tyto::Entity::Course.new(valid_attributes.merge(name: '')) }
+      _ { Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(name: '')) }
         .must_raise Dry::Struct::Error
     end
 
     it 'rejects course name over 200 characters' do
-      _ { Tyto::Entity::Course.new(valid_attributes.merge(name: 'A' * 201)) }
+      _ { Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(name: 'A' * 201)) }
         .must_raise Dry::Struct::Error
     end
   end
 
   describe 'immutability and constraint enforcement' do
     it 'enforces name constraint on updates via new()' do
-      course = Tyto::Entity::Course.new(valid_attributes)
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
       # Valid update
       updated = course.new(name: 'Advanced Ruby')
@@ -68,7 +68,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'preserves other attributes on partial update' do
-      course = Tyto::Entity::Course.new(valid_attributes)
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
       updated = course.new(logo: 'new_logo.png')
 
       _(updated.logo).must_equal 'new_logo.png'
@@ -80,7 +80,7 @@ describe 'Tyto::Entity::Course' do
 
   describe '#time_range' do
     it 'returns TimeRange when start and end times exist' do
-      course = Tyto::Entity::Course.new(valid_attributes)
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
       _(course.time_range).must_be_instance_of Tyto::Value::TimeRange
       _(course.time_range.start_at).must_equal course.start_at
@@ -89,14 +89,14 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'returns NullTimeRange when start_at is missing' do
-      course = Tyto::Entity::Course.new(valid_attributes.merge(start_at: nil))
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(start_at: nil))
 
       _(course.time_range).must_be_instance_of Tyto::Value::NullTimeRange
       _(course.time_range.null?).must_equal true
     end
 
     it 'returns NullTimeRange when end_at is missing' do
-      course = Tyto::Entity::Course.new(valid_attributes.merge(end_at: nil))
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(end_at: nil))
 
       _(course.time_range).must_be_instance_of Tyto::Value::NullTimeRange
       _(course.time_range.null?).must_equal true
@@ -105,13 +105,13 @@ describe 'Tyto::Entity::Course' do
 
   describe '#duration' do
     it 'returns duration in seconds' do
-      course = Tyto::Entity::Course.new(valid_attributes)
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
       _(course.duration).must_equal 30 * one_day
     end
 
     it 'returns 0 when dates are missing (via NullTimeRange)' do
-      course = Tyto::Entity::Course.new(valid_attributes.merge(start_at: nil))
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(start_at: nil))
 
       _(course.duration).must_equal 0
     end
@@ -119,7 +119,7 @@ describe 'Tyto::Entity::Course' do
 
   describe '#active?' do
     it 'returns true for currently running course' do
-      course = Tyto::Entity::Course.new(
+      course = Tyto::Domain::Courses::Entities::Course.new(
         valid_attributes.merge(
           start_at: now - one_hour,
           end_at: now + one_hour
@@ -130,7 +130,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'returns false for future course' do
-      course = Tyto::Entity::Course.new(
+      course = Tyto::Domain::Courses::Entities::Course.new(
         valid_attributes.merge(
           start_at: now + one_hour,
           end_at: now + 2 * one_hour
@@ -141,7 +141,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'returns false when dates are missing (via NullTimeRange)' do
-      course = Tyto::Entity::Course.new(valid_attributes.merge(start_at: nil))
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(start_at: nil))
 
       _(course.active?).must_equal false
     end
@@ -149,7 +149,7 @@ describe 'Tyto::Entity::Course' do
 
   describe '#upcoming?' do
     it 'returns true for future course' do
-      course = Tyto::Entity::Course.new(
+      course = Tyto::Domain::Courses::Entities::Course.new(
         valid_attributes.merge(
           start_at: now + one_hour,
           end_at: now + 2 * one_hour
@@ -160,7 +160,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'returns false for current course' do
-      course = Tyto::Entity::Course.new(
+      course = Tyto::Domain::Courses::Entities::Course.new(
         valid_attributes.merge(
           start_at: now - one_hour,
           end_at: now + one_hour
@@ -171,7 +171,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'returns false when dates are missing (via NullTimeRange)' do
-      course = Tyto::Entity::Course.new(valid_attributes.merge(start_at: nil))
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(start_at: nil))
 
       _(course.upcoming?).must_equal false
     end
@@ -179,7 +179,7 @@ describe 'Tyto::Entity::Course' do
 
   describe '#ended?' do
     it 'returns true for past course' do
-      course = Tyto::Entity::Course.new(
+      course = Tyto::Domain::Courses::Entities::Course.new(
         valid_attributes.merge(
           start_at: now - 2 * one_hour,
           end_at: now - one_hour
@@ -190,7 +190,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'returns false for current course' do
-      course = Tyto::Entity::Course.new(
+      course = Tyto::Domain::Courses::Entities::Course.new(
         valid_attributes.merge(
           start_at: now - one_hour,
           end_at: now + one_hour
@@ -201,7 +201,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     it 'returns false when dates are missing (via NullTimeRange)' do
-      course = Tyto::Entity::Course.new(valid_attributes.merge(start_at: nil))
+      course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(start_at: nil))
 
       _(course.ended?).must_equal false
     end
@@ -209,7 +209,7 @@ describe 'Tyto::Entity::Course' do
 
   describe 'child collections' do
     let(:event1) do
-      Tyto::Entity::Event.new(
+      Tyto::Domain::Courses::Entities::Event.new(
         id: 1, course_id: 1, location_id: 1, name: 'Event 1',
         start_at: now, end_at: now + one_hour,
         created_at: now, updated_at: now
@@ -217,7 +217,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     let(:event2) do
-      Tyto::Entity::Event.new(
+      Tyto::Domain::Courses::Entities::Event.new(
         id: 2, course_id: 1, location_id: 1, name: 'Event 2',
         start_at: now + one_hour, end_at: now + 2 * one_hour,
         created_at: now, updated_at: now
@@ -225,7 +225,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     let(:location1) do
-      Tyto::Entity::Location.new(
+      Tyto::Domain::Courses::Entities::Location.new(
         id: 1, course_id: 1, name: 'Room A',
         longitude: 121.5654, latitude: 25.0330,
         created_at: now, updated_at: now
@@ -234,14 +234,14 @@ describe 'Tyto::Entity::Course' do
 
     describe 'default state (not loaded)' do
       it 'has nil events by default' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _(course.events).must_be_nil
         _(course.events_loaded?).must_equal false
       end
 
       it 'has nil locations by default' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _(course.locations).must_be_nil
         _(course.locations_loaded?).must_equal false
@@ -250,7 +250,7 @@ describe 'Tyto::Entity::Course' do
 
     describe 'loaded state' do
       it 'can have events loaded (empty)' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             events: Tyto::Domain::Courses::Values::Events.from([])
                                           ))
 
@@ -260,7 +260,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'can have events loaded (with data)' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             events: Tyto::Domain::Courses::Values::Events.from([event1, event2])
                                           ))
 
@@ -269,7 +269,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'can have locations loaded (empty)' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             locations: Tyto::Domain::Courses::Values::Locations.from([])
                                           ))
 
@@ -279,7 +279,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'can have locations loaded (with data)' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             locations: Tyto::Domain::Courses::Values::Locations.from([location1])
                                           ))
 
@@ -290,7 +290,7 @@ describe 'Tyto::Entity::Course' do
 
     describe '#find_event' do
       it 'finds event by ID when events are loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             events: Tyto::Domain::Courses::Values::Events.from([event1, event2])
                                           ))
 
@@ -299,7 +299,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'returns nil when event not found' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             events: Tyto::Domain::Courses::Values::Events.from([event1])
                                           ))
 
@@ -307,7 +307,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'raises NoMethodError when events not loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _ { course.find_event(1) }
           .must_raise NoMethodError
@@ -316,7 +316,7 @@ describe 'Tyto::Entity::Course' do
 
     describe '#find_location' do
       it 'finds location by ID when locations are loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             locations: Tyto::Domain::Courses::Values::Locations.from([location1])
                                           ))
 
@@ -325,7 +325,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'returns nil when location not found' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             locations: Tyto::Domain::Courses::Values::Locations.from([location1])
                                           ))
 
@@ -333,7 +333,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'raises NoMethodError when locations not loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _ { course.find_location(1) }
           .must_raise NoMethodError
@@ -342,7 +342,7 @@ describe 'Tyto::Entity::Course' do
 
     describe '#event_count' do
       it 'returns count when events are loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             events: Tyto::Domain::Courses::Values::Events.from([event1, event2])
                                           ))
 
@@ -350,7 +350,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'returns 0 for empty events' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             events: Tyto::Domain::Courses::Values::Events.from([])
                                           ))
 
@@ -358,7 +358,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'raises NoMethodError when events not loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _ { course.event_count }
           .must_raise NoMethodError
@@ -367,7 +367,7 @@ describe 'Tyto::Entity::Course' do
 
     describe '#location_count' do
       it 'returns count when locations are loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             locations: Tyto::Domain::Courses::Values::Locations.from([location1])
                                           ))
 
@@ -375,7 +375,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'returns 0 for empty locations' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             locations: Tyto::Domain::Courses::Values::Locations.from([])
                                           ))
 
@@ -383,7 +383,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'raises NoMethodError when locations not loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _ { course.location_count }
           .must_raise NoMethodError
@@ -398,7 +398,7 @@ describe 'Tyto::Entity::Course' do
     let(:participant) { ->(email, name) { Tyto::Domain::Courses::Values::Participant.new(email:, name:) } }
 
     let(:owner_enrollment) do
-      Tyto::Entity::Enrollment.new(
+      Tyto::Domain::Courses::Entities::Enrollment.new(
         id: 1, account_id: 10, course_id: 1,
         participant: participant.call('owner@example.com', 'Owner'),
         roles: course_roles.call(['owner']),
@@ -407,7 +407,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     let(:instructor_enrollment) do
-      Tyto::Entity::Enrollment.new(
+      Tyto::Domain::Courses::Entities::Enrollment.new(
         id: 2, account_id: 20, course_id: 1,
         participant: participant.call('instructor@example.com', 'Instructor'),
         roles: course_roles.call(['instructor']),
@@ -416,7 +416,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     let(:student_enrollment) do
-      Tyto::Entity::Enrollment.new(
+      Tyto::Domain::Courses::Entities::Enrollment.new(
         id: 3, account_id: 30, course_id: 1,
         participant: participant.call('student@example.com', 'Student'),
         roles: course_roles.call(['student']),
@@ -425,7 +425,7 @@ describe 'Tyto::Entity::Course' do
     end
 
     let(:multi_role_enrollment) do
-      Tyto::Entity::Enrollment.new(
+      Tyto::Domain::Courses::Entities::Enrollment.new(
         id: 4, account_id: 40, course_id: 1,
         participant: participant.call('ta@example.com', 'TA'),
         roles: course_roles.call(%w[staff student]),
@@ -435,7 +435,7 @@ describe 'Tyto::Entity::Course' do
 
     describe 'default state (not loaded)' do
       it 'has nil enrollments by default' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _(course.enrollments).must_be_nil
         _(course.enrollments_loaded?).must_equal false
@@ -444,7 +444,7 @@ describe 'Tyto::Entity::Course' do
 
     describe 'loaded state' do
       it 'can have enrollments loaded (empty)' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             enrollments: Tyto::Domain::Courses::Values::Enrollments.from([])
                                           ))
 
@@ -457,7 +457,7 @@ describe 'Tyto::Entity::Course' do
         enrollments = Tyto::Domain::Courses::Values::Enrollments.from(
           [owner_enrollment, instructor_enrollment, student_enrollment]
         )
-        course = Tyto::Entity::Course.new(valid_attributes.merge(enrollments:))
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(enrollments:))
 
         _(course.enrollments.length).must_equal 3
         _(course.enrollments_loaded?).must_equal true
@@ -469,14 +469,14 @@ describe 'Tyto::Entity::Course' do
         enrollments = Tyto::Domain::Courses::Values::Enrollments.from(
           [owner_enrollment, student_enrollment]
         )
-        course = Tyto::Entity::Course.new(valid_attributes.merge(enrollments:))
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(enrollments:))
 
         found = course.find_enrollment(30)
         _(found.participant.email).must_equal 'student@example.com'
       end
 
       it 'returns nil when enrollment not found' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             enrollments: Tyto::Domain::Courses::Values::Enrollments.from([owner_enrollment])
                                           ))
 
@@ -484,7 +484,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'raises NoMethodError when not loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _ { course.find_enrollment(10) }
           .must_raise NoMethodError
@@ -496,13 +496,13 @@ describe 'Tyto::Entity::Course' do
         enrollments = Tyto::Domain::Courses::Values::Enrollments.from(
           [owner_enrollment, student_enrollment]
         )
-        course = Tyto::Entity::Course.new(valid_attributes.merge(enrollments:))
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(enrollments:))
 
         _(course.enrollment_count).must_equal 2
       end
 
       it 'returns 0 for empty enrollments' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             enrollments: Tyto::Domain::Courses::Values::Enrollments.from([])
                                           ))
 
@@ -510,7 +510,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'raises NoMethodError when not loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _ { course.enrollment_count }
           .must_raise NoMethodError
@@ -522,14 +522,14 @@ describe 'Tyto::Entity::Course' do
         enrollments = Tyto::Domain::Courses::Values::Enrollments.from(
           [owner_enrollment, instructor_enrollment, student_enrollment, multi_role_enrollment]
         )
-        course = Tyto::Entity::Course.new(valid_attributes.merge(enrollments:))
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(enrollments:))
 
         students = course.enrollments_with_role('student')
         _(students.length).must_equal 2 # student + multi_role (has student)
       end
 
       it 'returns empty array when no match' do
-        course = Tyto::Entity::Course.new(valid_attributes.merge(
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(
                                             enrollments: Tyto::Domain::Courses::Values::Enrollments.from([student_enrollment])
                                           ))
 
@@ -537,7 +537,7 @@ describe 'Tyto::Entity::Course' do
       end
 
       it 'raises NoMethodError when not loaded' do
-        course = Tyto::Entity::Course.new(valid_attributes)
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes)
 
         _ { course.enrollments_with_role('student') }
           .must_raise NoMethodError
@@ -549,7 +549,7 @@ describe 'Tyto::Entity::Course' do
         enrollments = Tyto::Domain::Courses::Values::Enrollments.from(
           [owner_enrollment, instructor_enrollment, student_enrollment, multi_role_enrollment]
         )
-        course = Tyto::Entity::Course.new(valid_attributes.merge(enrollments:))
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(enrollments:))
 
         staff = course.teaching_staff
         _(staff.length).must_equal 3 # owner, instructor, multi_role (has staff)
@@ -557,7 +557,7 @@ describe 'Tyto::Entity::Course' do
 
       it 'excludes student-only enrollments' do
         enrollments = Tyto::Domain::Courses::Values::Enrollments.from([student_enrollment])
-        course = Tyto::Entity::Course.new(valid_attributes.merge(enrollments:))
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(enrollments:))
 
         _(course.teaching_staff).must_equal []
       end
@@ -568,7 +568,7 @@ describe 'Tyto::Entity::Course' do
         enrollments = Tyto::Domain::Courses::Values::Enrollments.from(
           [owner_enrollment, instructor_enrollment, student_enrollment, multi_role_enrollment]
         )
-        course = Tyto::Entity::Course.new(valid_attributes.merge(enrollments:))
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(enrollments:))
 
         students = course.students
         _(students.length).must_equal 2 # student + multi_role (has student)
@@ -578,7 +578,7 @@ describe 'Tyto::Entity::Course' do
         enrollments = Tyto::Domain::Courses::Values::Enrollments.from(
           [owner_enrollment, instructor_enrollment]
         )
-        course = Tyto::Entity::Course.new(valid_attributes.merge(enrollments:))
+        course = Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(enrollments:))
 
         _(course.students).must_equal []
       end

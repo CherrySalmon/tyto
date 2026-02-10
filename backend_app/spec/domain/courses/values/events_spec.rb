@@ -7,7 +7,7 @@ describe Tyto::Domain::Courses::Values::Events do
   let(:one_hour) { 3600 }
 
   let(:event1) do
-    Tyto::Entity::Event.new(
+    Tyto::Domain::Courses::Entities::Event.new(
       id: 1, course_id: 1, location_id: 1, name: 'Lecture 1',
       start_at: now, end_at: now + one_hour,
       created_at: now, updated_at: now
@@ -15,7 +15,7 @@ describe Tyto::Domain::Courses::Values::Events do
   end
 
   let(:event2) do
-    Tyto::Entity::Event.new(
+    Tyto::Domain::Courses::Entities::Event.new(
       id: 2, course_id: 1, location_id: 2, name: 'Lecture 2',
       start_at: now + one_hour, end_at: now + 2 * one_hour,
       created_at: now, updated_at: now
@@ -23,7 +23,7 @@ describe Tyto::Domain::Courses::Values::Events do
   end
 
   let(:event3) do
-    Tyto::Entity::Event.new(
+    Tyto::Domain::Courses::Entities::Event.new(
       id: 3, course_id: 1, location_id: 1, name: 'Lab Session',
       start_at: now + 2 * one_hour, end_at: now + 3 * one_hour,
       created_at: now, updated_at: now

@@ -2,7 +2,7 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Tyto::Entity::Enrollment' do
+describe 'Tyto::Domain::Courses::Entities::Enrollment' do
   let(:now) { Time.now }
 
   # Helper to create CourseRoles
@@ -28,7 +28,7 @@ describe 'Tyto::Entity::Enrollment' do
 
   describe 'creation' do
     it 'creates a valid enrollment' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes)
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes)
 
       _(enrollment.id).must_equal 1
       _(enrollment.account_id).must_equal 10
@@ -39,20 +39,20 @@ describe 'Tyto::Entity::Enrollment' do
 
     it 'creates enrollment with multiple roles' do
       attrs = valid_attributes.merge(roles: course_roles.call(%w[instructor staff]))
-      enrollment = Tyto::Entity::Enrollment.new(attrs)
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(attrs)
 
       _(enrollment.roles.to_a).must_equal %w[instructor staff]
     end
 
     it 'creates enrollment with all roles' do
       attrs = valid_attributes.merge(roles: course_roles.call(%w[owner instructor staff student]))
-      enrollment = Tyto::Entity::Enrollment.new(attrs)
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(attrs)
 
       _(enrollment.roles.count).must_equal 4
     end
 
     it 'creates enrollment without optional attributes' do
-      enrollment = Tyto::Entity::Enrollment.new(
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(
         id: nil,
         account_id: 10,
         course_id: 20,
@@ -68,17 +68,17 @@ describe 'Tyto::Entity::Enrollment' do
     end
 
     it 'requires account_id' do
-      _ { Tyto::Entity::Enrollment.new(valid_attributes.merge(account_id: nil)) }
+      _ { Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(account_id: nil)) }
         .must_raise Dry::Struct::Error
     end
 
     it 'requires course_id' do
-      _ { Tyto::Entity::Enrollment.new(valid_attributes.merge(course_id: nil)) }
+      _ { Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(course_id: nil)) }
         .must_raise Dry::Struct::Error
     end
 
     it 'rejects raw arrays (must use CourseRoles)' do
-      _ { Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: ['student'])) }
+      _ { Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: ['student'])) }
         .must_raise Dry::Struct::Error
     end
 
@@ -95,14 +95,14 @@ describe 'Tyto::Entity::Enrollment' do
 
   describe '#has_role?' do
     it 'returns true when enrollment has the role' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(%w[instructor student])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(%w[instructor student])))
 
       _(enrollment.has_role?('instructor')).must_equal true
       _(enrollment.has_role?('student')).must_equal true
     end
 
     it 'returns false when enrollment lacks the role' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['student'])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['student'])))
 
       _(enrollment.has_role?('instructor')).must_equal false
       _(enrollment.has_role?('owner')).must_equal false
@@ -111,27 +111,27 @@ describe 'Tyto::Entity::Enrollment' do
 
   describe 'role predicates' do
     it 'returns true for owner?' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['owner'])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['owner'])))
 
       _(enrollment.owner?).must_equal true
       _(enrollment.instructor?).must_equal false
     end
 
     it 'returns true for instructor?' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['instructor'])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['instructor'])))
 
       _(enrollment.instructor?).must_equal true
       _(enrollment.student?).must_equal false
     end
 
     it 'returns true for staff?' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['staff'])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['staff'])))
 
       _(enrollment.staff?).must_equal true
     end
 
     it 'returns true for student?' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['student'])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['student'])))
 
       _(enrollment.student?).must_equal true
     end
@@ -139,31 +139,31 @@ describe 'Tyto::Entity::Enrollment' do
 
   describe '#teaching?' do
     it 'returns true for owner' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['owner'])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['owner'])))
 
       _(enrollment.teaching?).must_equal true
     end
 
     it 'returns true for instructor' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['instructor'])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['instructor'])))
 
       _(enrollment.teaching?).must_equal true
     end
 
     it 'returns true for staff' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['staff'])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['staff'])))
 
       _(enrollment.teaching?).must_equal true
     end
 
     it 'returns false for student only' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['student'])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(['student'])))
 
       _(enrollment.teaching?).must_equal false
     end
 
     it 'returns true when mixed roles include teaching role' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call(%w[student instructor])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call(%w[student instructor])))
 
       _(enrollment.teaching?).must_equal true
     end
@@ -171,13 +171,13 @@ describe 'Tyto::Entity::Enrollment' do
 
   describe '#active?' do
     it 'returns true when has roles' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes)
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes)
 
       _(enrollment.active?).must_equal true
     end
 
     it 'returns false when no roles' do
-      enrollment = Tyto::Entity::Enrollment.new(valid_attributes.merge(roles: course_roles.call([])))
+      enrollment = Tyto::Domain::Courses::Entities::Enrollment.new(valid_attributes.merge(roles: course_roles.call([])))
 
       _(enrollment.active?).must_equal false
     end

@@ -98,7 +98,7 @@ module Tyto
         end
 
         def persist_event(validated)
-          entity = Entity::Event.new(
+          entity = Domain::Courses::Entities::Event.new(
             id: nil,
             course_id: validated[:course_id],
             location_id: validated[:location_id],

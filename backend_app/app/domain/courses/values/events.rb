@@ -11,7 +11,7 @@ module Tyto
         # Value object wrapping a typed collection of Event entities.
         # Encapsulates query methods that previously lived on Course.
         class Events < Dry::Struct
-          attribute :events, Types::Array.of(Entity::Event)
+          attribute :events, Types::Array.of(Entities::Event)
 
           include Enumerable
 

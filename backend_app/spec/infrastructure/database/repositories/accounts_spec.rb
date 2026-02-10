@@ -7,7 +7,7 @@ describe 'Tyto::Repository::Accounts' do
 
   describe '#create' do
     it 'persists a new account and returns entity with ID' do
-      entity = Tyto::Entity::Account.new(
+      entity = Tyto::Domain::Accounts::Entities::Account.new(
         id: nil,
         name: 'John Doe',
         email: 'john@example.com',
@@ -18,14 +18,14 @@ describe 'Tyto::Repository::Accounts' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Tyto::Entity::Account
+      _(result).must_be_instance_of Tyto::Domain::Accounts::Entities::Account
       _(result.id).wont_be_nil
       _(result.name).must_equal 'John Doe'
       _(result.email).must_equal 'john@example.com'
     end
 
     it 'persists account with minimal attributes' do
-      entity = Tyto::Entity::Account.new(
+      entity = Tyto::Domain::Accounts::Entities::Account.new(
         id: nil,
         name: nil,
         email: 'minimal@example.com',
@@ -42,7 +42,7 @@ describe 'Tyto::Repository::Accounts' do
     end
 
     it 'assigns roles when provided' do
-      entity = Tyto::Entity::Account.new(
+      entity = Tyto::Domain::Accounts::Entities::Account.new(
         id: nil,
         name: 'Admin User',
         email: 'admin@example.com',
@@ -59,7 +59,7 @@ describe 'Tyto::Repository::Accounts' do
     end
 
     it 'returns entity with roles not loaded when no roles provided' do
-      entity = Tyto::Entity::Account.new(
+      entity = Tyto::Domain::Accounts::Entities::Account.new(
         id: nil,
         name: 'No Roles',
         email: 'noroles@example.com',
@@ -83,7 +83,7 @@ describe 'Tyto::Repository::Accounts' do
 
       result = repository.find_id(orm_account.id)
 
-      _(result).must_be_instance_of Tyto::Entity::Account
+      _(result).must_be_instance_of Tyto::Domain::Accounts::Entities::Account
       _(result.id).must_equal orm_account.id
       _(result.name).must_equal 'Test User'
       _(result.email).must_equal 'test@example.com'
@@ -145,7 +145,7 @@ describe 'Tyto::Repository::Accounts' do
 
       result = repository.find_by_email('findme@example.com')
 
-      _(result).must_be_instance_of Tyto::Entity::Account
+      _(result).must_be_instance_of Tyto::Domain::Accounts::Entities::Account
       _(result.id).must_equal orm_account.id
       _(result.email).must_equal 'findme@example.com'
     end
@@ -186,7 +186,7 @@ describe 'Tyto::Repository::Accounts' do
       result = repository.find_all
 
       _(result.length).must_equal 2
-      result.each { |account| _(account).must_be_instance_of Tyto::Entity::Account }
+      result.each { |account| _(account).must_be_instance_of Tyto::Domain::Accounts::Entities::Account }
     end
 
     it 'returns accounts with roles not loaded' do
@@ -263,7 +263,7 @@ describe 'Tyto::Repository::Accounts' do
     end
 
     it 'raises error for non-existent account' do
-      entity = Tyto::Entity::Account.new(
+      entity = Tyto::Domain::Accounts::Entities::Account.new(
         id: 999_999,
         name: 'Ghost',
         email: 'ghost@example.com',
@@ -301,7 +301,7 @@ describe 'Tyto::Repository::Accounts' do
 
       result = repository.find_or_create_by_email('existing@example.com')
 
-      _(result).must_be_instance_of Tyto::Entity::Account
+      _(result).must_be_instance_of Tyto::Domain::Accounts::Entities::Account
       _(result.id).must_equal existing.id
       _(result.email).must_equal 'existing@example.com'
       _(result.name).must_equal 'Existing User'
@@ -310,7 +310,7 @@ describe 'Tyto::Repository::Accounts' do
     it 'creates new account with member role when email does not exist' do
       result = repository.find_or_create_by_email('newuser@example.com')
 
-      _(result).must_be_instance_of Tyto::Entity::Account
+      _(result).must_be_instance_of Tyto::Domain::Accounts::Entities::Account
       _(result.id).wont_be_nil
       _(result.email).must_equal 'newuser@example.com'
 
@@ -331,7 +331,7 @@ describe 'Tyto::Repository::Accounts' do
   describe 'round-trip' do
     it 'maintains data integrity through create -> find -> update -> find cycle' do
       # Create
-      original = Tyto::Entity::Account.new(
+      original = Tyto::Domain::Accounts::Entities::Account.new(
         id: nil,
         name: 'Full Cycle',
         email: 'cycle@example.com',

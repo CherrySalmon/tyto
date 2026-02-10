@@ -8,7 +8,7 @@ describe Tyto::LocationPolicy do
   let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
 
   def create_enrollment(roles:)
-    Tyto::Entity::Enrollment.new(
+    Tyto::Domain::Courses::Entities::Enrollment.new(
       id: 1,
       account_id: account.id,
       course_id: course.id,

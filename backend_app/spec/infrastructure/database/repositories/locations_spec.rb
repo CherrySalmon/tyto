@@ -12,7 +12,7 @@ describe 'Tyto::Repository::Locations' do
 
   describe '#create' do
     it 'persists a new location and returns entity with ID' do
-      entity = Tyto::Entity::Location.new(
+      entity = Tyto::Domain::Courses::Entities::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Main Lecture Hall',
@@ -24,7 +24,7 @@ describe 'Tyto::Repository::Locations' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Tyto::Entity::Location
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Location
       _(result.id).wont_be_nil
       _(result.name).must_equal 'Main Lecture Hall'
       _(result.course_id).must_equal course.id
@@ -35,7 +35,7 @@ describe 'Tyto::Repository::Locations' do
     end
 
     it 'persists location without coordinates' do
-      entity = Tyto::Entity::Location.new(
+      entity = Tyto::Domain::Courses::Entities::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Virtual Room',
@@ -65,7 +65,7 @@ describe 'Tyto::Repository::Locations' do
 
       result = repository.find_id(orm_location.id)
 
-      _(result).must_be_instance_of Tyto::Entity::Location
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Location
       _(result.id).must_equal orm_location.id
       _(result.name).must_equal 'Test Location'
       _(result.course_id).must_equal course.id
@@ -87,7 +87,7 @@ describe 'Tyto::Repository::Locations' do
 
       _(result).must_be_kind_of Hash
       _(result.length).must_equal 2
-      _(result[loc1.id]).must_be_instance_of Tyto::Entity::Location
+      _(result[loc1.id]).must_be_instance_of Tyto::Domain::Courses::Entities::Location
       _(result[loc1.id].name).must_equal 'Room A'
       _(result[loc2.id].name).must_equal 'Room B'
     end
@@ -154,7 +154,7 @@ describe 'Tyto::Repository::Locations' do
       result = repository.find_all
 
       _(result.length).must_equal 2
-      result.each { |loc| _(loc).must_be_instance_of Tyto::Entity::Location }
+      result.each { |loc| _(loc).must_be_instance_of Tyto::Domain::Courses::Entities::Location }
     end
   end
 
@@ -183,7 +183,7 @@ describe 'Tyto::Repository::Locations' do
     end
 
     it 'raises error for non-existent location' do
-      entity = Tyto::Entity::Location.new(
+      entity = Tyto::Domain::Courses::Entities::Location.new(
         id: 999_999,
         course_id: course.id,
         name: 'Ghost Location',
@@ -249,7 +249,7 @@ describe 'Tyto::Repository::Locations' do
   describe 'round-trip' do
     it 'maintains data integrity through create -> find -> update -> find cycle' do
       # Create
-      original = Tyto::Entity::Location.new(
+      original = Tyto::Domain::Courses::Entities::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Full Cycle Test',
@@ -282,7 +282,7 @@ describe 'Tyto::Repository::Locations' do
 
   describe 'geo_location integration' do
     it 'entity has functioning geo_location value object' do
-      entity = Tyto::Entity::Location.new(
+      entity = Tyto::Domain::Courses::Entities::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Taipei Office',
@@ -299,7 +299,7 @@ describe 'Tyto::Repository::Locations' do
     end
 
     it 'entity without coordinates has NullGeoLocation' do
-      entity = Tyto::Entity::Location.new(
+      entity = Tyto::Domain::Courses::Entities::Location.new(
         id: nil,
         course_id: course.id,
         name: 'Virtual Location',

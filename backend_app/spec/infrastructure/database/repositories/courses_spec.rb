@@ -9,7 +9,7 @@ describe 'Tyto::Repository::Courses' do
 
   describe '#create' do
     it 'persists a new course and returns entity with ID' do
-      entity = Tyto::Entity::Course.new(
+      entity = Tyto::Domain::Courses::Entities::Course.new(
         id: nil,
         name: 'Ruby Programming',
         logo: 'ruby.png',
@@ -21,7 +21,7 @@ describe 'Tyto::Repository::Courses' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Tyto::Entity::Course
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Course
       _(result.id).wont_be_nil
       _(result.name).must_equal 'Ruby Programming'
       _(result.logo).must_equal 'ruby.png'
@@ -30,7 +30,7 @@ describe 'Tyto::Repository::Courses' do
     end
 
     it 'persists course with minimal attributes' do
-      entity = Tyto::Entity::Course.new(
+      entity = Tyto::Domain::Courses::Entities::Course.new(
         id: nil,
         name: 'Minimal Course',
         logo: nil,
@@ -58,7 +58,7 @@ describe 'Tyto::Repository::Courses' do
 
       _(result).must_be_kind_of Hash
       _(result.length).must_equal 2
-      _(result[c1.id]).must_be_instance_of Tyto::Entity::Course
+      _(result[c1.id]).must_be_instance_of Tyto::Domain::Courses::Entities::Course
       _(result[c1.id].name).must_equal 'Course A'
       _(result[c2.id].name).must_equal 'Course B'
     end
@@ -95,7 +95,7 @@ describe 'Tyto::Repository::Courses' do
 
     it 'persists course and assigns owner role to account' do
       account = Tyto::Account.create(email: 'creator@example.com', name: 'Creator')
-      entity = Tyto::Entity::Course.new(
+      entity = Tyto::Domain::Courses::Entities::Course.new(
         id: nil,
         name: 'New Course',
         logo: 'course.png',
@@ -107,7 +107,7 @@ describe 'Tyto::Repository::Courses' do
 
       result = repository.create_with_owner(entity, owner_account_id: account.id)
 
-      _(result).must_be_instance_of Tyto::Entity::Course
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Course
       _(result.id).wont_be_nil
       _(result.name).must_equal 'New Course'
 
@@ -120,7 +120,7 @@ describe 'Tyto::Repository::Courses' do
 
     it 'returns course entity without enrollment loaded' do
       account = Tyto::Account.create(email: 'creator@example.com', name: 'Creator')
-      entity = Tyto::Entity::Course.new(
+      entity = Tyto::Domain::Courses::Entities::Course.new(
         id: nil,
         name: 'New Course',
         logo: nil,
@@ -154,7 +154,7 @@ describe 'Tyto::Repository::Courses' do
 
       result = repository.find_id(orm_course.id)
 
-      _(result).must_be_instance_of Tyto::Entity::Course
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Course
       _(result.id).must_equal orm_course.id
       _(result.name).must_equal 'Test Course'
       _(result.logo).must_equal 'test.png'
@@ -334,7 +334,7 @@ describe 'Tyto::Repository::Courses' do
 
       result = repository.find_enrollment(account_id: account.id, course_id: orm_course.id)
 
-      _(result).must_be_instance_of Tyto::Entity::Enrollment
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Enrollment
       _(result.account_id).must_equal account.id
       _(result.course_id).must_equal orm_course.id
       _(result.participant.email).must_equal 'student@example.com'
@@ -414,7 +414,7 @@ describe 'Tyto::Repository::Courses' do
         roles: %w[instructor staff]
       )
 
-      _(result).must_be_instance_of Tyto::Entity::Enrollment
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Enrollment
       _(result.roles).must_include 'instructor'
       _(result.roles).must_include 'staff'
       _(result.roles).wont_include 'student'
@@ -430,7 +430,7 @@ describe 'Tyto::Repository::Courses' do
         roles: ['student']
       )
 
-      _(result).must_be_instance_of Tyto::Entity::Enrollment
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Enrollment
       _(result.roles.to_a).must_equal ['student']
     end
 
@@ -478,7 +478,7 @@ describe 'Tyto::Repository::Courses' do
         roles: %w[instructor student]
       )
 
-      _(result).must_be_instance_of Tyto::Entity::Enrollment
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Enrollment
       _(result.roles).must_include 'instructor'
       _(result.roles).must_include 'student'
     end
@@ -560,7 +560,7 @@ describe 'Tyto::Repository::Courses' do
 
       _(result.length).must_equal 3
       _(result).must_be_kind_of Array
-      result.each { |course| _(course).must_be_instance_of Tyto::Entity::Course }
+      result.each { |course| _(course).must_be_instance_of Tyto::Domain::Courses::Entities::Course }
       _(result.map(&:name)).must_include 'Course 1'
       _(result.map(&:name)).must_include 'Course 2'
       _(result.map(&:name)).must_include 'Course 3'
@@ -591,7 +591,7 @@ describe 'Tyto::Repository::Courses' do
     end
 
     it 'raises error for non-existent course' do
-      entity = Tyto::Entity::Course.new(
+      entity = Tyto::Domain::Courses::Entities::Course.new(
         id: 999_999,
         name: 'Ghost Course',
         logo: nil,
@@ -625,7 +625,7 @@ describe 'Tyto::Repository::Courses' do
   describe 'round-trip' do
     it 'maintains data integrity through create -> find -> update -> find cycle' do
       # Create
-      original = Tyto::Entity::Course.new(
+      original = Tyto::Domain::Courses::Entities::Course.new(
         id: nil,
         name: 'Full Cycle Test',
         logo: 'cycle.png',

@@ -4,7 +4,7 @@ require_relative '../../spec_helper'
 
 describe 'Presentation::Formatters::AttendanceReportCsv' do
   def build_course(name:, events: [], enrollments: [])
-    Tyto::Entity::Course.new(
+    Tyto::Domain::Courses::Entities::Course.new(
       id: 1, name: name, logo: nil, start_at: nil, end_at: nil,
       created_at: Time.now, updated_at: Time.now,
       events: Tyto::Domain::Courses::Values::Events.from(events),
@@ -14,7 +14,7 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
   end
 
   def build_event(id:, name:)
-    Tyto::Entity::Event.new(
+    Tyto::Domain::Courses::Entities::Event.new(
       id: id, course_id: 1, location_id: 1, name: name,
       start_at: Time.now, end_at: Time.now + 3600,
       created_at: Time.now, updated_at: Time.now
@@ -22,7 +22,7 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
   end
 
   def build_enrollment(account_id:, email:)
-    Tyto::Entity::Enrollment.new(
+    Tyto::Domain::Courses::Entities::Enrollment.new(
       id: account_id, account_id: account_id, course_id: 1,
       participant: Tyto::Domain::Courses::Values::Participant.new(email: email, name: 'Test'),
       roles: Tyto::Domain::Courses::Values::CourseRoles.from(['student']),
@@ -31,7 +31,7 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
   end
 
   def build_attendance(account_id:, event_id:)
-    Tyto::Entity::Attendance.new(
+    Tyto::Domain::Attendance::Entities::Attendance.new(
       id: nil, account_id: account_id, course_id: 1, event_id: event_id,
       role_id: nil, name: nil, longitude: nil, latitude: nil,
       created_at: nil, updated_at: nil
@@ -39,7 +39,7 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
   end
 
   def build_report(course:, attendances: [])
-    Tyto::Entity::AttendanceReport.new(course: course, attendances: attendances)
+    Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: attendances)
   end
 
   describe '.to_csv' do

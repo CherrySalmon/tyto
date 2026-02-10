@@ -4,7 +4,7 @@ require_relative '../../../spec_helper'
 
 describe 'Domain::Attendance::Values::StudentAttendanceRecord' do
   def build_event(id:, name:)
-    Tyto::Entity::Event.new(
+    Tyto::Domain::Courses::Entities::Event.new(
       id: id, course_id: 1, location_id: 1, name: name,
       start_at: Time.now, end_at: Time.now + 3600,
       created_at: Time.now, updated_at: Time.now
@@ -12,7 +12,7 @@ describe 'Domain::Attendance::Values::StudentAttendanceRecord' do
   end
 
   def build_enrollment(account_id:, email:)
-    Tyto::Entity::Enrollment.new(
+    Tyto::Domain::Courses::Entities::Enrollment.new(
       id: account_id, account_id: account_id, course_id: 1,
       participant: Tyto::Domain::Courses::Values::Participant.new(email: email, name: 'Test'),
       roles: Tyto::Domain::Courses::Values::CourseRoles.from(['student']),
@@ -25,7 +25,7 @@ describe 'Domain::Attendance::Values::StudentAttendanceRecord' do
   end
 
   def build_attendance(account_id:, event_id:)
-    Tyto::Entity::Attendance.new(
+    Tyto::Domain::Attendance::Entities::Attendance.new(
       id: nil, account_id: account_id, course_id: 1, event_id: event_id,
       role_id: nil, name: nil, longitude: nil, latitude: nil,
       created_at: nil, updated_at: nil
