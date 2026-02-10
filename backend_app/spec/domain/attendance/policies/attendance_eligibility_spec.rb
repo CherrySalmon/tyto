@@ -6,7 +6,7 @@ describe 'Tyto::Policy::AttendanceEligibility' do
   let(:now) { Time.now }
 
   def build_attendance(longitude:, latitude:)
-    Tyto::Entity::Attendance.new(
+    Tyto::Domain::Attendance::Entities::Attendance.new(
       id: nil, account_id: 1, course_id: 1, event_id: 1, role_id: 1,
       name: 'Test', longitude: longitude, latitude: latitude,
       created_at: nil, updated_at: nil
@@ -14,7 +14,7 @@ describe 'Tyto::Policy::AttendanceEligibility' do
   end
 
   def build_location(longitude:, latitude:)
-    Tyto::Entity::Location.new(
+    Tyto::Domain::Courses::Entities::Location.new(
       id: 1, course_id: 1, name: 'Classroom',
       longitude: longitude, latitude: latitude,
       created_at: now, updated_at: now
@@ -22,7 +22,7 @@ describe 'Tyto::Policy::AttendanceEligibility' do
   end
 
   def build_event(start_at:, end_at:)
-    Tyto::Entity::Event.new(
+    Tyto::Domain::Courses::Entities::Event.new(
       id: 1, course_id: 1, location_id: 1, name: 'Test Event',
       start_at: start_at, end_at: end_at,
       created_at: now, updated_at: now
@@ -75,7 +75,7 @@ describe 'Tyto::Policy::AttendanceEligibility' do
     it 'returns nil when event has no time range' do
       attendance = build_attendance(longitude: -74.0060, latitude: 40.7128)
       location = build_location(longitude: -74.0060, latitude: 40.7128)
-      event = Tyto::Entity::Event.new(
+      event = Tyto::Domain::Courses::Entities::Event.new(
         id: 1, course_id: 1, location_id: 1, name: 'Test Event',
         start_at: nil, end_at: nil, created_at: now, updated_at: now
       )

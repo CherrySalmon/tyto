@@ -4,7 +4,7 @@ require_relative '../../../spec_helper'
 
 describe 'Domain::Attendance::Values::AttendanceRegister' do
   def build_attendance(account_id:, event_id:)
-    Tyto::Entity::Attendance.new(
+    Tyto::Domain::Attendance::Entities::Attendance.new(
       id: nil, account_id: account_id, course_id: 1, event_id: event_id,
       role_id: nil, name: nil, longitude: nil, latitude: nil,
       created_at: nil, updated_at: nil

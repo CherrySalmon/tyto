@@ -9,7 +9,7 @@ module Tyto
     class Events
       # Find an event by ID
       # @param id [Integer] the event ID
-      # @return [Entity::Event, nil] the domain entity or nil if not found
+      # @return [Domain::Courses::Entities::Event, nil] the domain entity or nil if not found
       def find_id(id)
         orm_record = Tyto::Event[id]
         return nil unless orm_record
@@ -19,7 +19,7 @@ module Tyto
 
       # Find all events for a course, ordered by start time
       # @param course_id [Integer] the course ID
-      # @return [Array<Entity::Event>] array of domain entities
+      # @return [Array<Domain::Courses::Entities::Event>] array of domain entities
       def find_by_course(course_id)
         Tyto::Event
           .where(course_id:)
@@ -29,7 +29,7 @@ module Tyto
       end
 
       # Find all events
-      # @return [Array<Entity::Event>] array of domain entities
+      # @return [Array<Domain::Courses::Entities::Event>] array of domain entities
       def find_all
         Tyto::Event.all.map { |record| rebuild_entity(record) }
       end
@@ -37,7 +37,7 @@ module Tyto
       # Find events active at a given time for specified course IDs
       # @param course_ids [Array<Integer>] list of course IDs to filter
       # @param time [Time] the time to check
-      # @return [Array<Entity::Event>] array of active domain entities
+      # @return [Array<Domain::Courses::Entities::Event>] array of active domain entities
       def find_active_at(course_ids, time)
         Tyto::Event
           .where { start_at <= time }
@@ -48,8 +48,8 @@ module Tyto
       end
 
       # Create a new event from a domain entity
-      # @param entity [Entity::Event] the domain entity to persist
-      # @return [Entity::Event] the persisted entity with ID
+      # @param entity [Domain::Courses::Entities::Event] the domain entity to persist
+      # @return [Domain::Courses::Entities::Event] the persisted entity with ID
       def create(entity)
         orm_record = Tyto::Event.find_or_create(
           course_id: entity.course_id,
@@ -63,8 +63,8 @@ module Tyto
       end
 
       # Update an existing event from a domain entity
-      # @param entity [Entity::Event] the domain entity with updates
-      # @return [Entity::Event] the updated entity
+      # @param entity [Domain::Courses::Entities::Event] the domain entity with updates
+      # @return [Domain::Courses::Entities::Event] the updated entity
       def update(entity)
         orm_record = Tyto::Event[entity.id]
         raise "Event not found: #{entity.id}" unless orm_record
@@ -94,9 +94,9 @@ module Tyto
 
       # Rebuild a domain entity from an ORM record
       # @param orm_record [Tyto::Event] the Sequel model instance
-      # @return [Entity::Event] the domain entity
+      # @return [Domain::Courses::Entities::Event] the domain entity
       def rebuild_entity(orm_record)
-        Entity::Event.new(
+        Domain::Courses::Entities::Event.new(
           id: orm_record.id,
           course_id: orm_record.course_id,
           location_id: orm_record.location_id,

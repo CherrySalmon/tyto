@@ -22,7 +22,7 @@ module Tyto
           course = step fetch_course(course_id)
           step authorize(requestor, course_id)
           attendances = step fetch_attendances(course_id)
-          report = Entity::AttendanceReport.new(course:, attendances:)
+          report = Domain::Attendance::Entities::AttendanceReport.new(course:, attendances:)
 
           ok(report)
         end

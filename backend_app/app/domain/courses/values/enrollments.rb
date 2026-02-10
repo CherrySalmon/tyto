@@ -11,7 +11,7 @@ module Tyto
         # Value object wrapping a typed collection of Enrollment entities.
         # Encapsulates query methods that previously lived on Course.
         class Enrollments < Dry::Struct
-          attribute :enrollments, Types::Array.of(Entity::Enrollment)
+          attribute :enrollments, Types::Array.of(Entities::Enrollment)
 
           include Enumerable
 

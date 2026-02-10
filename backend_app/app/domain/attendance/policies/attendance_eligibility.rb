@@ -11,9 +11,9 @@ module Tyto
       MAX_DISTANCE_KM = 0.055 # ~55 meters
 
       # Check if an attendance attempt is eligible.
-      # @param attendance [Entity::Attendance] the attendance with check-in coordinates
-      # @param event [Entity::Event] the event being attended
-      # @param location [Entity::Location, nil] the event's location
+      # @param attendance [Domain::Attendance::Entities::Attendance] the attendance with check-in coordinates
+      # @param event [Domain::Courses::Entities::Event] the event being attended
+      # @param location [Domain::Courses::Entities::Location, nil] the event's location
       # @param time [Time] the time of the attendance attempt
       # @return [Symbol, nil] nil if eligible, or a symbol indicating the failure reason
       def self.check(attendance:, event:, location:, time: Time.now)

@@ -2,9 +2,9 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Entity::AttendanceReport' do
+describe 'Domain::Attendance::Entities::AttendanceReport' do
   def build_course(name:, events: [], enrollments: [])
-    Tyto::Entity::Course.new(
+    Tyto::Domain::Courses::Entities::Course.new(
       id: 1, name: name, logo: nil, start_at: nil, end_at: nil,
       created_at: Time.now, updated_at: Time.now,
       events: Tyto::Domain::Courses::Values::Events.from(events),
@@ -14,7 +14,7 @@ describe 'Entity::AttendanceReport' do
   end
 
   def build_event(id:, name:)
-    Tyto::Entity::Event.new(
+    Tyto::Domain::Courses::Entities::Event.new(
       id: id, course_id: 1, location_id: 1, name: name,
       start_at: Time.now, end_at: Time.now + 3600,
       created_at: Time.now, updated_at: Time.now
@@ -22,7 +22,7 @@ describe 'Entity::AttendanceReport' do
   end
 
   def build_enrollment(account_id:, email:)
-    Tyto::Entity::Enrollment.new(
+    Tyto::Domain::Courses::Entities::Enrollment.new(
       id: account_id, account_id: account_id, course_id: 1,
       participant: Tyto::Domain::Courses::Values::Participant.new(email: email, name: 'Test'),
       roles: Tyto::Domain::Courses::Values::CourseRoles.from(['student']),
@@ -31,7 +31,7 @@ describe 'Entity::AttendanceReport' do
   end
 
   def build_attendance(account_id:, event_id:)
-    Tyto::Entity::Attendance.new(
+    Tyto::Domain::Attendance::Entities::Attendance.new(
       id: nil, account_id: account_id, course_id: 1, event_id: event_id,
       role_id: nil, name: nil, longitude: nil, latitude: nil,
       created_at: nil, updated_at: nil
@@ -41,7 +41,7 @@ describe 'Entity::AttendanceReport' do
   describe '.build' do
     it 'builds report with course name and generated_at' do
       course = build_course(name: 'Test Course')
-      report = Tyto::Entity::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
 
       _(report.course_name).must_equal 'Test Course'
       _(report.generated_at).must_be_kind_of Time
@@ -52,7 +52,7 @@ describe 'Entity::AttendanceReport' do
       event2 = build_event(id: 20, name: 'Lecture 2')
       course = build_course(name: 'C', events: [event1, event2])
 
-      report = Tyto::Entity::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
 
       _(report.events.length).must_equal 2
       _(report.events[0].id).must_equal 10
@@ -67,7 +67,7 @@ describe 'Entity::AttendanceReport' do
       course = build_course(name: 'C', events: [event1], enrollments: [enrollment])
       attendances = [build_attendance(account_id: 100, event_id: 10)]
 
-      report = Tyto::Entity::AttendanceReport.new(course: course, attendances: attendances)
+      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: attendances)
 
       _(report.student_records.length).must_equal 1
       record = report.student_records.first
@@ -90,7 +90,7 @@ describe 'Entity::AttendanceReport' do
         build_attendance(account_id: 200, event_id: 10)
       ]
 
-      report = Tyto::Entity::AttendanceReport.new(course: course, attendances: attendances)
+      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: attendances)
 
       _(report.student_records.length).must_equal 2
 
@@ -112,7 +112,7 @@ describe 'Entity::AttendanceReport' do
       enrollment = build_enrollment(account_id: 100, email: 'alice@example.com')
       course = build_course(name: 'C', events: [], enrollments: [enrollment])
 
-      report = Tyto::Entity::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
 
       _(report.events).must_be_empty
       record = report.student_records.first
@@ -124,7 +124,7 @@ describe 'Entity::AttendanceReport' do
       event = build_event(id: 10, name: 'Lecture 1')
       course = build_course(name: 'C', events: [event], enrollments: [])
 
-      report = Tyto::Entity::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
 
       _(report.student_records).must_be_empty
       _(report.events.length).must_equal 1
@@ -134,7 +134,7 @@ describe 'Entity::AttendanceReport' do
       enrollment = build_enrollment(account_id: 100, email: 'alice@example.com')
       course = build_course(name: 'C', events: [], enrollments: [enrollment])
 
-      report = Tyto::Entity::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
 
       _(report.student_records.first).must_be_kind_of(
         Tyto::Domain::Attendance::Values::StudentAttendanceRecord

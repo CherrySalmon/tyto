@@ -16,7 +16,7 @@ module Tyto
     class Accounts
       # Find an account by ID (roles not loaded)
       # @param id [Integer] the account ID
-      # @return [Entity::Account, nil] the domain entity or nil if not found
+      # @return [Domain::Accounts::Entities::Account, nil] the domain entity or nil if not found
       def find_id(id)
         orm_record = Tyto::Account[id]
         return nil unless orm_record
@@ -26,7 +26,7 @@ module Tyto
 
       # Find an account by ID with roles loaded
       # @param id [Integer] the account ID
-      # @return [Entity::Account, nil] the domain entity with roles, or nil
+      # @return [Domain::Accounts::Entities::Account, nil] the domain entity with roles, or nil
       def find_with_roles(id)
         orm_record = Tyto::Account[id]
         return nil unless orm_record
@@ -36,7 +36,7 @@ module Tyto
 
       # Find an account by email (roles not loaded)
       # @param email [String] the email address
-      # @return [Entity::Account, nil] the domain entity or nil if not found
+      # @return [Domain::Accounts::Entities::Account, nil] the domain entity or nil if not found
       def find_by_email(email)
         orm_record = Tyto::Account.first(email: email)
         return nil unless orm_record
@@ -46,7 +46,7 @@ module Tyto
 
       # Find an account by email with roles loaded
       # @param email [String] the email address
-      # @return [Entity::Account, nil] the domain entity with roles, or nil
+      # @return [Domain::Accounts::Entities::Account, nil] the domain entity with roles, or nil
       def find_by_email_with_roles(email)
         orm_record = Tyto::Account.first(email: email)
         return nil unless orm_record
@@ -55,21 +55,21 @@ module Tyto
       end
 
       # Find all accounts (roles not loaded)
-      # @return [Array<Entity::Account>] array of domain entities
+      # @return [Array<Domain::Accounts::Entities::Account>] array of domain entities
       def find_all
         Tyto::Account.all.map { |record| rebuild_entity(record) }
       end
 
       # Find all accounts with roles loaded
-      # @return [Array<Entity::Account>] array of domain entities with roles
+      # @return [Array<Domain::Accounts::Entities::Account>] array of domain entities with roles
       def find_all_with_roles
         Tyto::Account.all.map { |record| rebuild_entity(record, load_roles: true) }
       end
 
       # Create a new account from a domain entity
-      # @param entity [Entity::Account] the domain entity to persist
+      # @param entity [Domain::Accounts::Entities::Account] the domain entity to persist
       # @param role_names [Array<String>] optional role names to assign
-      # @return [Entity::Account] the persisted entity with ID
+      # @return [Domain::Accounts::Entities::Account] the persisted entity with ID
       def create(entity, role_names: [])
         orm_record = Tyto::Account.create(
           name: entity.name,
@@ -89,9 +89,9 @@ module Tyto
       end
 
       # Update an existing account from a domain entity
-      # @param entity [Entity::Account] the domain entity with updates
+      # @param entity [Domain::Accounts::Entities::Account] the domain entity with updates
       # @param role_names [Array<String>, nil] new role names (nil = don't update roles)
-      # @return [Entity::Account] the updated entity
+      # @return [Domain::Accounts::Entities::Account] the updated entity
       def update(entity, role_names: nil)
         orm_record = Tyto::Account[entity.id]
         raise "Account not found: #{entity.id}" unless orm_record
@@ -130,7 +130,7 @@ module Tyto
       # Find an account by email, or create with 'member' role if not found
       # Domain rule: new accounts always get 'member' role
       # @param email [String] the email address
-      # @return [Entity::Account] the found or created account entity
+      # @return [Domain::Accounts::Entities::Account] the found or created account entity
       def find_or_create_by_email(email)
         orm_record = Tyto::Account.first(email: email)
 
@@ -148,7 +148,7 @@ module Tyto
       # Rebuild a domain entity from an ORM record
       # @param orm_record [Tyto::Account] the Sequel model instance
       # @param load_roles [Boolean] whether to load roles
-      # @return [Entity::Account] the domain entity
+      # @return [Domain::Accounts::Entities::Account] the domain entity
       def rebuild_entity(orm_record, load_roles: false)
         roles = if load_roles
                   Domain::Accounts::Values::SystemRoles.from(rebuild_role_names(orm_record))
@@ -156,7 +156,7 @@ module Tyto
                   Domain::Accounts::Values::NullSystemRoles.new
                 end
 
-        Entity::Account.new(
+        Domain::Accounts::Entities::Account.new(
           id: orm_record.id,
           name: orm_record.name,
           email: orm_record.email,

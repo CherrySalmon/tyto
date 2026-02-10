@@ -75,7 +75,7 @@ module Tyto
         end
 
         def persist_location(validated)
-          entity = Entity::Location.new(
+          entity = Domain::Courses::Entities::Location.new(
             id: nil,
             course_id: validated[:course_id],
             name: validated[:name],

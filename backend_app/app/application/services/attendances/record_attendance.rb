@@ -120,7 +120,7 @@ module Tyto
         end
 
         def build_attendance_entity(validated)
-          Entity::Attendance.new(
+          Domain::Attendance::Entities::Attendance.new(
             id: nil,
             account_id: validated[:account_id],
             course_id: validated[:course_id],

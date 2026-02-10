@@ -52,7 +52,7 @@ module Tyto
         def persist_account(validated)
           # Create domain entity (without ID)
           # Use NullSystemRoles because roles are assigned by repository during persistence
-          entity = Entity::Account.new(
+          entity = Domain::Accounts::Entities::Account.new(
             id: nil,
             name: validated[:name],
             email: validated[:email],

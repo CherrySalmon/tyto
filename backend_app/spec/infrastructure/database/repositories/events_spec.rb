@@ -14,7 +14,7 @@ describe 'Tyto::Repository::Events' do
 
   describe '#create' do
     it 'persists a new event and returns entity with ID' do
-      entity = Tyto::Entity::Event.new(
+      entity = Tyto::Domain::Courses::Entities::Event.new(
         id: nil,
         course_id: course.id,
         location_id: event_location.id,
@@ -27,7 +27,7 @@ describe 'Tyto::Repository::Events' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Tyto::Entity::Event
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Event
       _(result.id).wont_be_nil
       _(result.name).must_equal 'Lecture 1'
       _(result.course_id).must_equal course.id
@@ -37,7 +37,7 @@ describe 'Tyto::Repository::Events' do
     end
 
     it 'persists event with minimal attributes (no times)' do
-      entity = Tyto::Entity::Event.new(
+      entity = Tyto::Domain::Courses::Entities::Event.new(
         id: nil,
         course_id: course.id,
         location_id: event_location.id,
@@ -69,7 +69,7 @@ describe 'Tyto::Repository::Events' do
 
       result = repository.find_id(orm_event.id)
 
-      _(result).must_be_instance_of Tyto::Entity::Event
+      _(result).must_be_instance_of Tyto::Domain::Courses::Entities::Event
       _(result.id).must_equal orm_event.id
       _(result.name).must_equal 'Test Event'
       _(result.course_id).must_equal course.id
@@ -198,7 +198,7 @@ describe 'Tyto::Repository::Events' do
       result = repository.find_all
 
       _(result.length).must_equal 2
-      result.each { |event| _(event).must_be_instance_of Tyto::Entity::Event }
+      result.each { |event| _(event).must_be_instance_of Tyto::Domain::Courses::Entities::Event }
     end
   end
 
@@ -226,7 +226,7 @@ describe 'Tyto::Repository::Events' do
     end
 
     it 'raises error for non-existent event' do
-      entity = Tyto::Entity::Event.new(
+      entity = Tyto::Domain::Courses::Entities::Event.new(
         id: 999_999,
         course_id: course.id,
         location_id: event_location.id,
@@ -265,7 +265,7 @@ describe 'Tyto::Repository::Events' do
   describe 'round-trip' do
     it 'maintains data integrity through create -> find -> update -> find cycle' do
       # Create
-      original = Tyto::Entity::Event.new(
+      original = Tyto::Domain::Courses::Entities::Event.new(
         id: nil,
         course_id: course.id,
         location_id: event_location.id,

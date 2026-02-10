@@ -37,7 +37,7 @@ describe Tyto::Service::Auth::VerifyGoogleToken do
 
         mock_sso_mapper.verify
         _(result).must_be_kind_of Dry::Monads::Result::Success
-        _(result.value!.message[:account]).must_be_kind_of Tyto::Entity::Account
+        _(result.value!.message[:account]).must_be_kind_of Tyto::Domain::Accounts::Entities::Account
         _(result.value!.message[:credential]).wont_be_nil
       end
 

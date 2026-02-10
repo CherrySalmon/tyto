@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative '../../../domain/courses/values/geo_location'
+require_relative '../../../domain/shared/values/geo_location'
 
 module Tyto
   module Service

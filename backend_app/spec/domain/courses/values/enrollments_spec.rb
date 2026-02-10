@@ -8,7 +8,7 @@ describe Tyto::Domain::Courses::Values::Enrollments do
   let(:participant) { ->(email, name) { Tyto::Domain::Courses::Values::Participant.new(email:, name:) } }
 
   let(:owner_enrollment) do
-    Tyto::Entity::Enrollment.new(
+    Tyto::Domain::Courses::Entities::Enrollment.new(
       id: 1, account_id: 10, course_id: 1,
       participant: participant.call('owner@example.com', 'Owner'),
       roles: course_roles.call(['owner']),
@@ -17,7 +17,7 @@ describe Tyto::Domain::Courses::Values::Enrollments do
   end
 
   let(:instructor_enrollment) do
-    Tyto::Entity::Enrollment.new(
+    Tyto::Domain::Courses::Entities::Enrollment.new(
       id: 2, account_id: 20, course_id: 1,
       participant: participant.call('instructor@example.com', 'Instructor'),
       roles: course_roles.call(['instructor']),
@@ -26,7 +26,7 @@ describe Tyto::Domain::Courses::Values::Enrollments do
   end
 
   let(:student_enrollment) do
-    Tyto::Entity::Enrollment.new(
+    Tyto::Domain::Courses::Entities::Enrollment.new(
       id: 3, account_id: 30, course_id: 1,
       participant: participant.call('student@example.com', 'Student'),
       roles: course_roles.call(['student']),
@@ -35,7 +35,7 @@ describe Tyto::Domain::Courses::Values::Enrollments do
   end
 
   let(:multi_role_enrollment) do
-    Tyto::Entity::Enrollment.new(
+    Tyto::Domain::Courses::Entities::Enrollment.new(
       id: 4, account_id: 40, course_id: 1,
       participant: participant.call('ta@example.com', 'TA'),
       roles: course_roles.call(%w[staff student]),

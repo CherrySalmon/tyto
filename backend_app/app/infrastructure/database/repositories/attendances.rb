@@ -10,7 +10,7 @@ module Tyto
     class Attendances
       # Find an attendance by ID
       # @param id [Integer] the attendance ID
-      # @return [Entity::Attendance, nil] the domain entity or nil if not found
+      # @return [Domain::Attendance::Entities::Attendance, nil] the domain entity or nil if not found
       def find_id(id)
         orm_record = Tyto::Attendance[id]
         return nil unless orm_record
@@ -20,7 +20,7 @@ module Tyto
 
       # Find all attendances for a course
       # @param course_id [Integer] the course ID
-      # @return [Array<Entity::Attendance>] array of domain entities
+      # @return [Array<Domain::Attendance::Entities::Attendance>] array of domain entities
       def find_by_course(course_id)
         Tyto::Attendance
           .where(course_id:)
@@ -31,7 +31,7 @@ module Tyto
 
       # Find all attendances for an event
       # @param event_id [Integer] the event ID
-      # @return [Array<Entity::Attendance>] array of domain entities
+      # @return [Array<Domain::Attendance::Entities::Attendance>] array of domain entities
       def find_by_event(event_id)
         Tyto::Attendance
           .where(event_id:)
@@ -43,7 +43,7 @@ module Tyto
       # Find all attendances for an account in a course
       # @param account_id [Integer] the account ID
       # @param course_id [Integer] the course ID
-      # @return [Array<Entity::Attendance>] array of domain entities
+      # @return [Array<Domain::Attendance::Entities::Attendance>] array of domain entities
       def find_by_account_course(account_id, course_id)
         Tyto::Attendance
           .where(account_id:, course_id:)
@@ -55,7 +55,7 @@ module Tyto
       # Find attendance for an account at a specific event
       # @param account_id [Integer] the account ID
       # @param event_id [Integer] the event ID
-      # @return [Entity::Attendance, nil] the domain entity or nil
+      # @return [Domain::Attendance::Entities::Attendance, nil] the domain entity or nil
       def find_by_account_event(account_id, event_id)
         orm_record = Tyto::Attendance.first(account_id:, event_id:)
         return nil unless orm_record
@@ -76,14 +76,14 @@ module Tyto
       end
 
       # Find all attendances
-      # @return [Array<Entity::Attendance>] array of domain entities
+      # @return [Array<Domain::Attendance::Entities::Attendance>] array of domain entities
       def find_all
         Tyto::Attendance.all.map { |record| rebuild_entity(record) }
       end
 
       # Create a new attendance from a domain entity
-      # @param entity [Entity::Attendance] the domain entity to persist
-      # @return [Entity::Attendance] the persisted entity with ID
+      # @param entity [Domain::Attendance::Entities::Attendance] the domain entity to persist
+      # @return [Domain::Attendance::Entities::Attendance] the persisted entity with ID
       def create(entity)
         orm_record = Tyto::Attendance.find_or_create(
           account_id: entity.account_id,
@@ -113,9 +113,9 @@ module Tyto
 
       # Rebuild a domain entity from an ORM record
       # @param orm_record [Tyto::Attendance] the Sequel model instance
-      # @return [Entity::Attendance] the domain entity
+      # @return [Domain::Attendance::Entities::Attendance] the domain entity
       def rebuild_entity(orm_record)
-        Entity::Attendance.new(
+        Domain::Attendance::Entities::Attendance.new(
           id: orm_record.id,
           account_id: orm_record.account_id,
           course_id: orm_record.course_id,

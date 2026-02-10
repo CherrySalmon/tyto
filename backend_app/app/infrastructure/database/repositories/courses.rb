@@ -20,7 +20,7 @@ module Tyto
     class Courses
       # Find a course by ID (children not loaded)
       # @param id [Integer] the course ID
-      # @return [Entity::Course, nil] the domain entity or nil if not found
+      # @return [Domain::Courses::Entities::Course, nil] the domain entity or nil if not found
       def find_id(id)
         orm_record = Tyto::Course[id]
         return nil unless orm_record
@@ -30,7 +30,7 @@ module Tyto
 
       # Find a course by ID with events loaded
       # @param id [Integer] the course ID
-      # @return [Entity::Course, nil] the domain entity with events, or nil
+      # @return [Domain::Courses::Entities::Course, nil] the domain entity with events, or nil
       def find_with_events(id)
         orm_record = Tyto::Course[id]
         return nil unless orm_record
@@ -40,7 +40,7 @@ module Tyto
 
       # Find a course by ID with locations loaded
       # @param id [Integer] the course ID
-      # @return [Entity::Course, nil] the domain entity with locations, or nil
+      # @return [Domain::Courses::Entities::Course, nil] the domain entity with locations, or nil
       def find_with_locations(id)
         orm_record = Tyto::Course[id]
         return nil unless orm_record
@@ -50,7 +50,7 @@ module Tyto
 
       # Find a course by ID with enrollments loaded
       # @param id [Integer] the course ID
-      # @return [Entity::Course, nil] the domain entity with enrollments, or nil
+      # @return [Domain::Courses::Entities::Course, nil] the domain entity with enrollments, or nil
       def find_with_enrollments(id)
         orm_record = Tyto::Course[id]
         return nil unless orm_record
@@ -60,7 +60,7 @@ module Tyto
 
       # Find a course by ID with all children loaded
       # @param id [Integer] the course ID
-      # @return [Entity::Course, nil] the full aggregate, or nil
+      # @return [Domain::Courses::Entities::Course, nil] the full aggregate, or nil
       def find_full(id)
         orm_record = Tyto::Course[id]
         return nil unless orm_record
@@ -70,7 +70,7 @@ module Tyto
 
       # Find multiple courses by IDs (children not loaded)
       # @param ids [Array<Integer>] the course IDs
-      # @return [Hash<Integer, Entity::Course>] hash of ID => domain entity
+      # @return [Hash<Integer, Domain::Courses::Entities::Course>] hash of ID => domain entity
       def find_ids(ids)
         return {} if ids.empty?
 
@@ -79,7 +79,7 @@ module Tyto
       end
 
       # Find all courses (children not loaded)
-      # @return [Array<Entity::Course>] array of domain entities
+      # @return [Array<Domain::Courses::Entities::Course>] array of domain entities
       def find_all
         Tyto::Course.all.map { |record| rebuild_entity(record) }
       end
@@ -87,7 +87,7 @@ module Tyto
       # Find a single enrollment for an account in a course
       # @param account_id [Integer] the account ID
       # @param course_id [Integer] the course ID
-      # @return [Entity::Enrollment, nil] the enrollment entity or nil if not enrolled
+      # @return [Domain::Courses::Entities::Enrollment, nil] the enrollment entity or nil if not enrolled
       def find_enrollment(account_id:, course_id:)
         account_courses = Tyto::AccountCourse.where(account_id:, course_id:).all
         return nil if account_courses.empty?
@@ -95,7 +95,7 @@ module Tyto
         account = account_courses.first.account
         role_names = account_courses.map { |ac| ac.role.name }.uniq
 
-        Entity::Enrollment.new(
+        Domain::Courses::Entities::Enrollment.new(
           id: account_courses.min_by(&:id).id,
           account_id:,
           course_id:,
@@ -109,8 +109,8 @@ module Tyto
       end
 
       # Create a new course from a domain entity
-      # @param entity [Entity::Course] the domain entity to persist
-      # @return [Entity::Course] the persisted entity with ID
+      # @param entity [Domain::Courses::Entities::Course] the domain entity to persist
+      # @return [Domain::Courses::Entities::Course] the persisted entity with ID
       def create(entity)
         orm_record = Tyto::Course.create(
           name: entity.name,
@@ -123,9 +123,9 @@ module Tyto
       end
 
       # Create a new course and assign owner role to the creator
-      # @param entity [Entity::Course] the domain entity to persist
+      # @param entity [Domain::Courses::Entities::Course] the domain entity to persist
       # @param owner_account_id [Integer] the account ID of the course creator
-      # @return [Entity::Course] the persisted entity with ID
+      # @return [Domain::Courses::Entities::Course] the persisted entity with ID
       # @raise [RuntimeError] if owner role is not found
       def create_with_owner(entity, owner_account_id:)
         orm_record = Tyto::Course.create(
@@ -148,8 +148,8 @@ module Tyto
       end
 
       # Update an existing course from a domain entity
-      # @param entity [Entity::Course] the domain entity with updates
-      # @return [Entity::Course] the updated entity
+      # @param entity [Domain::Courses::Entities::Course] the domain entity with updates
+      # @return [Domain::Courses::Entities::Course] the updated entity
       def update(entity)
         orm_record = Tyto::Course[entity.id]
         raise "Course not found: #{entity.id}" unless orm_record
@@ -180,7 +180,7 @@ module Tyto
       # @param course_id [Integer] the course ID
       # @param account_id [Integer] the account ID
       # @param roles [Array<String>] the role names to set
-      # @return [Entity::Enrollment, nil] the updated enrollment or nil if invalid
+      # @return [Domain::Courses::Entities::Enrollment, nil] the updated enrollment or nil if invalid
       def set_enrollment_roles(course_id:, account_id:, roles:)
         return nil if roles.nil? || roles.empty?
 
@@ -215,7 +215,7 @@ module Tyto
       # @param course_id [Integer] the course ID
       # @param account_id [Integer] the account ID
       # @param roles [Array<String>] the role names to assign
-      # @return [Entity::Enrollment, nil] the created enrollment or nil if invalid
+      # @return [Domain::Courses::Entities::Enrollment, nil] the created enrollment or nil if invalid
       def add_enrollment(course_id:, account_id:, roles:)
         return nil if roles.nil? || roles.empty?
 
@@ -236,9 +236,9 @@ module Tyto
       # @param load_events [Boolean] whether to load events
       # @param load_locations [Boolean] whether to load locations
       # @param load_enrollments [Boolean] whether to load enrollments
-      # @return [Entity::Course] the domain entity
+      # @return [Domain::Courses::Entities::Course] the domain entity
       def rebuild_entity(orm_record, load_events: false, load_locations: false, load_enrollments: false)
-        Entity::Course.new(
+        Domain::Courses::Entities::Course.new(
           id: orm_record.id,
           name: orm_record.name,
           logo: orm_record.logo,
@@ -269,7 +269,7 @@ module Tyto
       end
 
       def rebuild_event(orm_record)
-        Entity::Event.new(
+        Domain::Courses::Entities::Event.new(
           id: orm_record.id,
           course_id: orm_record.course_id,
           location_id: orm_record.location_id,
@@ -282,7 +282,7 @@ module Tyto
       end
 
       def rebuild_location(orm_record)
-        Entity::Location.new(
+        Domain::Courses::Entities::Location.new(
           id: orm_record.id,
           course_id: orm_record.course_id,
           name: orm_record.name,
@@ -310,7 +310,7 @@ module Tyto
           role_names = records.map { |r| r.role.name }.uniq
           first_record = records.min_by(&:id)
 
-          Entity::Enrollment.new(
+          Domain::Courses::Entities::Enrollment.new(
             id: first_record.id, # Use first record's ID as enrollment ID
             account_id:,
             course_id: orm_course.id,

@@ -11,7 +11,7 @@ module Tyto
         # Value object wrapping a typed collection of Location entities.
         # Encapsulates query methods that previously lived on Course.
         class Locations < Dry::Struct
-          attribute :locations, Types::Array.of(Entity::Location)
+          attribute :locations, Types::Array.of(Entities::Location)
 
           include Enumerable
 

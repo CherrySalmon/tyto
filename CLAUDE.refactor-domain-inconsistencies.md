@@ -23,11 +23,11 @@ No frontend changes required — these are domain-layer fixes only.
 ## Current State
 
 - [x] Plan created
-- [ ] Slice 1: GeoLocation relocation
-- [ ] Slice 2: raw_events return type normalization
-- [ ] Slice 3: Entity namespace alignment
-- [ ] All tests passing
-- [ ] Manual verification
+- [x] Slice 1: GeoLocation relocation
+- [x] Slice 2: Remove AttendanceReport defensive fallbacks
+- [x] Slice 3: Entity namespace alignment
+- [x] All tests passing
+- [x] Manual verification — app runs, all CRUD flows work
 
 ## Key Findings
 
@@ -85,7 +85,7 @@ Entities use flat `Tyto::Entity` namespace while values use context-scoped `Tyto
 
 > Questions must be crossed off when resolved. Note the decision made.
 
-- [x] Normalize raw_events to Array or Events? — **Decision**: Normalize to `Events` collection using `Events.from([])` for the empty case. This preserves the typed collection contract and is consistent with how the domain models collections.
+- [x] Normalize raw_events to Array or Events? — **Decision**: Remove `raw_events` (and `students`) private methods entirely. The service layer (`GenerateReport`) always calls `find_full`, which loads all collections — so `@course.events` is always an `Events` collection, never `nil`. The `raw_events` fallback to `[]` was silently handling a precondition violation that can't happen through the service. Removing these methods simplifies the code and lets a `NoMethodError` surface if the precondition is ever violated.
 - [x] Slice ordering dependency? — **Decision**: Slice 3 should run after Slices 1 and 2, since it touches entity files (`location.rb`, `attendance.rb`, `attendance_report.rb`) that those slices also modify. Running Slice 3 last avoids merge conflicts within the branch.
 
 ## Scope
@@ -94,7 +94,7 @@ Entities use flat `Tyto::Entity` namespace while values use context-scoped `Tyto
 
 - Move `geo_location.rb` and `null_geo_location.rb` from `courses/values/` to `shared/values/`
 - Update all `require_relative` paths in domain entities, application services, and specs
-- Normalize `AttendanceReport#raw_events` to always return an `Events` collection
+- Remove `raw_events` and `students` private helpers from `AttendanceReport`; use `@course.events` and `@course.students` directly
 - Move spec files to match new source locations
 - Re-namespace all 7 entity files from `Tyto::Entity` to `Tyto::Domain::<Context>::Entities`
 - Update all consumers (repositories, services, policies, collection values, representers, specs)
@@ -108,21 +108,21 @@ Entities use flat `Tyto::Entity` namespace while values use context-scoped `Tyto
 
 > **Test-first**: Update spec file locations and require paths first, then move source files.
 
-- [ ] 1.1a Move spec files `spec/domain/courses/values/geo_location_spec.rb` and `null_geo_location_spec.rb` to `spec/domain/shared/values/` and update their require paths
-- [ ] 1.1b Verify moved specs fail (files not yet relocated)
-- [ ] 1.2 Move `domain/courses/values/geo_location.rb` and `null_geo_location.rb` to `domain/shared/values/`
-- [ ] 1.3 Update `require_relative` in `courses/entities/location.rb` — change `../values/geo_location` to `../../shared/values/geo_location` (same for null)
-- [ ] 1.4 Update `require_relative` in `attendance/entities/attendance.rb` — change `../../courses/values/geo_location` to `../../shared/values/geo_location` (same for null)
-- [ ] 1.5 Update `require_relative` in `application/services/concerns/coordinate_validation.rb` — change path from `courses/values/` to `shared/values/`
-- [ ] 1.6 Run full test suite — all specs pass
+- [x] 1.1a Move spec files `spec/domain/courses/values/geo_location_spec.rb` and `null_geo_location_spec.rb` to `spec/domain/shared/values/` and update their require paths
+- [x] 1.1b Verify moved specs fail (files not yet relocated)
+- [x] 1.2 Move `domain/courses/values/geo_location.rb` and `null_geo_location.rb` to `domain/shared/values/`
+- [x] 1.3 Update `require_relative` in `courses/entities/location.rb` — change `../values/geo_location` to `../../shared/values/geo_location` (same for null)
+- [x] 1.4 Update `require_relative` in `attendance/entities/attendance.rb` — change `../../courses/values/geo_location` to `../../shared/values/geo_location` (same for null)
+- [x] 1.5 Update `require_relative` in `application/services/concerns/coordinate_validation.rb` — change path from `courses/values/` to `shared/values/`
+- [x] 1.6 Run full test suite — all specs pass
 
-## Slice 2: Normalize raw_events return type
+## Slice 2: Remove defensive fallbacks in AttendanceReport
 
-- [ ] 2.1a Add/update test in `spec/domain/attendance/entities/attendance_report_spec.rb` asserting `raw_events` returns an `Events` collection even when events are not loaded
-- [ ] 2.1b Verify new test fails (returns Array currently)
-- [ ] 2.2 Update `AttendanceReport#raw_events` to return `Events.from([])` instead of `[]`
-- [ ] 2.3 Ensure `attendance_report.rb` has the necessary `require_relative` for Events
-- [ ] 2.4 Run full test suite — all specs pass
+> The `raw_events` and `students` private methods silently return `[]` when collections aren't loaded, masking a precondition violation. The service layer (`GenerateReport`) always loads full courses via `find_full`, so `@course.events` and `@course.students` are always populated. Remove the helpers and use the course accessors directly — a `NoMethodError` on `nil` is the correct failure mode if the precondition is ever violated.
+
+- [x] 2.1 Verify existing specs pass (baseline) — they already cover the empty-events and empty-enrollments cases with loaded collections
+- [x] 2.2 Remove `raw_events` and `students` private methods from `attendance_report.rb`; replace calls with `@course.events` and `@course.students`
+- [x] 2.3 Run full test suite — all 858 specs pass
 
 ## Slice 3: Entity namespace alignment
 
@@ -206,32 +206,40 @@ Change entity namespaces from flat `Tyto::Entity::<Name>` to context-scoped `Tyt
 
 > **Context-at-a-time**: Refactor one bounded context at a time to keep changes reviewable. Within each context: update specs first, then source files, then consumers.
 
-- [ ] 3.1 **Accounts context** — Re-namespace `Account`
-  - [ ] 3.1a Update `account_spec.rb` to use `Tyto::Domain::Accounts::Entities::Account`; verify it fails
-  - [ ] 3.1b Update `account.rb` namespace from `module Tyto; module Entity` to `module Tyto; module Domain; module Accounts; module Entities`
-  - [ ] 3.1c Update consumers: `create_account.rb`, `accounts.rb` repository, `verify_google_token_spec.rb`, `accounts_spec.rb`
-  - [ ] 3.1d Run test suite — verify all pass
-- [ ] 3.2 **Courses context** — Re-namespace `Course`, `Event`, `Location`, `Enrollment`
-  - [ ] 3.2a Update course entity specs to use new namespace; verify they fail
-  - [ ] 3.2b Update 4 entity files' namespace declarations
-  - [ ] 3.2c Update domain consumers: `events.rb`, `locations.rb`, `enrollments.rb` collection type constraints
-  - [ ] 3.2d Update infrastructure: `courses.rb`, `events.rb`, `locations.rb` repositories
-  - [ ] 3.2e Update application: `create_course.rb`, `create_event.rb`, `create_location.rb`, `list_user_courses.rb`
-  - [ ] 3.2f Update all remaining specs referencing Courses entities
-  - [ ] 3.2g Run test suite — verify all pass
-- [ ] 3.3 **Attendance context** — Re-namespace `Attendance`, `AttendanceReport`
-  - [ ] 3.3a Update attendance entity specs to use new namespace; verify they fail
-  - [ ] 3.3b Update 2 entity files' namespace declarations
-  - [ ] 3.3c Update domain consumers: `attendance_eligibility.rb` policy
-  - [ ] 3.3d Update infrastructure: `attendances.rb` repository
-  - [ ] 3.3e Update application: `record_attendance.rb`, `generate_report.rb`
-  - [ ] 3.3f Update all remaining specs referencing Attendance entities
-  - [ ] 3.3g Run test suite — verify all pass
-- [ ] 3.4 Run full test suite — all specs pass
+- [x] 3.1 **Accounts context** — Re-namespace `Account`
+  - [x] 3.1a Update `account_spec.rb` to use `Tyto::Domain::Accounts::Entities::Account`; verify it fails
+  - [x] 3.1b Update `account.rb` namespace from `module Tyto; module Entity` to `module Tyto; module Domain; module Accounts; module Entities`
+  - [x] 3.1c Update consumers: `create_account.rb`, `accounts.rb` repository, `verify_google_token_spec.rb`, `accounts_spec.rb`
+  - [x] 3.1d Run test suite — verify all pass
+- [x] 3.2 **Courses context** — Re-namespace `Course`, `Event`, `Location`, `Enrollment`
+  - [x] 3.2a Update course entity specs to use new namespace; verify they fail
+  - [x] 3.2b Update 4 entity files' namespace declarations
+  - [x] 3.2c Update domain consumers: `events.rb`, `locations.rb`, `enrollments.rb` collection type constraints
+  - [x] 3.2d Update infrastructure: `courses.rb`, `events.rb`, `locations.rb` repositories
+  - [x] 3.2e Update application: `create_course.rb`, `create_event.rb`, `create_location.rb`, `list_user_courses.rb`
+  - [x] 3.2f Update all remaining specs referencing Courses entities
+  - [x] 3.2g Run test suite — verify all pass
+- [x] 3.3 **Attendance context** — Re-namespace `Attendance`, `AttendanceReport`
+  - [x] 3.3a Update attendance entity specs to use new namespace; verify they fail
+  - [x] 3.3b Update 2 entity files' namespace declarations
+  - [x] 3.3c Update domain consumers: `attendance_eligibility.rb` policy
+  - [x] 3.3d Update infrastructure: `attendances.rb` repository
+  - [x] 3.3e Update application: `record_attendance.rb`, `generate_report.rb`
+  - [x] 3.3f Update all remaining specs referencing Attendance entities
+  - [x] 3.3g Run test suite — verify all pass
+- [x] 3.4 Run full test suite — all specs pass
 
 ## Completed
 
-(none yet)
+- **Slice 1** (2026-02-10): Relocated `GeoLocation` and `NullGeoLocation` from `courses/values/` to `shared/values/`. Moved spec files, source files, updated 3 consumer `require_relative` paths. All 858 tests pass.
+- **Slice 2** (2026-02-10): Removed `raw_events` and `students` private methods from `AttendanceReport`. These methods silently returned `[]` when collections weren't loaded, masking a precondition violation that can't happen through the service layer (`GenerateReport` always uses `find_full`). Now uses `@course.events` and `@course.students` directly. All 858 tests pass.
+- **Slice 3** (2026-02-10): Re-namespaced all 7 entity files from flat `Tyto::Entity::<Name>` to context-scoped `Tyto::Domain::<Context>::Entities::<Name>`. Updated 3 contexts (Accounts, Courses, Attendance), 7 entity source files, 3 collection value objects, 5 repositories, 7 services, 1 policy, and 24 spec files. Within entities, simplified internal references to use shorter `Values::` paths resolved from the parent context module. All 858 tests pass.
+
+- **Manual verification** (2026-02-10): Started backend (Puma on :9292) and frontend (webpack on :8080). App loaded successfully — authenticated user displayed with correct roles, course listing rendered, all API endpoints responded. Verified account display, course CRUD, events, locations (GeoLocation), and enrollment flows work end-to-end.
+
+---
+
+All slices complete. Branch is ready for PR.
 
 ---
 

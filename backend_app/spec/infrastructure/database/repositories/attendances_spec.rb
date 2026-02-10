@@ -17,7 +17,7 @@ describe 'Tyto::Repository::Attendances' do
 
   describe '#create' do
     it 'persists a new attendance and returns entity with ID' do
-      entity = Tyto::Entity::Attendance.new(
+      entity = Tyto::Domain::Attendance::Entities::Attendance.new(
         id: nil,
         account_id: account.id,
         course_id: course.id,
@@ -32,7 +32,7 @@ describe 'Tyto::Repository::Attendances' do
 
       result = repository.create(entity)
 
-      _(result).must_be_instance_of Tyto::Entity::Attendance
+      _(result).must_be_instance_of Tyto::Domain::Attendance::Entities::Attendance
       _(result.id).wont_be_nil
       _(result.account_id).must_equal account.id
       _(result.course_id).must_equal course.id
@@ -42,7 +42,7 @@ describe 'Tyto::Repository::Attendances' do
     end
 
     it 'persists attendance without coordinates' do
-      entity = Tyto::Entity::Attendance.new(
+      entity = Tyto::Domain::Attendance::Entities::Attendance.new(
         id: nil,
         account_id: account.id,
         course_id: course.id,
@@ -74,7 +74,7 @@ describe 'Tyto::Repository::Attendances' do
 
       result = repository.find_id(orm_attendance.id)
 
-      _(result).must_be_instance_of Tyto::Entity::Attendance
+      _(result).must_be_instance_of Tyto::Domain::Attendance::Entities::Attendance
       _(result.id).must_equal orm_attendance.id
       _(result.name).must_equal 'Test Attendance'
     end
@@ -173,7 +173,7 @@ describe 'Tyto::Repository::Attendances' do
 
       result = repository.find_by_account_event(account.id, event.id)
 
-      _(result).must_be_instance_of Tyto::Entity::Attendance
+      _(result).must_be_instance_of Tyto::Domain::Attendance::Entities::Attendance
       _(result.account_id).must_equal account.id
       _(result.event_id).must_equal event.id
     end
@@ -244,7 +244,7 @@ describe 'Tyto::Repository::Attendances' do
       result = repository.find_all
 
       _(result.length).must_equal 2
-      result.each { |a| _(a).must_be_instance_of Tyto::Entity::Attendance }
+      result.each { |a| _(a).must_be_instance_of Tyto::Domain::Attendance::Entities::Attendance }
     end
   end
 
@@ -269,7 +269,7 @@ describe 'Tyto::Repository::Attendances' do
 
   describe 'check_in_location integration' do
     it 'entity has functioning check_in_location' do
-      entity = Tyto::Entity::Attendance.new(
+      entity = Tyto::Domain::Attendance::Entities::Attendance.new(
         id: nil,
         account_id: account.id,
         course_id: course.id,

@@ -7,7 +7,7 @@ describe Tyto::CoursePolicy do
   let(:course) { Tyto::Course.create(name: 'Test Course') }
 
   def create_enrollment(roles:)
-    Tyto::Entity::Enrollment.new(
+    Tyto::Domain::Courses::Entities::Enrollment.new(
       id: 1,
       account_id: account.id,
       course_id: course.id,

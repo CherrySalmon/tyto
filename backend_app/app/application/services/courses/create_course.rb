@@ -47,7 +47,7 @@ module Tyto
 
         def persist_course(validated, requestor)
           # Build domain entity from validated input
-          course_entity = Entity::Course.new(
+          course_entity = Domain::Courses::Entities::Course.new(
             id: nil,
             name: validated[:name],
             logo: validated[:logo],
