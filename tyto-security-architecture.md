@@ -37,7 +37,7 @@ Browser → https://yourdomain.com (Roda serves both)
 
 #### 3. Server-side authorization
 
-The policy pattern (`CoursePolicy`, `EventPolicy`, `AccountPolicy`, etc.) enforces authorization on every API request. User identity comes from the encrypted JWT token, not from client-supplied data. The `verify_policy` pattern in services provides defense-in-depth.
+The policy pattern (`CoursePolicy`, `EventPolicy`, `AccountPolicy`, etc.) enforces authorization on every API request. User identity comes from the encrypted JWT token, not from client-supplied data. Services instantiate and call policies directly (e.g., `CoursePolicy.new(requestor, enrollment).can_view?`), providing defense-in-depth.
 
 #### 4. Backend validates Google OAuth
 
