@@ -278,6 +278,22 @@ module Tyto
                   end
                 end
 
+                r.on 'unpublish' do
+                  # POST api/course/:course_id/assignments/:assignment_id/unpublish
+                  r.post do
+                    case Service::Assignments::UnpublishAssignment.new.call(
+                      requestor:, course_id:, assignment_id:
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, message: api_result.message }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  end
+                end
+
                 # GET api/course/:course_id/assignments/:assignment_id
                 r.get do
                   case Service::Assignments::GetAssignment.new.call(

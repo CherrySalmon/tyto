@@ -20,7 +20,7 @@
                   :attendance-events="attendanceEvents" :locations="locations" @create-event="showAttendanceEvent" @edit-event="editAttendanceEvent" @delete-event="deleteAttendanceEvent"
                   @create-location="createNewLocation" @update-location="updateLocation" @delete-location="deleteLocation"
                   :enrollments="enrollments" :assignableRoles="assignableRoles" @new-enrolls="addEnrollments" @update-enrollment="updateEnrollment" @delete-enrollment="deleteEnrollments" :currentRole="currentRole"
-                  :assignments="assignments" @create-assignment="showCreateAssignment" @edit-assignment="editAssignment" @delete-assignment="deleteAssignment" @publish-assignment="publishAssignment" @view-assignment="viewAssignment"
+                  :assignments="assignments" @create-assignment="showCreateAssignment" @edit-assignment="editAssignment" @delete-assignment="deleteAssignment" @publish-assignment="publishAssignment" @unpublish-assignment="unpublishAssignment" @view-assignment="viewAssignment"
                 >
                 </RouterView>
               </div>
@@ -97,7 +97,8 @@
     </CreateAssignmentDialog>
 
     <template v-if="showModifyAssignmentDialog">
-      <ModifyAssignmentDialog class="dialog-container" :assignmentForm="assignmentForm" :visible="showModifyAssignmentDialog"
+      <ModifyAssignmentDialog class="dialog-container" :assignmentForm="assignmentForm" :assignmentStatus="currentAssignmentStatus"
+        :visible="showModifyAssignmentDialog"
         :attendanceEvents="attendanceEvents" @dialog-closed="showModifyAssignmentDialog = false"
         @update-assignment="updateAssignment">
       </ModifyAssignmentDialog>
@@ -164,6 +165,7 @@ export default {
       showAssignmentDetailDialog: false,
       currentAssignment: {},
       currentAssignmentId: '',
+      currentAssignmentStatus: 'draft',
       assignmentForm: {}
     };
   },
@@ -428,18 +430,22 @@ export default {
       });
     },
     editAssignment(assignmentId) {
-      const assignment = this.assignments.find(a => a.id === assignmentId);
-      if (assignment) {
+      api.get(`/course/${this.course.id}/assignments/${assignmentId}`).then(response => {
+        const assignment = response.data.data;
         this.assignmentForm = {
           title: assignment.title,
           description: assignment.description,
           due_at: assignment.due_at,
           event_id: assignment.event_id,
-          allow_late_resubmit: assignment.allow_late_resubmit
+          allow_late_resubmit: assignment.allow_late_resubmit,
+          submission_requirements: assignment.submission_requirements || []
         };
         this.currentAssignmentId = assignmentId;
+        this.currentAssignmentStatus = assignment.status;
         this.showModifyAssignmentDialog = true;
-      }
+      }).catch(error => {
+        console.error('Error fetching assignment for edit:', error);
+      });
     },
     updateAssignment(form) {
       api.put(`/course/${this.course.id}/assignments/${this.currentAssignmentId}`, form).then(() => {
@@ -466,7 +472,7 @@ export default {
     },
     publishAssignment(assignmentId) {
       ElMessageBox.confirm(
-        'Publishing makes this assignment visible to students. Submission requirements cannot be modified after publishing. Continue?',
+        'Publishing makes this assignment visible to students. Submission requirements (e.g., files, URLs to upload) cannot be modified while published — unpublish first to make changes. Continue?',
         'Publish Assignment',
         { confirmButtonText: 'Publish', cancelButtonText: 'Cancel', type: 'warning' }
       ).then(() => {
@@ -475,6 +481,20 @@ export default {
           ElMessage({ type: 'success', message: 'Assignment published' });
         }).catch(error => {
           console.error('Error publishing assignment:', error);
+        });
+      }).catch(() => {});
+    },
+    unpublishAssignment(assignmentId) {
+      ElMessageBox.confirm(
+        'This will return the assignment to draft status and hide it from students. You can then edit requirements before republishing. Continue?',
+        'Unpublish Assignment',
+        { confirmButtonText: 'Unpublish', cancelButtonText: 'Cancel', type: 'warning' }
+      ).then(() => {
+        api.post(`/course/${this.course.id}/assignments/${assignmentId}/unpublish`).then(() => {
+          this.fetchAssignments();
+          ElMessage({ type: 'success', message: 'Assignment unpublished' });
+        }).catch(error => {
+          console.error('Error unpublishing assignment:', error);
         });
       }).catch(() => {});
     },

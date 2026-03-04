@@ -19,6 +19,8 @@ Deliver a complete, testable feature end-to-end:
 3. **Frontend update** — Build UI to consume new API
 4. **Verify** — Hybrid: Claude-in-Chrome walkthrough + manual pass by developer before merge
 
+> **Meta-review note**: Track pain points encountered during hybrid testing (flakiness, missed regressions, re-verification cost, edge cases discovered late, etc.) in a section below. After Slice 2, use these observations to decide whether to invest in automated interface acceptance tests (e.g., Playwright/Capybara) before merging to main.
+
 ## Reference Documents
 
 | Document | Contents | Status |
@@ -154,22 +156,22 @@ New lifecycle rules:
 
 **Backend**:
 
-- [ ] 1.13a Policy: add `can_unpublish?` method + update summary hash + tests
-- [ ] 1.13b Repository: add `update_with_requirements` method + tests
-- [ ] 1.13c New service: `UnpublishAssignment` (published → draft, with `has_submissions?` placeholder for Slice 2) + tests
-- [ ] 1.13d Update service: `UpdateAssignment` accepts optional `submission_requirements` (allow if draft, reject if published) + tests
-- [ ] 1.13e Routes: add `POST .../unpublish` endpoint + tests
-- [ ] 1.13f All backend tests pass
+- [x] 1.13a Policy: `can_unpublish?` method + summary hash already existed; added test coverage
+- [x] 1.13b Repository: add `update_with_requirements` method (delete-and-replace) + 3 tests
+- [x] 1.13c New service: `UnpublishAssignment` (published → draft, with `has_submissions?` placeholder for Slice 2) + 5 tests
+- [x] 1.13d Update service: `UpdateAssignment` accepts optional `submission_requirements` (allow if draft, reject if published) + 2 tests
+- [x] 1.13e Routes: add `POST .../unpublish` endpoint + 3 tests; add requirements update route tests + 2 tests
+- [x] 1.13f All backend tests pass (998 tests, 0 failures, 98.32% coverage)
 
 **Frontend**:
 
-- [ ] 1.14a `ModifyAssignmentDialog`: add requirements builder for draft assignments; read-only note for published
-- [ ] 1.14b `SingleCourse`: change `editAssignment` to async fetch (to get requirements); add `unpublishAssignment` handler + event wiring
-- [ ] 1.14c `AssignmentsCard`: add unpublish icon for published assignments
+- [x] 1.14a `ModifyAssignmentDialog`: requirements builder for draft assignments; info alert for published
+- [x] 1.14b `SingleCourse`: async fetch `editAssignment` (gets requirements); `unpublishAssignment` handler + event wiring; `currentAssignmentStatus` tracking
+- [x] 1.14c `AssignmentsCard`: unpublish icon (Bottom) for published assignments + `unpublish-assignment` emit
 
 **Verify**:
 
-- [ ] 1.15 Chrome walkthrough: create draft → edit requirements → publish → unpublish → edit requirements → republish
+- [x] 1.15 Chrome walkthrough: create draft → edit requirements → publish → unpublish → edit requirements → republish (all 16 tests passed — see review notes)
 
 ### Slice 2: Submissions (create, view, overwrite — end-to-end)
 
@@ -186,7 +188,7 @@ New lifecycle rules:
 - [ ] 2.2 Domain: Submission entity, RequirementUpload entity, collection value objects
 - [ ] 2.3 Infrastructure: migrations (submissions + submission_entries), ORM models, repository
 - [ ] 2.4 Infrastructure: file storage — LocalGateway (dev/test filesystem adapter), Mapper, storage abstraction interface
-- [ ] 2.5 Application: services (create/overwrite with file validation, late resubmit enforcement), policy, routes (including presign-upload and presign-download endpoints)
+- [ ] 2.5 Application: services (create/overwrite with file validation, late resubmit enforcement), policy, routes (including presign-upload and presign-download endpoints). Note: file extension validation against `allowed_types` must be case-insensitive (e.g., uploading `Report.PDF` should match `pdf`).
 - [ ] 2.6 Presentation: Submission representer (including nested entries)
 - [ ] 2.7 All backend tests pass
 
@@ -230,6 +232,9 @@ New lifecycle rules:
 All wiring in `SingleCourse.vue`: imports, component registration, data properties (assignments, dialog visibility, forms), currentRole watcher (fetchAssignments), 8 methods (fetchAssignments, showCreateAssignment, createAssignment, editAssignment, updateAssignment, deleteAssignment with confirmation, publishAssignment with confirmation, viewAssignment with detail fetch), RouterView props/events, dialog instances. Frontend builds successfully.
 
 - **1.11** — Chrome walkthrough verification of all assignment flows. Fixed `require 'ostruct'` bug in representer (Ruby 3.4 compatibility). All flows verified: create (with requirements builder), list (status badges, due dates), detail view (rendered markdown, requirements table, linked event), edit (metadata only, requirements frozen per R7), publish (status transition, icon removal), delete (confirmation + card removal). Tab switching regression check passed (Attendance Events, Locations, People all unaffected).
+- **1.13a–1.13f** — Slice 1 extension backend: `can_unpublish?` policy tests (3 assertions added across 4 test groups); `update_with_requirements` repository method (delete-and-replace pattern, 3 tests); `UnpublishAssignment` service (published→draft with `has_submissions?` placeholder, 5 tests); `UpdateAssignment` enhanced to accept `submission_requirements` for draft (reject for published, 2 tests); unpublish route + update-with-requirements route tests (5 tests). Total: 998 tests, 0 failures, 98.32% coverage.
+- **1.14a–1.14c** — Slice 1 extension frontend: `ModifyAssignmentDialog` now shows requirements builder for draft assignments (reuses CreateAssignmentDialog pattern) and info alert for published; `SingleCourse.editAssignment` changed to async fetch (loads requirements before showing dialog); `unpublishAssignment` handler with confirmation dialog wired to new API; `AssignmentsCard` shows unpublish (Bottom) icon for published assignments. Frontend builds clean.
+- **1.15** — Chrome walkthrough verification of Slice 1 extension: 16 tests, all passed. Tested: create draft with requirements → edit requirements (add/remove) → publish (confirmation, status badge, icon swap) → edit published (info alert, metadata-only) → unpublish (confirmation, status revert, icon swap) → edit requirements after unpublish → republish. Regression: tab switching (Attendance Events, Locations, Assignments) all unaffected. Test data cleaned up after run.
 
 ## Review Notes (Slice 1)
 
@@ -243,12 +248,22 @@ Issues noted during verification and developer review:
 
 4. **~~Label wording~~** — **RESOLVED** (1.12b): "Late Resubmit" → "Allow Late Resubmits?"
 
-5. **Timezone display** — Deferred to GitHub issue #47 (cross-cutting UX improvement).
+5. **~~Timezone display~~** — **DEFERRED**: GitHub issue #47 (cross-cutting UX improvement).
 
-6. **Markdown sanitization** — Deferred to post-Slice 2 (1.12e). `v-html` with `marked` in AssignmentDetailDialog is an XSS vector. Low risk (only teaching staff input) but should add DOMPurify.
+6. **~~Markdown sanitization~~** — **DEFERRED**: post-Slice 2 (1.12e). `v-html` with `marked` in AssignmentDetailDialog is an XSS vector. Low risk (only teaching staff input) but should add DOMPurify.
 
 7. **~~Add Requirement button~~** — **RESOLVED** (1.12d): Disabled when empty requirement row exists.
 
+8. **~~Publish dialog wording~~** — **RESOLVED**: Updated to mention unpublish option: "...cannot be modified while published — unpublish first to make changes."
+
+## Hybrid Testing Pain Points (meta-review after Slice 2)
+
+> Track observations here during Slice 2 hybrid testing. After Slice 2, review this list to decide whether automated interface acceptance tests (Playwright/Capybara) are warranted before merging to main.
+
+| # | Pain Point | Slice | Impact |
+|---|-----------|-------|--------|
+| — | *(none yet — populate during Slice 2 verification)* | — | — |
+
 ---
 
-Last updated: 2026-03-04 (Slice 1 review in progress: review fixes applied, lifecycle extension planned as 1.13–1.15)
+Last updated: 2026-03-04 (added hybrid testing meta-review tracking; Slice 1 extension complete)

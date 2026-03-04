@@ -30,7 +30,7 @@ describe 'Assignment Routes' do
         title: 'Homework 1',
         description: 'First assignment',
         submission_requirements: [
-          { submission_format: 'file', description: 'Source code', allowed_types: '.rb,.py' }
+          { submission_format: 'file', description: 'Source code', allowed_types: 'rb,py' }
         ]
       }
 
@@ -237,6 +237,50 @@ describe 'Assignment Routes' do
       _(last_response.status).must_equal 403
     end
 
+    it 'updates requirements for draft assignment' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      assignment = Tyto::Assignment.create(
+        course_id: course.id, title: 'Draft', status: 'draft', allow_late_resubmit: false
+      )
+      Tyto::SubmissionRequirement.create(
+        assignment_id: assignment.id, submission_format: 'file',
+        description: 'Old req', sort_order: 0
+      )
+
+      payload = {
+        title: 'Updated',
+        submission_requirements: [
+          { submission_format: 'url', description: 'New URL req' }
+        ]
+      }
+
+      put "/api/course/#{course.id}/assignments/#{assignment.id}", payload.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 200
+      reqs = Tyto::SubmissionRequirement.where(assignment_id: assignment.id).all
+      _(reqs.length).must_equal 1
+      _(reqs.first.description).must_equal 'New URL req'
+    end
+
+    it 'rejects requirements update for published assignment' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      assignment = Tyto::Assignment.create(
+        course_id: course.id, title: 'Published', status: 'published', allow_late_resubmit: false
+      )
+
+      payload = {
+        submission_requirements: [
+          { submission_format: 'file', description: 'Sneaky' }
+        ]
+      }
+
+      put "/api/course/#{course.id}/assignments/#{assignment.id}", payload.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 400
+    end
+
     it 'returns not found for non-existent assignment' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
@@ -292,6 +336,56 @@ describe 'Assignment Routes' do
       delete "/api/course/#{course.id}/assignments/999999", nil, auth
 
       _(last_response.status).must_equal 404
+    end
+  end
+
+  describe 'POST /api/course/:id/assignments/:assignment_id/unpublish' do
+    it 'unpublishes published assignment as owner' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      assignment = Tyto::Assignment.create(
+        course_id: course.id, title: 'Published HW', status: 'published', allow_late_resubmit: false
+      )
+
+      post "/api/course/#{course.id}/assignments/#{assignment.id}/unpublish", nil, auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['success']).must_equal true
+      _(json_response['message']).must_be_kind_of String
+      _(Tyto::Assignment[assignment.id].status).must_equal 'draft'
+    end
+
+    it 'returns bad request when unpublishing draft assignment' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      assignment = Tyto::Assignment.create(
+        course_id: course.id, title: 'Draft', status: 'draft', allow_late_resubmit: false
+      )
+
+      post "/api/course/#{course.id}/assignments/#{assignment.id}/unpublish", nil, auth
+
+      _(last_response.status).must_equal 400
+    end
+
+    it 'returns forbidden as student' do
+      owner_account = create_test_account(roles: ['creator'])
+      course = create_test_course(owner_account)
+      student_account, student_auth = authenticated_header(roles: ['student'])
+
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
+        course_id: course.id,
+        account_id: student_account.id,
+        role_id: student_role.id
+      )
+
+      assignment = Tyto::Assignment.create(
+        course_id: course.id, title: 'HW', status: 'published', allow_late_resubmit: false
+      )
+
+      post "/api/course/#{course.id}/assignments/#{assignment.id}/unpublish", nil, student_auth
+
+      _(last_response.status).must_equal 403
     end
   end
 

@@ -11,7 +11,7 @@ describe 'Tyto::Domain::Assignments::Entities::SubmissionRequirement' do
       assignment_id: 10,
       submission_format: 'file',
       description: 'R Markdown source file',
-      allowed_types: '.Rmd,.qmd',
+      allowed_types: 'Rmd,qmd',
       sort_order: 0,
       created_at: now,
       updated_at: now
@@ -39,7 +39,7 @@ describe 'Tyto::Domain::Assignments::Entities::SubmissionRequirement' do
       _(req.assignment_id).must_equal 10
       _(req.submission_format).must_equal 'file'
       _(req.description).must_equal 'R Markdown source file'
-      _(req.allowed_types).must_equal '.Rmd,.qmd'
+      _(req.allowed_types).must_equal 'Rmd,qmd'
       _(req.sort_order).must_equal 0
     end
 

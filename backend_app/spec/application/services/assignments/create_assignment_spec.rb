@@ -35,7 +35,7 @@ describe Tyto::Service::Assignments::CreateAssignment do
         'description' => 'Clean the data.',
         'due_at' => (Time.now + 7 * 86_400).iso8601,
         'submission_requirements' => [
-          { 'submission_format' => 'file', 'description' => 'R Markdown source', 'allowed_types' => '.Rmd,.qmd' },
+          { 'submission_format' => 'file', 'description' => 'R Markdown source', 'allowed_types' => 'Rmd,qmd' },
           { 'submission_format' => 'url', 'description' => 'GitHub repo link' }
         ]
       }
@@ -116,6 +116,23 @@ describe Tyto::Service::Assignments::CreateAssignment do
 
       _(result).must_be_kind_of Dry::Monads::Result::Failure
       _(result.failure.status).must_equal :bad_request
+    end
+
+    it 'sanitizes allowed_types by stripping dots and lowercasing' do
+      assignment_data = {
+        'title' => 'Sanitize Test',
+        'submission_requirements' => [
+          { 'submission_format' => 'file', 'description' => 'Report', 'allowed_types' => '.PDF, .Rmd, .qmd' }
+        ]
+      }
+
+      result = Tyto::Service::Assignments::CreateAssignment.new.call(
+        requestor: owner_requestor, course_id: course.id, assignment_data:
+      )
+
+      _(result).must_be_kind_of Dry::Monads::Result::Success
+      req = result.value!.message.submission_requirements.first
+      _(req.allowed_types).must_equal 'pdf,rmd,qmd'
     end
   end
 end

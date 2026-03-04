@@ -37,6 +37,15 @@
           >
             <Promotion />
           </el-icon>
+          <el-icon
+            v-if="assignment.status === 'published'"
+            :size="18"
+            @click="$emit('unpublish-assignment', assignment.id)"
+            style="margin-left: 10px;"
+            title="Unpublish (return to draft)"
+          >
+            <Hide />
+          </el-icon>
           <el-icon :size="18" @click="$emit('delete-assignment', assignment.id)" style="margin-left: 10px;">
             <Delete />
           </el-icon>
@@ -50,7 +59,7 @@
 import { formatLocalDateTime } from '../../../lib/dates'
 
 export default {
-  emits: ['create-assignment', 'edit-assignment', 'delete-assignment', 'publish-assignment', 'view-assignment'],
+  emits: ['create-assignment', 'edit-assignment', 'delete-assignment', 'publish-assignment', 'unpublish-assignment', 'view-assignment'],
   props: {
     course: Object,
     assignments: Array

@@ -8,7 +8,7 @@ describe Tyto::Domain::Assignments::Values::SubmissionRequirements do
   let(:file_req) do
     Tyto::Domain::Assignments::Entities::SubmissionRequirement.new(
       id: 1, assignment_id: 10, submission_format: 'file',
-      description: 'R Markdown source file', allowed_types: '.Rmd,.qmd',
+      description: 'R Markdown source file', allowed_types: 'Rmd,qmd',
       sort_order: 0, created_at: now, updated_at: now
     )
   end
@@ -24,7 +24,7 @@ describe Tyto::Domain::Assignments::Values::SubmissionRequirements do
   let(:pdf_req) do
     Tyto::Domain::Assignments::Entities::SubmissionRequirement.new(
       id: 3, assignment_id: 10, submission_format: 'file',
-      description: 'PDF report', allowed_types: '.pdf',
+      description: 'PDF report', allowed_types: 'pdf',
       sort_order: 2, created_at: now, updated_at: now
     )
   end

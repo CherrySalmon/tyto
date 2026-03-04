@@ -27,12 +27,13 @@ describe Tyto::AssignmentPolicy do
       let(:enrollment) { create_enrollment(roles: ['owner']) }
       let(:policy) { Tyto::AssignmentPolicy.new(requestor, enrollment) }
 
-      it 'allows full CRUD and publish' do
+      it 'allows full CRUD, publish, and unpublish' do
         _(policy.can_create?).must_equal true
         _(policy.can_view?).must_equal true
         _(policy.can_update?).must_equal true
         _(policy.can_delete?).must_equal true
         _(policy.can_publish?).must_equal true
+        _(policy.can_unpublish?).must_equal true
       end
 
       it 'allows viewing draft assignments' do
@@ -44,12 +45,13 @@ describe Tyto::AssignmentPolicy do
       let(:enrollment) { create_enrollment(roles: ['instructor']) }
       let(:policy) { Tyto::AssignmentPolicy.new(requestor, enrollment) }
 
-      it 'allows full CRUD and publish' do
+      it 'allows full CRUD, publish, and unpublish' do
         _(policy.can_create?).must_equal true
         _(policy.can_view?).must_equal true
         _(policy.can_update?).must_equal true
         _(policy.can_delete?).must_equal true
         _(policy.can_publish?).must_equal true
+        _(policy.can_unpublish?).must_equal true
       end
 
       it 'allows viewing draft assignments' do
@@ -61,12 +63,13 @@ describe Tyto::AssignmentPolicy do
       let(:enrollment) { create_enrollment(roles: ['staff']) }
       let(:policy) { Tyto::AssignmentPolicy.new(requestor, enrollment) }
 
-      it 'allows full CRUD and publish' do
+      it 'allows full CRUD, publish, and unpublish' do
         _(policy.can_create?).must_equal true
         _(policy.can_view?).must_equal true
         _(policy.can_update?).must_equal true
         _(policy.can_delete?).must_equal true
         _(policy.can_publish?).must_equal true
+        _(policy.can_unpublish?).must_equal true
       end
 
       it 'allows viewing draft assignments' do
@@ -84,11 +87,12 @@ describe Tyto::AssignmentPolicy do
       _(policy.can_view?).must_equal true
     end
 
-    it 'denies creating, updating, deleting, and publishing' do
+    it 'denies creating, updating, deleting, publishing, and unpublishing' do
       _(policy.can_create?).must_equal false
       _(policy.can_update?).must_equal false
       _(policy.can_delete?).must_equal false
       _(policy.can_publish?).must_equal false
+      _(policy.can_unpublish?).must_equal false
     end
 
     it 'denies viewing draft assignments' do
@@ -106,6 +110,7 @@ describe Tyto::AssignmentPolicy do
       _(policy.can_update?).must_equal false
       _(policy.can_delete?).must_equal false
       _(policy.can_publish?).must_equal false
+      _(policy.can_unpublish?).must_equal false
       _(policy.can_view_drafts?).must_equal false
     end
   end
@@ -120,6 +125,7 @@ describe Tyto::AssignmentPolicy do
       _(policy.can_update?).must_equal false
       _(policy.can_delete?).must_equal false
       _(policy.can_publish?).must_equal false
+      _(policy.can_unpublish?).must_equal false
     end
   end
 
@@ -137,6 +143,7 @@ describe Tyto::AssignmentPolicy do
       _(summary[:can_update]).must_equal true
       _(summary[:can_delete]).must_equal true
       _(summary[:can_publish]).must_equal true
+      _(summary[:can_unpublish]).must_equal true
       _(summary[:can_view_drafts]).must_equal true
     end
   end

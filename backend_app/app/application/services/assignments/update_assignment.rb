@@ -50,6 +50,12 @@ module Tyto
         end
 
         def persist_update(data)
+          has_requirements = data.key?('submission_requirements')
+
+          if has_requirements && @assignment.status != 'draft'
+            return Failure(bad_request('Requirements cannot be updated for published assignments'))
+          end
+
           updated = @assignment.new(
             title: data['title'] ? data['title'].strip : @assignment.title,
             description: data.key?('description') ? data['description'] : @assignment.description,
@@ -58,10 +64,48 @@ module Tyto
             allow_late_resubmit: data.key?('allow_late_resubmit') ? data['allow_late_resubmit'] : @assignment.allow_late_resubmit
           )
 
-          @assignments_repo.update(updated)
+          if has_requirements
+            requirement_entities = parse_requirements(data['submission_requirements']).map.with_index do |req, idx|
+              Domain::Assignments::Entities::SubmissionRequirement.new(
+                id: nil,
+                assignment_id: @assignment.id,
+                submission_format: req[:submission_format],
+                description: req[:description],
+                allowed_types: req[:allowed_types],
+                sort_order: req[:sort_order] || idx,
+                created_at: nil,
+                updated_at: nil
+              )
+            end
+            @assignments_repo.update_with_requirements(updated, requirement_entities)
+          else
+            @assignments_repo.update(updated)
+          end
+
           Success(true)
         rescue StandardError => e
           Failure(internal_error(e.message))
+        end
+
+        def parse_requirements(requirements_data)
+          return [] unless requirements_data.is_a?(Array)
+
+          requirements_data
+            .reject { |req| req['description'].nil? || req['description'].to_s.strip.empty? }
+            .map do |req|
+              {
+                submission_format: req['submission_format'] || 'file',
+                description: req['description'],
+                allowed_types: sanitize_allowed_types(req['allowed_types']),
+                sort_order: req['sort_order']
+              }
+            end
+        end
+
+        def sanitize_allowed_types(value)
+          return nil if value.nil? || value.to_s.strip.empty?
+
+          value.to_s.split(',').map { |ext| ext.strip.delete_prefix('.').downcase }.reject(&:empty?).join(',')
         end
 
         def parse_time(time_value)

@@ -103,10 +103,16 @@ module Tyto
               {
                 submission_format: req['submission_format'] || 'file',
                 description: req['description'],
-                allowed_types: req['allowed_types'],
+                allowed_types: sanitize_allowed_types(req['allowed_types']),
                 sort_order: req['sort_order']
               }
             end
+        end
+
+        def sanitize_allowed_types(value)
+          return nil if value.nil? || value.to_s.strip.empty?
+
+          value.to_s.split(',').map { |ext| ext.strip.delete_prefix('.').downcase }.reject(&:empty?).join(',')
         end
 
         def parse_time(time_value)

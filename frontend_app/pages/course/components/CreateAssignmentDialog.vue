@@ -32,7 +32,7 @@
             <el-input
               v-if="req.submission_format === 'file'"
               v-model="req.allowed_types"
-              placeholder=".Rmd,.pdf"
+              placeholder="Rmd,pdf"
               style="width: 140px;"
             ></el-input>
             <el-button type="danger" :icon="Delete" circle size="small" @click="removeRequirement(index)" style="margin-left: 8px;"></el-button>

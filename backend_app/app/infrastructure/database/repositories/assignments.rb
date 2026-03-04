@@ -116,6 +116,35 @@ module Tyto
         rebuild_entity(orm_record.refresh)
       end
 
+      # Update an assignment and replace its submission requirements
+      def update_with_requirements(entity, requirements)
+        orm_record = Tyto::Assignment[entity.id]
+        raise "Assignment not found: #{entity.id}" unless orm_record
+
+        orm_record.update(
+          event_id: entity.event_id,
+          title: entity.title,
+          description: entity.description,
+          status: entity.status,
+          due_at: entity.due_at&.utc,
+          allow_late_resubmit: entity.allow_late_resubmit
+        )
+
+        Tyto::SubmissionRequirement.where(assignment_id: orm_record.id).delete
+
+        requirements.each do |req|
+          Tyto::SubmissionRequirement.create(
+            assignment_id: orm_record.id,
+            submission_format: req.submission_format,
+            description: req.description,
+            allowed_types: req.allowed_types,
+            sort_order: req.sort_order
+          )
+        end
+
+        rebuild_entity(orm_record.refresh, load_requirements: true)
+      end
+
       # Delete an assignment by ID
       def delete(id)
         orm_record = Tyto::Assignment[id]

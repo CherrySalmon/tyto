@@ -92,7 +92,7 @@ describe 'Tyto::Repository::Assignments' do
       requirements = [
         Tyto::Domain::Assignments::Entities::SubmissionRequirement.new(
           id: nil, assignment_id: 0, submission_format: 'file',
-          description: 'R Markdown source', allowed_types: '.Rmd,.qmd',
+          description: 'R Markdown source', allowed_types: 'Rmd,qmd',
           sort_order: 0, created_at: nil, updated_at: nil
         ),
         Tyto::Domain::Assignments::Entities::SubmissionRequirement.new(
@@ -184,7 +184,7 @@ describe 'Tyto::Repository::Assignments' do
         assignment_id: orm_assignment.id,
         submission_format: 'file',
         description: 'R Markdown source',
-        allowed_types: '.Rmd,.qmd',
+        allowed_types: 'Rmd,qmd',
         sort_order: 0
       )
       Tyto::SubmissionRequirement.create(
@@ -220,7 +220,7 @@ describe 'Tyto::Repository::Assignments' do
         assignment_id: orm_assignment.id,
         submission_format: 'file',
         description: 'First',
-        allowed_types: '.pdf',
+        allowed_types: 'pdf',
         sort_order: 0
       )
 
@@ -396,6 +396,83 @@ describe 'Tyto::Repository::Assignments' do
       )
 
       _ { repository.update(entity) }.must_raise RuntimeError
+    end
+  end
+
+  describe '#update_with_requirements' do
+    it 'updates assignment metadata and replaces requirements' do
+      orm_assignment = Tyto::Assignment.create(
+        course_id: orm_course.id,
+        title: 'Original',
+        status: 'draft',
+        allow_late_resubmit: false
+      )
+      Tyto::SubmissionRequirement.create(
+        assignment_id: orm_assignment.id,
+        submission_format: 'file',
+        description: 'Old requirement',
+        sort_order: 0
+      )
+
+      entity = repository.find_id(orm_assignment.id)
+      updated_entity = entity.new(title: 'Updated Title')
+
+      new_requirements = [
+        Tyto::Domain::Assignments::Entities::SubmissionRequirement.new(
+          id: nil, assignment_id: orm_assignment.id, submission_format: 'url',
+          description: 'New URL requirement', allowed_types: nil,
+          sort_order: 0, created_at: nil, updated_at: nil
+        ),
+        Tyto::Domain::Assignments::Entities::SubmissionRequirement.new(
+          id: nil, assignment_id: orm_assignment.id, submission_format: 'file',
+          description: 'New file requirement', allowed_types: 'pdf,docx',
+          sort_order: 1, created_at: nil, updated_at: nil
+        )
+      ]
+
+      result = repository.update_with_requirements(updated_entity, new_requirements)
+
+      _(result.title).must_equal 'Updated Title'
+      _(result.requirements_loaded?).must_equal true
+      _(result.submission_requirements.count).must_equal 2
+      _(result.submission_requirements.map(&:description)).must_include 'New URL requirement'
+      _(result.submission_requirements.map(&:description)).must_include 'New file requirement'
+      _(result.submission_requirements.map(&:description)).wont_include 'Old requirement'
+    end
+
+    it 'clears all requirements when empty array provided' do
+      orm_assignment = Tyto::Assignment.create(
+        course_id: orm_course.id,
+        title: 'Has Reqs',
+        status: 'draft',
+        allow_late_resubmit: false
+      )
+      Tyto::SubmissionRequirement.create(
+        assignment_id: orm_assignment.id,
+        submission_format: 'file',
+        description: 'To be removed',
+        sort_order: 0
+      )
+
+      entity = repository.find_id(orm_assignment.id)
+      result = repository.update_with_requirements(entity, [])
+
+      _(result.requirements_loaded?).must_equal true
+      _(result.submission_requirements.empty?).must_equal true
+      _(Tyto::SubmissionRequirement.where(assignment_id: orm_assignment.id).count).must_equal 0
+    end
+
+    it 'raises error for non-existent assignment' do
+      entity = Tyto::Domain::Assignments::Entities::Assignment.new(
+        id: 999_999,
+        course_id: orm_course.id,
+        title: 'Ghost',
+        status: 'draft',
+        created_at: nil,
+        updated_at: nil
+      )
+
+      _ { repository.update_with_requirements(entity, []) }.must_raise RuntimeError
     end
   end
 
