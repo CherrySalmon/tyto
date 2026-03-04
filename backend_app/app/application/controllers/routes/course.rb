@@ -260,6 +260,105 @@ module Tyto
               end
             end
 
+            r.on 'assignments' do
+              r.on String do |assignment_id|
+                r.on 'publish' do
+                  # POST api/course/:course_id/assignments/:assignment_id/publish
+                  r.post do
+                    case Service::Assignments::PublishAssignment.new.call(
+                      requestor:, course_id:, assignment_id:
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, message: api_result.message }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  end
+                end
+
+                # GET api/course/:course_id/assignments/:assignment_id
+                r.get do
+                  case Service::Assignments::GetAssignment.new.call(
+                    requestor:, course_id:, assignment_id:
+                  )
+                  in Success(api_result)
+                    response.status = api_result.http_status_code
+                    { success: true, data: Representer::Assignment.new(api_result.message).to_hash }.to_json
+                  in Failure(api_result)
+                    response.status = api_result.http_status_code
+                    api_result.to_json
+                  end
+                end
+
+                # PUT api/course/:course_id/assignments/:assignment_id
+                r.put do
+                  request_body = JSON.parse(r.body.read)
+
+                  case Service::Assignments::UpdateAssignment.new.call(
+                    requestor:, course_id:, assignment_id:, assignment_data: request_body
+                  )
+                  in Success(api_result)
+                    response.status = api_result.http_status_code
+                    { success: true, message: api_result.message }.to_json
+                  in Failure(api_result)
+                    response.status = api_result.http_status_code
+                    api_result.to_json
+                  end
+                rescue JSON::ParserError => e
+                  response.status = 400
+                  { error: 'Invalid JSON', details: e.message }.to_json
+                end
+
+                # DELETE api/course/:course_id/assignments/:assignment_id
+                r.delete do
+                  case Service::Assignments::DeleteAssignment.new.call(
+                    requestor:, course_id:, assignment_id:
+                  )
+                  in Success(api_result)
+                    response.status = api_result.http_status_code
+                    { success: true, message: api_result.message }.to_json
+                  in Failure(api_result)
+                    response.status = api_result.http_status_code
+                    api_result.to_json
+                  end
+                end
+              end
+
+              # GET api/course/:course_id/assignments
+              r.get do
+                case Service::Assignments::ListAssignments.new.call(requestor:, course_id:)
+                in Success(api_result)
+                  response.status = api_result.http_status_code
+                  { success: true, data: Representer::AssignmentsList.from_entities(api_result.message).to_array }.to_json
+                in Failure(api_result)
+                  response.status = api_result.http_status_code
+                  api_result.to_json
+                end
+              end
+
+              # POST api/course/:course_id/assignments
+              r.post do
+                request_body = JSON.parse(r.body.read)
+
+                case Service::Assignments::CreateAssignment.new.call(
+                  requestor:, course_id:, assignment_data: request_body
+                )
+                in Success(api_result)
+                  response.status = api_result.http_status_code
+                  { success: true, message: 'Assignment created',
+                    assignment_info: Representer::Assignment.new(api_result.message).to_hash }.to_json
+                in Failure(api_result)
+                  response.status = api_result.http_status_code
+                  api_result.to_json
+                end
+              rescue JSON::ParserError => e
+                response.status = 400
+                { error: 'Invalid JSON', details: e.message }.to_json
+              end
+            end
+
             r.on 'location' do
               r.on String do |location_id|
                 r.on do

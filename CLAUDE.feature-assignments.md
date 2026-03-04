@@ -105,19 +105,21 @@ The codebase has four bounded contexts: **Accounts**, **Courses**, **Attendance*
 
 **Backend test (red)**:
 
-- [ ] 1.1a Failing tests for Assignment entity, SubmissionRequirement entity, and value objects
-- [ ] 1.1b Failing tests for Assignment repository (including requirements loading, event loading)
-- [ ] 1.1c Failing tests for Assignment services (create, list, get, update, delete, publish — including submission requirements and optional event_id)
-- [ ] 1.1d Failing tests for Assignment policy (authorization, draft/published visibility)
-- [ ] 1.1e Failing tests for Assignment routes
+- [x] 1.1a Failing tests for Assignment entity, SubmissionRequirement entity, and value objects
+- [x] 1.1b Failing tests for Assignment repository (including requirements loading, event loading)
+- [x] 1.1c Failing tests for Assignment services (create, list, get, update, delete, publish — including submission requirements and optional event_id)
+- [x] 1.1d Failing tests for Assignment policy (authorization, draft/published visibility)
+- [x] 1.1e Failing tests for Assignment routes
 
 **Backend implementation (green)**:
 
-- [ ] 1.2 Domain: Assignment entity, SubmissionRequirement entity, types, collection value objects
-- [ ] 1.3 Infrastructure: migrations (assignments + submission_requirements), ORM models, repository
-- [ ] 1.4 Application: services (CRUD + publish, with requirements management), policy, routes
-- [ ] 1.5 Presentation: Assignment representer (including nested requirements)
-- [ ] 1.6 All backend tests pass
+- [x] 1.2 Domain: Assignment entity, SubmissionRequirement entity, types, collection value objects
+- [x] 1.3 Infrastructure: migrations (assignments + submission_requirements), ORM models, repository
+- [x] 1.4 Application: services (CRUD + publish, with requirements management), policy, routes
+- [x] 1.5 Presentation: Assignment representer (including nested requirements)
+- [x] 1.6 All backend tests pass (983 tests, 0 failures, 98.31% coverage)
+
+**🔍 REVIEW CHECKPOINT**: Pause for developer review of Slice 1 backend (domain, infrastructure, application, presentation). All backend tests should pass. Resume with frontend after review.
 
 **Frontend**:
 
@@ -149,6 +151,8 @@ The codebase has four bounded contexts: **Accounts**, **Courses**, **Attendance*
 - [ ] 2.6 Presentation: Submission representer (including nested entries)
 - [ ] 2.7 All backend tests pass
 
+**🔍 REVIEW CHECKPOINT**: Pause for developer review of Slice 2 backend (domain, infrastructure, application, presentation). All backend tests should pass. Resume with frontend after review.
+
 **Frontend**:
 
 - [ ] 2.8 Submission form on assignment detail (per-requirement: file upload or URL input)
@@ -170,8 +174,16 @@ The codebase has four bounded contexts: **Accounts**, **Courses**, **Attendance*
 
 ## Completed
 
-(none yet)
+- **1.1a** — Tests for Assignment entity (17 tests), SubmissionRequirement entity (11 tests), SubmissionRequirements collection value object (15 tests). All initially failed (red).
+- **1.2** — Domain implementation: added `AssignmentTitle`, `AssignmentStatus`, `RequirementType` to `types.rb`; created `Assignment` entity (aggregate root with defaults for status/allow_late_resubmit), `SubmissionRequirement` child entity, `SubmissionRequirements` collection value object. All 43 tests now pass (green). Note: `Types::AssignmentStatus.default()` not supported by dry-types — used inline `Types::String.default('draft').enum(...)` instead.
+- **1.1b** — Tests for Assignment repository (27 tests): CRUD, composable loading (find_id, find_with_requirements, find_by_course, find_by_course_and_status, find_by_course_with_requirements), cascade delete, round-trip integrity.
+- **1.3** — Infrastructure: migrations 009 (assignments) + 010 (submission_requirements) with FK constraints and cascade rules; ORM models (`Assignment`, `SubmissionRequirement`); `Repository::Assignments` with composable loading pattern. Updated setup_spec for new tables. All 928 tests pass.
+- **1.1d + 1.4 (policy)** — `AssignmentPolicy` with role-based authorization: teaching staff (owner/instructor/staff) get full CRUD; students can only view published. 12 policy tests pass.
+- **1.1c + 1.4 (services)** — Six services implemented with tests: `CreateAssignment` (7 tests), `ListAssignments` (3 tests), `GetAssignment` (4 tests), `UpdateAssignment` (4 tests), `DeleteAssignment` (3 tests), `PublishAssignment` (4 tests). All 25 service tests pass.
+- **1.5** — `Assignment` representer with nested `SubmissionRequirementRepr`, ISO8601 time formatting, `AssignmentsList` collection representer.
+- **1.1e + 1.4 (routes)** — Assignment routes added to `Routes::Courses` under `r.on 'assignments'`: POST create, GET list, GET by ID, PUT update, DELETE, POST publish. 18 route tests pass.
+- **1.6** — Full regression: 983 tests, 0 failures, 98.31% line coverage.
 
 ---
 
-Last updated: 2026-03-03 (reconciled all docs: R1 submission_format, R2 S3 key, R2 unified .url storage, disabled status, route path, stale markers cleared)
+Last updated: 2026-03-03 (completed Slice 1 backend: tasks 1.1a–1.6 all done, 983 tests passing)

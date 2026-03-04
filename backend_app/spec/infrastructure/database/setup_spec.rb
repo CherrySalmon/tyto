@@ -20,6 +20,8 @@ describe 'Database Setup from Scratch' do
       locations
       events
       attendances
+      assignments
+      submission_requirements
       schema_info
     ] # schema_info <-- Sequel’s migration tracking table
   end
