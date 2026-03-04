@@ -124,11 +124,12 @@ Execution guidelines:
 
 2. **Update the branch plan** (`CLAUDE.*.md`):
    - Mark the verification task as complete (or partially complete if failures exist).
-   - Add a **Review Notes** section (or append to an existing one) with items the developer should consider. Include:
+   - Add a **Review Log** section (or append to an existing one) with numbered items the developer should consider. Include:
      - Design questions surfaced during testing
      - UX inconsistencies or confusing wording
      - Bugs found and whether they were fixed during the run
      - Any workarounds applied (e.g., missing `require` statements)
+   - **After review items are resolved**: collapse resolved items to a single summary line (e.g., "**Resolved**: card sizing fix, label wording, button disable logic"). Keep only deferred items with full detail.
    - Update the `Last updated` line.
 
 3. **Do not auto-fix issues** unless they are clearly bugs that block testing (e.g., a missing require that crashes the server). For design questions and UX concerns, document them in review notes for the developer to decide.
@@ -149,3 +150,4 @@ This ensures review notes are not forgotten — they become a tracked task that 
 - **Regression is not optional**: Always check that existing features on the same page still work. Tab switching, navigation, and shared UI elements are common regression points.
 - **Keep review notes actionable**: Each note should state what was observed and suggest what to consider. Avoid vague "this seems wrong" — explain the tension (e.g., "dialog says X but design doc says Y").
 - **Capture evidence**: Screenshots at failure points and key state transitions help the developer during their manual pass.
+- **Track testing pain points**: If the branch plan has a "Hybrid Testing Pain Points" table, log any pain points encountered during this run (e.g., had to re-verify previously passing flows due to changes, missed a regression that unit tests would have caught, flaky browser state). These observations inform the decision on whether to invest in automated acceptance tests.

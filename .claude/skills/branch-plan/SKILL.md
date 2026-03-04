@@ -37,6 +37,18 @@ When populating or updating a plan:
 
 **Update after each phase**: After each phase completes (tests written, implementation passing, frontend updated, verification), immediately update the plan: mark completed tasks, record findings/decisions, update Current State.
 
+**Completed log**: After each task, add a one-line entry to the Completed table (task ID, summary, test count). Include implementation gotchas only if they'll help resume after context clears. When a slice is finished and stable, trim the Completed table to compact one-liners and move any important gotchas into code comments where they'll be found in context.
+
+**Review log**: After verification, add review notes as numbered items. When review items are resolved, collapse them to a single summary line and keep only deferred items with full detail.
+
+**Review checkpoints**: Insert explicit pause points in the task list where work stops for developer review before continuing. At minimum, insert a checkpoint after backend implementation passes all tests (before starting frontend) and after frontend verification (before moving to the next slice). Use a bold line in the task list:
+
+```
+**REVIEW CHECKPOINT**: Pause for developer review of [scope]. All [tests/flows] should [pass/work]. Resume with [next phase] after review.
+```
+
+The checkpoint ensures the developer can inspect, run, and approve the work before building on top of it. Do not proceed past a checkpoint without developer confirmation.
+
 **Scope decisions**: Record deferrals and rationale. Cross off resolved Questions with the decision made.
 
 **Markdownlint clean**: The final plan document must have no markdownlint warnings. Verify before finishing. Note: line-length limits (MD013) are disabled — do not wrap lines to 80 characters. If a `.markdownlint.json` does not already exist in the project root, create one to codify these and any other deliberate rule exclusions from this skill.
@@ -99,12 +111,23 @@ Deliver a complete, testable feature end-to-end:
 - [ ] 1a [Failing test for expected behavior]
 - [ ] 1b [Additional test scenarios]
 - [ ] 2 [Implementation to make tests pass]
-- [ ] 3 [Frontend update]
-- [ ] 4 Manual verification
+- [ ] 3 All backend tests pass
+
+**REVIEW CHECKPOINT**: Pause for developer review of backend. All tests should pass. Resume with frontend after review.
+
+- [ ] 4 [Frontend update]
+- [ ] 5 Hybrid verification (see review log)
+- [ ] 6 Resolve review notes from verification
 
 ## Completed
 
-(none yet)
+| Task | Summary | Tests |
+|------|---------|-------|
+| — | *(none yet)* | — |
+
+## Review Log
+
+*(none yet)*
 
 ---
 

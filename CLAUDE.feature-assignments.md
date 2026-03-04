@@ -213,48 +213,30 @@ New lifecycle rules:
 - [ ] 3.5 Tests for Gateway (mocked AWS SDK) and gateway selection logic
 - [ ] 3.6 All tests pass (including Slice 1 and 2 regression)
 
-## Completed
+## Completed (Slice 1)
 
-- **1.1a** — Tests for Assignment entity (17 tests), SubmissionRequirement entity (11 tests), SubmissionRequirements collection value object (15 tests). All initially failed (red).
-- **1.2** — Domain implementation: added `AssignmentTitle`, `AssignmentStatus`, `RequirementType` to `types.rb`; created `Assignment` entity (aggregate root with defaults for status/allow_late_resubmit), `SubmissionRequirement` child entity, `SubmissionRequirements` collection value object. All 43 tests now pass (green). Note: `Types::AssignmentStatus.default()` not supported by dry-types — used inline `Types::String.default('draft').enum(...)` instead.
-- **1.1b** — Tests for Assignment repository (27 tests): CRUD, composable loading (find_id, find_with_requirements, find_by_course, find_by_course_and_status, find_by_course_with_requirements), cascade delete, round-trip integrity.
-- **1.3** — Infrastructure: migrations 009 (assignments) + 010 (submission_requirements) with FK constraints and cascade rules; ORM models (`Assignment`, `SubmissionRequirement`); `Repository::Assignments` with composable loading pattern. Updated setup_spec for new tables. All 928 tests pass.
-- **1.1d + 1.4 (policy)** — `AssignmentPolicy` with role-based authorization: teaching staff (owner/instructor/staff) get full CRUD; students can only view published. 12 policy tests pass.
-- **1.1c + 1.4 (services)** — Six services implemented with tests: `CreateAssignment` (7 tests), `ListAssignments` (3 tests), `GetAssignment` (4 tests), `UpdateAssignment` (4 tests), `DeleteAssignment` (3 tests), `PublishAssignment` (4 tests). All 25 service tests pass.
-- **1.5** — `Assignment` representer with nested `SubmissionRequirementRepr`, ISO8601 time formatting, `AssignmentsList` collection representer.
-- **1.1e + 1.4 (routes)** — Assignment routes added to `Routes::Courses` under `r.on 'assignments'`: POST create, GET list, GET by ID, PUT update, DELETE, POST publish. 18 route tests pass.
-- **1.6** — Full regression: 983 tests, 0 failures, 98.31% line coverage.
-- **1.7** — Added `assignments` route as child of SingleCourse in `router/index.js`; added "Assignments" tab link in SingleCourse menu bar.
-- **1.8** — `AssignmentsCard.vue`: card-based list component with status badges (draft=warning, published=success, disabled=info), due date display, create/edit/delete/publish action icons. Follows AttendanceEventCard pattern.
-- **1.9** — `CreateAssignmentDialog.vue`: form with title, markdown description, due date picker, optional event selector, allow_late_resubmit switch, and dynamic submission requirements builder (add/remove requirements with format, description, allowed_types). `ModifyAssignmentDialog.vue`: metadata-only edit form (requirements frozen per R7). Both follow existing dialog patterns.
-- **1.10** — `AssignmentDetailDialog.vue`: detail view with rendered markdown description (using `marked` library), status badge, due date, requirements table, linked event name, late resubmit policy indicator. Added `marked` npm dependency.
+| Task | Summary | Tests |
+|------|---------|-------|
+| 1.1a–1.2 | Domain: Assignment + SubmissionRequirement entities, collection VO, types | 43 |
+| 1.1b, 1.3 | Infrastructure: migrations, ORM models, repository with composable loading | 27 |
+| 1.1d, 1.4 | Policy: role-based authorization (teaching staff CRUD, students view published) | 12 |
+| 1.1c, 1.4 | Services: Create, List, Get, Update, Delete, Publish | 25 |
+| 1.5 | Presentation: Assignment + SubmissionRequirement representers | — |
+| 1.1e, 1.4 | Routes: full CRUD + publish under `/api/course/:course_id/assignments` | 18 |
+| 1.6 | Full regression pass | 983 (98.31% cov) |
+| 1.7–1.10 | Frontend: AssignmentsCard, Create/Modify/Detail dialogs, SingleCourse wiring | build clean |
+| 1.11 | Chrome walkthrough verification (all flows + tab regression) | — |
+| 1.13a–f | Extension backend: unpublish service, update-with-requirements, policy/route tests | 998 (98.32% cov) |
+| 1.14a–c | Extension frontend: draft requirements builder, unpublish handler | build clean |
+| 1.15 | Extension Chrome walkthrough (16 test steps, all passed) | — |
 
-All wiring in `SingleCourse.vue`: imports, component registration, data properties (assignments, dialog visibility, forms), currentRole watcher (fetchAssignments), 8 methods (fetchAssignments, showCreateAssignment, createAssignment, editAssignment, updateAssignment, deleteAssignment with confirmation, publishAssignment with confirmation, viewAssignment with detail fetch), RouterView props/events, dialog instances. Frontend builds successfully.
+## Review Log (Slice 1)
 
-- **1.11** — Chrome walkthrough verification of all assignment flows. Fixed `require 'ostruct'` bug in representer (Ruby 3.4 compatibility). All flows verified: create (with requirements builder), list (status badges, due dates), detail view (rendered markdown, requirements table, linked event), edit (metadata only, requirements frozen per R7), publish (status transition, icon removal), delete (confirmation + card removal). Tab switching regression check passed (Attendance Events, Locations, People all unaffected).
-- **1.13a–1.13f** — Slice 1 extension backend: `can_unpublish?` policy tests (3 assertions added across 4 test groups); `update_with_requirements` repository method (delete-and-replace pattern, 3 tests); `UnpublishAssignment` service (published→draft with `has_submissions?` placeholder, 5 tests); `UpdateAssignment` enhanced to accept `submission_requirements` for draft (reject for published, 2 tests); unpublish route + update-with-requirements route tests (5 tests). Total: 998 tests, 0 failures, 98.32% coverage.
-- **1.14a–1.14c** — Slice 1 extension frontend: `ModifyAssignmentDialog` now shows requirements builder for draft assignments (reuses CreateAssignmentDialog pattern) and info alert for published; `SingleCourse.editAssignment` changed to async fetch (loads requirements before showing dialog); `unpublishAssignment` handler with confirmation dialog wired to new API; `AssignmentsCard` shows unpublish (Bottom) icon for published assignments. Frontend builds clean.
-- **1.15** — Chrome walkthrough verification of Slice 1 extension: 16 tests, all passed. Tested: create draft with requirements → edit requirements (add/remove) → publish (confirmation, status badge, icon swap) → edit published (info alert, metadata-only) → unpublish (confirmation, status revert, icon swap) → edit requirements after unpublish → republish. Regression: tab switching (Attendance Events, Locations, Assignments) all unaffected. Test data cleaned up after run.
+**Resolved**: publish dialog wording (1.12a), `require 'ostruct'` Ruby 3.4 fix, card sizing matched to events, "Late Resubmit" → "Allow Late Resubmits?", "+ Add Requirement" disabled when empty row exists, publish confirmation mentions unpublish option.
 
-## Review Notes (Slice 1)
-
-Issues noted during verification and developer review:
-
-1. **~~Publish dialog wording~~** — **RESOLVED**: Requirements are now editable in draft mode. Published assignments can be unpublished back to draft (if no submissions). Publish confirmation wording will be updated when 1.13–1.14 are implemented. See "Slice 1 extension" tasks above.
-
-2. **~~Bug fix~~** — **RESOLVED**: Added `require 'ostruct'` to `backend_app/app/presentation/representers/assignment.rb`. Ruby 3.4 no longer auto-loads OpenStruct.
-
-3. **~~Card sizing~~** — **RESOLVED** (1.12a): Create Assignment card matched to Create Event card styling.
-
-4. **~~Label wording~~** — **RESOLVED** (1.12b): "Late Resubmit" → "Allow Late Resubmits?"
-
-5. **~~Timezone display~~** — **DEFERRED**: GitHub issue #47 (cross-cutting UX improvement).
-
-6. **~~Markdown sanitization~~** — **DEFERRED**: post-Slice 2 (1.12e). `v-html` with `marked` in AssignmentDetailDialog is an XSS vector. Low risk (only teaching staff input) but should add DOMPurify.
-
-7. **~~Add Requirement button~~** — **RESOLVED** (1.12d): Disabled when empty requirement row exists.
-
-8. **~~Publish dialog wording~~** — **RESOLVED**: Updated to mention unpublish option: "...cannot be modified while published — unpublish first to make changes."
+**Deferred**:
+- **Timezone display**: GitHub issue #47 (cross-cutting UX improvement)
+- **Markdown sanitization** (1.12e): `v-html` + `marked` in AssignmentDetailDialog — add DOMPurify after Slice 2 (may apply to submissions too)
 
 ## Hybrid Testing Pain Points (meta-review after Slice 2)
 

@@ -23,6 +23,7 @@ module Tyto
           attribute :event_id, Types::Integer.optional.default(nil)
           attribute :title, Types::AssignmentTitle
           attribute :description, Types::String.optional.default(nil)
+          # Inline default+enum: dry-types named types (e.g. AssignmentStatus) don't support .default()
           attribute :status, Types::String.default('draft'.freeze).enum('draft', 'published', 'disabled')
           attribute :due_at, Types::Time.optional.default(nil)
           attribute :allow_late_resubmit, Types::Bool.default(false)
