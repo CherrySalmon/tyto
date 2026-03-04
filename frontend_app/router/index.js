@@ -10,6 +10,7 @@ import AttendanceTrack from '../pages/course/AttendanceTrack.vue'
 import AttendanceEventCard from '../pages/course/components/AttendanceEventCard.vue';
 import LocationCard from '../pages/course/components/LocationCard.vue';
 import ManagePeopleCard from '../pages/course/components/ManagePeopleCard.vue';
+import AssignmentsCard from '../pages/course/components/AssignmentsCard.vue';
 
 const routes = [
   {
@@ -50,6 +51,11 @@ const routes = [
             path: 'people',
             name: 'ManagePeopleCard',
             component: ManagePeopleCard
+          },
+          {
+            path: 'assignments',
+            name: 'AssignmentsCard',
+            component: AssignmentsCard
           }
         ]
       },

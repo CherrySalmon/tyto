@@ -30,6 +30,10 @@ module Tyto
       teaching_staff?
     end
 
+    def can_unpublish?
+      teaching_staff?
+    end
+
     def can_view_drafts?
       teaching_staff?
     end
@@ -41,6 +45,7 @@ module Tyto
         can_update: can_update?,
         can_delete: can_delete?,
         can_publish: can_publish?,
+        can_unpublish: can_unpublish?,
         can_view_drafts: can_view_drafts?
       }
     end

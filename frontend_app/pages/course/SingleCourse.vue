@@ -11,6 +11,7 @@
                   <li class="tab" :class="$route.path.includes('attendance')?'active':''"><router-link to="attendance">Attendance Events</router-link></li>
                   <li class="tab" :class="$route.path.includes('location')?'active':''"><router-link to="location">Locations</router-link></li>
                   <li class="tab" :class="$route.path.includes('people')?'active':''"><router-link to="people">People</router-link></li>
+                  <li class="tab" :class="$route.path.includes('assignments')?'active':''"><router-link to="assignments">Assignments</router-link></li>
                 </ul>
               </div>
               <div class="course-manage-view">
@@ -19,6 +20,7 @@
                   :attendance-events="attendanceEvents" :locations="locations" @create-event="showAttendanceEvent" @edit-event="editAttendanceEvent" @delete-event="deleteAttendanceEvent"
                   @create-location="createNewLocation" @update-location="updateLocation" @delete-location="deleteLocation"
                   :enrollments="enrollments" :assignableRoles="assignableRoles" @new-enrolls="addEnrollments" @update-enrollment="updateEnrollment" @delete-enrollment="deleteEnrollments" :currentRole="currentRole"
+                  :assignments="assignments" @create-assignment="showCreateAssignment" @edit-assignment="editAssignment" @delete-assignment="deleteAssignment" @publish-assignment="publishAssignment" @view-assignment="viewAssignment"
                 >
                 </RouterView>
               </div>
@@ -89,6 +91,21 @@
         @update-event="updateAttendanceEvent">
       </ModifyAttendanceEventDialog>
     </template>
+
+    <CreateAssignmentDialog class="dialog-container" :visible="showCreateAssignmentDialog" :attendanceEvents="attendanceEvents"
+      @dialog-closed="showCreateAssignmentDialog = false" @create-assignment="createAssignment">
+    </CreateAssignmentDialog>
+
+    <template v-if="showModifyAssignmentDialog">
+      <ModifyAssignmentDialog class="dialog-container" :assignmentForm="assignmentForm" :visible="showModifyAssignmentDialog"
+        :attendanceEvents="attendanceEvents" @dialog-closed="showModifyAssignmentDialog = false"
+        @update-assignment="updateAssignment">
+      </ModifyAssignmentDialog>
+    </template>
+
+    <AssignmentDetailDialog :assignment="currentAssignment" :visible="showAssignmentDetailDialog"
+      :attendanceEvents="attendanceEvents" @dialog-closed="showAssignmentDetailDialog = false">
+    </AssignmentDetailDialog>
   </div>
 </template>
 
@@ -102,11 +119,14 @@ import CreateAttendanceEventDialog from './components/CreateAttendanceEventDialo
 import ModifyAttendanceEventDialog from './components/ModifyAttendanceEventDialog.vue'
 import AttendanceEventCard from './components/AttendanceEventCard.vue';
 import LocationCard from './components/LocationCard.vue'
+import CreateAssignmentDialog from './components/CreateAssignmentDialog.vue';
+import ModifyAssignmentDialog from './components/ModifyAssignmentDialog.vue';
+import AssignmentDetailDialog from './components/AssignmentDetailDialog.vue';
 import { ElMessage } from 'element-plus'
 
 export default {
   name: 'SingleCourse',
-  components: { CourseInfoCard, ModifyCourseDialog, ManagePeopleCard, CreateAttendanceEventDialog, AttendanceEventCard, ModifyAttendanceEventDialog, LocationCard },
+  components: { CourseInfoCard, ModifyCourseDialog, ManagePeopleCard, CreateAttendanceEventDialog, AttendanceEventCard, ModifyAttendanceEventDialog, LocationCard, CreateAssignmentDialog, ModifyAssignmentDialog, AssignmentDetailDialog },
   data() {
     return {
       course: {
@@ -137,7 +157,14 @@ export default {
       enrollments: [],
       assignableRoles: [],
       currentEventID: '',
-      activeTab: 'events'
+      activeTab: 'events',
+      assignments: [],
+      showCreateAssignmentDialog: false,
+      showModifyAssignmentDialog: false,
+      showAssignmentDetailDialog: false,
+      currentAssignment: {},
+      currentAssignmentId: '',
+      assignmentForm: {}
     };
   },
   computed: {
@@ -162,6 +189,7 @@ export default {
         this.fetchLocations();
         this.fetchEnrollments();
         this.fetchAssignableRoles();
+        this.fetchAssignments();
       }
     }
   },
@@ -378,6 +406,84 @@ export default {
         this.fetchAttendanceEvents(); // Refresh the list after adding
       }).catch(error => {
         console.error('Error modifying attendance event:', error);
+      });
+    },
+    fetchAssignments() {
+      api.get(`/course/${this.course.id}/assignments`).then(response => {
+        this.assignments = response.data.data;
+      }).catch(error => {
+        console.error('Error fetching assignments:', error);
+      });
+    },
+    showCreateAssignment() {
+      this.showCreateAssignmentDialog = true;
+    },
+    createAssignment(form) {
+      api.post(`/course/${this.course.id}/assignments`, form).then(() => {
+        this.showCreateAssignmentDialog = false;
+        this.fetchAssignments();
+        ElMessage({ type: 'success', message: 'Assignment created' });
+      }).catch(error => {
+        console.error('Error creating assignment:', error);
+      });
+    },
+    editAssignment(assignmentId) {
+      const assignment = this.assignments.find(a => a.id === assignmentId);
+      if (assignment) {
+        this.assignmentForm = {
+          title: assignment.title,
+          description: assignment.description,
+          due_at: assignment.due_at,
+          event_id: assignment.event_id,
+          allow_late_resubmit: assignment.allow_late_resubmit
+        };
+        this.currentAssignmentId = assignmentId;
+        this.showModifyAssignmentDialog = true;
+      }
+    },
+    updateAssignment(form) {
+      api.put(`/course/${this.course.id}/assignments/${this.currentAssignmentId}`, form).then(() => {
+        this.showModifyAssignmentDialog = false;
+        this.fetchAssignments();
+        ElMessage({ type: 'success', message: 'Assignment updated' });
+      }).catch(error => {
+        console.error('Error updating assignment:', error);
+      });
+    },
+    deleteAssignment(assignmentId) {
+      ElMessageBox.confirm(
+        'Are you sure you want to delete this assignment?',
+        'Delete Assignment',
+        { confirmButtonText: 'Delete', cancelButtonText: 'Cancel', type: 'warning' }
+      ).then(() => {
+        api.delete(`/course/${this.course.id}/assignments/${assignmentId}`).then(() => {
+          this.fetchAssignments();
+          ElMessage({ type: 'success', message: 'Assignment deleted' });
+        }).catch(error => {
+          console.error('Error deleting assignment:', error);
+        });
+      }).catch(() => {});
+    },
+    publishAssignment(assignmentId) {
+      ElMessageBox.confirm(
+        'Publishing makes this assignment visible to students. Submission requirements cannot be modified after publishing. Continue?',
+        'Publish Assignment',
+        { confirmButtonText: 'Publish', cancelButtonText: 'Cancel', type: 'warning' }
+      ).then(() => {
+        api.post(`/course/${this.course.id}/assignments/${assignmentId}/publish`).then(() => {
+          this.fetchAssignments();
+          ElMessage({ type: 'success', message: 'Assignment published' });
+        }).catch(error => {
+          console.error('Error publishing assignment:', error);
+        });
+      }).catch(() => {});
+    },
+    viewAssignment(assignmentId) {
+      api.get(`/course/${this.course.id}/assignments/${assignmentId}`).then(response => {
+        this.currentAssignment = response.data.data;
+        this.showAssignmentDetailDialog = true;
+      }).catch(error => {
+        console.error('Error fetching assignment:', error);
       });
     },
     onConfirm() {

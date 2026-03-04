@@ -36,6 +36,7 @@
     "axios": "^1.6.0",
     "element-plus": "^2.4.2",
     "js-cookie": "^3.0.5",
+    "marked": "^17.0.3",
     "vue-google-oauth2": "^1.5.10",
     "vue-router": "^4.2.5",
     "vue3-google-login": "^2.0.25"

@@ -34,7 +34,9 @@ Deliver a complete, testable feature end-to-end:
 - [x] File storage strategy decided: direct-to-S3 via presigned URLs (see domain model doc)
 - [x] **Architecture review complete** — R1–R10 resolved, decisions in design decisions doc
 - [x] **Scope and tasks updated to reflect domain model** — reconciled with design decisions (R1–R10) on 2026-03-03
-- [ ] Slice 1: Assignments (backend → frontend → verify)
+- [x] Slice 1: Assignments backend (domain, infrastructure, application, presentation — 983 tests passing)
+- [x] Slice 1: Assignments frontend (tab, list, create/edit dialogs, detail view — build compiles)
+- [x] Slice 1: Assignments verification (Chrome walkthrough complete — see review notes below)
 - [ ] Slice 2: Submissions with local storage (backend → frontend → verify)
 - [ ] Slice 3: Production S3 infrastructure (gateway, config, docs)
 
@@ -123,14 +125,51 @@ The codebase has four bounded contexts: **Accounts**, **Courses**, **Attendance*
 
 **Frontend**:
 
-- [ ] 1.7 Add assignments tab/route to course detail page
-- [ ] 1.8 Assignment list component (draft/published indicators for teaching staff)
-- [ ] 1.9 Create/edit assignment dialog with submission requirements builder
-- [ ] 1.10 Assignment detail view (rendered markdown, linked event, requirements list)
+- [x] 1.7 Add assignments tab/route to course detail page
+- [x] 1.8 Assignment list component (draft/published indicators for teaching staff)
+- [x] 1.9 Create/edit assignment dialog with submission requirements builder
+- [x] 1.10 Assignment detail view (rendered markdown, linked event, requirements list)
 
 **Verify**:
 
-- [ ] 1.11 Hybrid verification: Chrome walkthrough of assignment flows + manual developer pass
+- [x] 1.11 Hybrid verification: Chrome walkthrough of assignment flows (see review notes)
+- [ ] 1.12 Resolve review notes from hybrid verification (see below)
+
+**Review fixes (from 1.11 + developer review)**:
+
+- [x] 1.12a Fix: Create Assignment card font/appearance larger than Create Event card — added `font-size: 14px`, `line-height: 2.5rem`, `text-align: center` to `.assignment-item` CSS (matching global `.event-item` style)
+- [x] 1.12b Fix: "Late Resubmit" label → "Allow Late Resubmits?" in CreateAssignmentDialog + ModifyAssignmentDialog
+- [x] 1.12c Issue: Date pickers don't show user's timezone — created GitHub issue #47 (cross-cutting, deferred)
+- [x] 1.12d Fix: "+ Add Requirement" button disabled when empty requirement row exists (prevents adding blank rows)
+- [ ] 1.12e Deferred: Sanitize markdown in AssignmentDetailDialog (DOMPurify) — add after Slice 2 (may apply to submissions too)
+
+**Slice 1 extension — Draft requirements editing + Unpublish lifecycle**:
+
+Resolves review note #1: requirements should be editable in draft mode, and published assignments with no submissions can be unpublished back to draft.
+
+New lifecycle rules:
+- **Draft**: full editing (metadata + requirements), can publish, can delete
+- **Published (no submissions)**: can edit metadata, can unpublish back to draft, can delete
+- **Published (with submissions)**: metadata only, no unpublish, no delete (use disable) — enforced when Slice 2 adds submissions
+
+**Backend**:
+
+- [ ] 1.13a Policy: add `can_unpublish?` method + update summary hash + tests
+- [ ] 1.13b Repository: add `update_with_requirements` method + tests
+- [ ] 1.13c New service: `UnpublishAssignment` (published → draft, with `has_submissions?` placeholder for Slice 2) + tests
+- [ ] 1.13d Update service: `UpdateAssignment` accepts optional `submission_requirements` (allow if draft, reject if published) + tests
+- [ ] 1.13e Routes: add `POST .../unpublish` endpoint + tests
+- [ ] 1.13f All backend tests pass
+
+**Frontend**:
+
+- [ ] 1.14a `ModifyAssignmentDialog`: add requirements builder for draft assignments; read-only note for published
+- [ ] 1.14b `SingleCourse`: change `editAssignment` to async fetch (to get requirements); add `unpublishAssignment` handler + event wiring
+- [ ] 1.14c `AssignmentsCard`: add unpublish icon for published assignments
+
+**Verify**:
+
+- [ ] 1.15 Chrome walkthrough: create draft → edit requirements → publish → unpublish → edit requirements → republish
 
 ### Slice 2: Submissions (create, view, overwrite — end-to-end)
 
@@ -183,7 +222,33 @@ The codebase has four bounded contexts: **Accounts**, **Courses**, **Attendance*
 - **1.5** — `Assignment` representer with nested `SubmissionRequirementRepr`, ISO8601 time formatting, `AssignmentsList` collection representer.
 - **1.1e + 1.4 (routes)** — Assignment routes added to `Routes::Courses` under `r.on 'assignments'`: POST create, GET list, GET by ID, PUT update, DELETE, POST publish. 18 route tests pass.
 - **1.6** — Full regression: 983 tests, 0 failures, 98.31% line coverage.
+- **1.7** — Added `assignments` route as child of SingleCourse in `router/index.js`; added "Assignments" tab link in SingleCourse menu bar.
+- **1.8** — `AssignmentsCard.vue`: card-based list component with status badges (draft=warning, published=success, disabled=info), due date display, create/edit/delete/publish action icons. Follows AttendanceEventCard pattern.
+- **1.9** — `CreateAssignmentDialog.vue`: form with title, markdown description, due date picker, optional event selector, allow_late_resubmit switch, and dynamic submission requirements builder (add/remove requirements with format, description, allowed_types). `ModifyAssignmentDialog.vue`: metadata-only edit form (requirements frozen per R7). Both follow existing dialog patterns.
+- **1.10** — `AssignmentDetailDialog.vue`: detail view with rendered markdown description (using `marked` library), status badge, due date, requirements table, linked event name, late resubmit policy indicator. Added `marked` npm dependency.
+
+All wiring in `SingleCourse.vue`: imports, component registration, data properties (assignments, dialog visibility, forms), currentRole watcher (fetchAssignments), 8 methods (fetchAssignments, showCreateAssignment, createAssignment, editAssignment, updateAssignment, deleteAssignment with confirmation, publishAssignment with confirmation, viewAssignment with detail fetch), RouterView props/events, dialog instances. Frontend builds successfully.
+
+- **1.11** — Chrome walkthrough verification of all assignment flows. Fixed `require 'ostruct'` bug in representer (Ruby 3.4 compatibility). All flows verified: create (with requirements builder), list (status badges, due dates), detail view (rendered markdown, requirements table, linked event), edit (metadata only, requirements frozen per R7), publish (status transition, icon removal), delete (confirmation + card removal). Tab switching regression check passed (Attendance Events, Locations, People all unaffected).
+
+## Review Notes (Slice 1)
+
+Issues noted during verification and developer review:
+
+1. **~~Publish dialog wording~~** — **RESOLVED**: Requirements are now editable in draft mode. Published assignments can be unpublished back to draft (if no submissions). Publish confirmation wording will be updated when 1.13–1.14 are implemented. See "Slice 1 extension" tasks above.
+
+2. **~~Bug fix~~** — **RESOLVED**: Added `require 'ostruct'` to `backend_app/app/presentation/representers/assignment.rb`. Ruby 3.4 no longer auto-loads OpenStruct.
+
+3. **~~Card sizing~~** — **RESOLVED** (1.12a): Create Assignment card matched to Create Event card styling.
+
+4. **~~Label wording~~** — **RESOLVED** (1.12b): "Late Resubmit" → "Allow Late Resubmits?"
+
+5. **Timezone display** — Deferred to GitHub issue #47 (cross-cutting UX improvement).
+
+6. **Markdown sanitization** — Deferred to post-Slice 2 (1.12e). `v-html` with `marked` in AssignmentDetailDialog is an XSS vector. Low risk (only teaching staff input) but should add DOMPurify.
+
+7. **~~Add Requirement button~~** — **RESOLVED** (1.12d): Disabled when empty requirement row exists.
 
 ---
 
-Last updated: 2026-03-03 (completed Slice 1 backend: tasks 1.1a–1.6 all done, 983 tests passing)
+Last updated: 2026-03-04 (Slice 1 review in progress: review fixes applied, lifecycle extension planned as 1.13–1.15)

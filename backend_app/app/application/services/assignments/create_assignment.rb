@@ -97,14 +97,16 @@ module Tyto
         def parse_requirements(requirements_data)
           return [] unless requirements_data.is_a?(Array)
 
-          requirements_data.map do |req|
-            {
-              submission_format: req['submission_format'] || 'file',
-              description: req['description'] || '',
-              allowed_types: req['allowed_types'],
-              sort_order: req['sort_order']
-            }
-          end
+          requirements_data
+            .reject { |req| req['description'].nil? || req['description'].to_s.strip.empty? }
+            .map do |req|
+              {
+                submission_format: req['submission_format'] || 'file',
+                description: req['description'],
+                allowed_types: req['allowed_types'],
+                sort_order: req['sort_order']
+              }
+            end
         end
 
         def parse_time(time_value)
