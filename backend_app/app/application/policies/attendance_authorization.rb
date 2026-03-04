@@ -10,12 +10,12 @@ module Tyto
 
     # Enrolled users can create attendance (record their own attendance)
     def can_create?
-      self_enrolled?
+      enrolled?
     end
 
     # Enrolled users can view their own attendance
     def can_view?
-      self_enrolled?
+      enrolled?
     end
 
     # Teaching staff can view all attendance records
@@ -25,7 +25,7 @@ module Tyto
 
     # Enrolled users can mark their own attendance
     def can_attend?
-      self_enrolled?
+      enrolled?
     end
 
     # Summary of permissions
@@ -41,7 +41,7 @@ module Tyto
     private
 
     # Check if the requestor is enrolled in the course
-    def self_enrolled?
+    def enrolled?
       @enrollment&.active? || false
     end
 

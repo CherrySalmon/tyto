@@ -20,7 +20,7 @@ module Tyto
 
     # Enrolled users can view the course
     def can_view?
-      self_enrolled?
+      enrolled?
     end
 
     # Teaching staff can update the course
@@ -46,7 +46,7 @@ module Tyto
     private
 
     # Check if the requestor is enrolled in the course
-    def self_enrolled?
+    def enrolled?
       @enrollment&.active? || false
     end
 
