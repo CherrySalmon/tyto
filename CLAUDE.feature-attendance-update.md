@@ -56,6 +56,7 @@ Deliver a complete, testable feature end-to-end using red-green-refactor cycles:
 - **Event timing**: Event must be ongoing or past (not future) — can't mark attendance for an event that hasn't started.
 - **Instructor + staff only**: Instructor and staff can manage. Owner cannot — owners are course administrators, not classroom staff.
 - **Coordinates**: When instructor marks attendance, latitude/longitude are null (no geo-location).
+- **Policy flow to frontend**: The `ListEventParticipants` response includes an `AttendanceAuthorization` policy summary (with `can_manage_attendance`) alongside the participants list. This keeps attendance policies in `AttendanceAuthorization` (not `CoursePolicy`) and avoids cross-concern leakage. The frontend uses this to decide whether to show toggle controls. Existing `CoursePolicy` → `course.policies.can_update` continues to gate the instructor management tabs; the attendance policy only gates the toggle UI within those tabs.
 
 ## Questions
 
@@ -84,9 +85,9 @@ Deliver a complete, testable feature end-to-end using red-green-refactor cycles:
 
 - `AttendanceAuthorization`: Add `can_manage_attendance?` (instructor or staff)
 - New service: `UpdateParticipantAttendance` — validates course, event, enrollment; creates or deletes attendance
-- New service: `ListEventParticipants` — returns enrolled students with attendance status per event
+- New service: `ListEventParticipants` — returns enrolled students with attendance status per event, plus `AttendanceAuthorization` policy summary
 - Routes: Add `PUT /api/course/:course_id/attendance/:event_id/participant/:account_id` and `GET /api/course/:course_id/attendance/:event_id/participants`
-- Representer: New `EventParticipant` representer (enrollment info + attended boolean)
+- Representer: New `EventParticipants` representer (participants list + policies hash including `can_manage_attendance`)
 
 **Frontend changes**:
 
@@ -122,11 +123,12 @@ Order: happy path first, then error/edge cases.
 Order: happy path, then authorization.
 
 - [ ] 3.1 RED: test returns enrolled students with attendance status for an event → GREEN: implement service
-- [ ] 3.2 RED: test rejects non-instructor/staff (forbidden) → GREEN: adjust if needed
+- [ ] 3.2 RED: test response includes `can_manage_attendance` policy in summary → GREEN: add policy summary to service response
+- [ ] 3.3 RED: test rejects non-instructor/staff (forbidden) → GREEN: adjust if needed
 
 ### Slice 4: Routes + Representer
 
-- [ ] 4.1 Add `EventParticipant` representer (enrollment info + attended boolean)
+- [ ] 4.1 Add `EventParticipants` representer (participants list + policies hash with `can_manage_attendance`)
 - [ ] 4.2 Add PUT route `/api/course/:course_id/attendance/:event_id/participant/:account_id` wired to `UpdateParticipantAttendance`
 - [ ] 4.3 Add GET route `/api/course/:course_id/attendance/:event_id/participants` wired to `ListEventParticipants`
 - [ ] 4.4 Run full test suite — confirm all green
@@ -135,7 +137,7 @@ Order: happy path, then authorization.
 
 - [ ] 5.1 Create `ManageEventAttendance.vue` component — student list with attendance toggles
 - [ ] 5.2 Update `AttendanceEventCard.vue` — add click handler to open attendance management dialog
-- [ ] 5.3 Wire up API calls (GET participants, PUT toggle)
+- [ ] 5.3 Wire up API calls (GET participants, PUT toggle); use `policies.can_manage_attendance` from GET response to show/hide toggles
 
 ### Verification
 
@@ -147,4 +149,4 @@ Order: happy path, then authorization.
 
 ---
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
