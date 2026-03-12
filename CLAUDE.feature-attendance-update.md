@@ -100,12 +100,11 @@ Deliver a complete, testable feature end-to-end using red-green-refactor cycles:
 
 ### Slice 1: Authorization — `can_manage_attendance?`
 
-Order: simplest role check first, build up to all roles.
+Order: test which roles grant access, then test that lacking those roles denies access. Note: users can have multiple roles, so tests should verify the presence/absence of the required roles (instructor, staff) — not enumerate specific excluded roles.
 
-- [ ] 1.1 RED: test `can_manage_attendance?` returns true for instructor → GREEN: add `can_manage_attendance?` method to `AttendanceAuthorization`
-- [ ] 1.2 RED: test `can_manage_attendance?` returns true for staff → GREEN: expand method (may already pass — if so, note and move on)
-- [ ] 1.3 RED: test `can_manage_attendance?` returns false for owner → GREEN: adjust if needed
-- [ ] 1.4 RED: test `can_manage_attendance?` returns false for student → GREEN: adjust if needed
+- [ ] 1.1 RED: test `can_manage_attendance?` returns true when enrollment includes instructor role → GREEN: add `can_manage_attendance?` method to `AttendanceAuthorization`
+- [ ] 1.2 RED: test `can_manage_attendance?` returns true when enrollment includes staff role → GREEN: expand method (may already pass — if so, note and move on)
+- [ ] 1.3 RED: test `can_manage_attendance?` returns false when enrollment has no instructor or staff role → GREEN: adjust if needed
 
 ### Slice 2: UpdateParticipantAttendance service
 
@@ -113,7 +112,7 @@ Order: happy path first, then error/edge cases.
 
 - [ ] 2.1 RED: test instructor marks student as attended (creates attendance) → GREEN: implement service with authorize + create logic
 - [ ] 2.2 RED: test instructor unmarks student attendance (deletes attendance) → GREEN: add delete path
-- [ ] 2.3 RED: test rejects owner (forbidden) → GREEN: adjust if needed
+- [ ] 2.3 RED: test rejects requestor without instructor or staff role (forbidden) → GREEN: adjust if needed
 - [ ] 2.4 RED: test rejects non-enrolled target student → GREEN: add enrollment check
 - [ ] 2.5 RED: test rejects future event → GREEN: add event timing check
 - [ ] 2.6 RED: test rejects event not belonging to course → GREEN: add course-event validation
