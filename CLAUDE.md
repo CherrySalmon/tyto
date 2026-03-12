@@ -140,6 +140,7 @@ rake run:api
 - Module namespacing: `Tyto::Api`, `Tyto::Routes::*`
 - RuboCop for linting
 - **Testing**: Minitest with spec-style syntax (`describe`/`it`), NOT RSpec.
+- **Test-first development**: Use red-green-refactor TDD when adding new features, fixing bugs, or refactoring. Write a failing test first, then write the minimum implementation to make it pass, then refactor. Run the test suite between each phase — never skip the test run. One test at a time; do not batch.
 - **Avoid `nil` as state**: Use Null Object pattern instead of returning `nil` for missing/empty states. This eliminates guard clauses and follows "Tell, Don't Ask" principle. Example: `NullTimeRange` instead of `nil` for courses without dates.
 
 ### Vue/JavaScript

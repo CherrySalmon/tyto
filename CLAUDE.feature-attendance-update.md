@@ -10,20 +10,21 @@
 
 Allow course instructors and staff (not owners) to view and toggle recorded attendance for eligible participants of an ongoing or past event, to address technical or other issues that prevented a participant from marking their own attendance.
 
-## Strategy: Vertical Slice
+## Strategy: Vertical Slice with TDD
 
-Deliver a complete, testable feature end-to-end:
+Deliver a complete, testable feature end-to-end using red-green-refactor cycles:
 
-1. **Backend test** — Write failing tests for the new update-attendance service (red)
-2. **Backend implementation** — New service + policy + route to make tests pass (green)
-3. **Frontend update** — Add attendance management UI to instructor's event view
-4. **Verify** — Manual test confirms behavior
+1. **RED-GREEN cycles** — For each behavioral increment: write one failing test (RED), write minimum implementation to pass (GREEN), refactor if needed. Run the test suite between every phase.
+2. **Frontend update** — Add attendance management UI to instructor's event view
+3. **Verify** — Manual test confirms behavior
 
 ## Current State
 
 - [x] Plan created
-- [ ] Backend tests written (red)
-- [ ] Backend implementation (green)
+- [ ] Authorization RED-GREEN cycles
+- [ ] UpdateParticipantAttendance RED-GREEN cycles
+- [ ] ListEventParticipants RED-GREEN cycles
+- [ ] Routes + representer
 - [ ] Frontend UI
 - [ ] Manual verification
 
@@ -94,28 +95,51 @@ Deliver a complete, testable feature end-to-end:
 
 ## Tasks
 
-> **Test-first**: Write or update tests that fail (red) before writing the implementation to make them pass (green).
+> **TDD discipline**: Each task below is one RED-GREEN cycle. Write one failing test (RED), confirm it fails, write minimum implementation (GREEN), confirm it passes, refactor if needed. Run the test suite between every phase. Do not batch tests or implementations.
 
-### Slice 1: Backend — Authorization + Service + Route
+### Slice 1: Authorization — `can_manage_attendance?`
 
-- [ ] 1.1a Test: `AttendanceAuthorization#can_manage_attendance?` — true for instructor, true for staff, false for owner, false for student
-- [ ] 1.1b Test: `UpdateParticipantAttendance` service — success for instructor marking student attended, success for unmarking, failure for owner, failure for non-enrolled student, failure for future event, failure for event not in course
-- [ ] 1.1c Test: `ListEventParticipants` service — returns enrolled students with attendance status, requires instructor/staff auth
-- [ ] 1.2 Implement `can_manage_attendance?` in `AttendanceAuthorization`
-- [ ] 1.3 Implement `UpdateParticipantAttendance` service
-- [ ] 1.4 Implement `ListEventParticipants` service
-- [ ] 1.5 Add new API routes and representer
-- [ ] 1.6 Verify all tests pass
+Order: simplest role check first, build up to all roles.
 
-### Slice 2: Frontend — Attendance Management UI
+- [ ] 1.1 RED: test `can_manage_attendance?` returns true for instructor → GREEN: add `can_manage_attendance?` method to `AttendanceAuthorization`
+- [ ] 1.2 RED: test `can_manage_attendance?` returns true for staff → GREEN: expand method (may already pass — if so, note and move on)
+- [ ] 1.3 RED: test `can_manage_attendance?` returns false for owner → GREEN: adjust if needed
+- [ ] 1.4 RED: test `can_manage_attendance?` returns false for student → GREEN: adjust if needed
 
-- [ ] 2.1 Create `ManageEventAttendance.vue` component — student list with attendance toggles
-- [ ] 2.2 Update `AttendanceEventCard.vue` — add click handler to open attendance management dialog
-- [ ] 2.3 Wire up API calls (GET participants, PUT toggle)
+### Slice 2: UpdateParticipantAttendance service
+
+Order: happy path first, then error/edge cases.
+
+- [ ] 2.1 RED: test instructor marks student as attended (creates attendance) → GREEN: implement service with authorize + create logic
+- [ ] 2.2 RED: test instructor unmarks student attendance (deletes attendance) → GREEN: add delete path
+- [ ] 2.3 RED: test rejects owner (forbidden) → GREEN: adjust if needed
+- [ ] 2.4 RED: test rejects non-enrolled target student → GREEN: add enrollment check
+- [ ] 2.5 RED: test rejects future event → GREEN: add event timing check
+- [ ] 2.6 RED: test rejects event not belonging to course → GREEN: add course-event validation
+
+### Slice 3: ListEventParticipants service
+
+Order: happy path, then authorization.
+
+- [ ] 3.1 RED: test returns enrolled students with attendance status for an event → GREEN: implement service
+- [ ] 3.2 RED: test rejects non-instructor/staff (forbidden) → GREEN: adjust if needed
+
+### Slice 4: Routes + Representer
+
+- [ ] 4.1 Add `EventParticipant` representer (enrollment info + attended boolean)
+- [ ] 4.2 Add PUT route `/api/course/:course_id/attendance/:event_id/participant/:account_id` wired to `UpdateParticipantAttendance`
+- [ ] 4.3 Add GET route `/api/course/:course_id/attendance/:event_id/participants` wired to `ListEventParticipants`
+- [ ] 4.4 Run full test suite — confirm all green
+
+### Slice 5: Frontend — Attendance Management UI
+
+- [ ] 5.1 Create `ManageEventAttendance.vue` component — student list with attendance toggles
+- [ ] 5.2 Update `AttendanceEventCard.vue` — add click handler to open attendance management dialog
+- [ ] 5.3 Wire up API calls (GET participants, PUT toggle)
 
 ### Verification
 
-- [ ] 3.1 Manual verification: end-to-end test of instructor toggling student attendance
+- [ ] 6.1 Manual verification: end-to-end test of instructor toggling student attendance
 
 ## Completed
 
