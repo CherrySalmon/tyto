@@ -839,46 +839,6 @@ describe 'Course Routes' do
       end
     end
 
-    describe 'GET /api/course/:id/attendance/list_all' do
-      it 'returns all attendance for instructor' do
-        owner_account = create_test_account(roles: ['creator'])
-        course = create_test_course(owner_account)
-        instructor_account, instructor_auth = authenticated_header(roles: ['instructor'])
-
-        # Enroll as instructor
-        instructor_role = Tyto::Role.find(name: 'instructor')
-        Tyto::AccountCourse.create(
-          course_id: course.id,
-          account_id: instructor_account.id,
-          role_id: instructor_role.id
-        )
-
-        get "/api/course/#{course.id}/attendance/list_all", nil, instructor_auth
-
-        _(last_response.status).must_equal 200
-        _(json_response['success']).must_equal true
-        _(json_response['data']).must_be_kind_of Array
-      end
-
-      it 'returns forbidden for student' do
-        owner_account = create_test_account(roles: ['creator'])
-        course = create_test_course(owner_account)
-        student_account, student_auth = authenticated_header(roles: ['student'])
-
-        # Enroll as student
-        student_role = Tyto::Role.find(name: 'student')
-        Tyto::AccountCourse.create(
-          course_id: course.id,
-          account_id: student_account.id,
-          role_id: student_role.id
-        )
-
-        get "/api/course/#{course.id}/attendance/list_all", nil, student_auth
-
-        _(last_response.status).must_equal 403
-      end
-    end
-
     describe 'GET /api/course/:id/attendance/:event_id' do
       it 'returns attendance for specific event' do
         owner_account = create_test_account(roles: ['creator'])

@@ -56,7 +56,7 @@ module Tyto
           enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
           policy = AttendanceAuthorization.new(requestor, enrollment)
 
-          return Failure(forbidden('You have no access to record attendance')) unless policy.can_create?
+          return Failure(forbidden('You have no access to record attendance')) unless policy.can_attend?
 
           Success(true)
         end

@@ -21,11 +21,11 @@ Deliver a complete, testable feature end-to-end using red-green-refactor cycles:
 ## Current State
 
 - [x] Plan created
-- [ ] Authorization RED-GREEN cycles
-- [ ] UpdateParticipantAttendance RED-GREEN cycles
-- [ ] ListEventParticipants RED-GREEN cycles
-- [ ] Routes + representer
-- [ ] Frontend UI
+- [x] Authorization RED-GREEN cycles
+- [x] UpdateParticipantAttendance RED-GREEN cycles
+- [x] ListEventParticipants RED-GREEN cycles
+- [x] Routes + representer
+- [x] Frontend UI
 - [ ] Manual verification
 
 ## Key Findings
@@ -102,49 +102,55 @@ Deliver a complete, testable feature end-to-end using red-green-refactor cycles:
 
 Order: test which roles grant access, then test that lacking those roles denies access. Note: users can have multiple roles, so tests should verify the presence/absence of the required roles (instructor, staff) — not enumerate specific excluded roles.
 
-- [ ] 1.1 RED: test `can_manage_attendance?` returns true when enrollment includes instructor role → GREEN: add `can_manage_attendance?` method to `AttendanceAuthorization`
-- [ ] 1.2 RED: test `can_manage_attendance?` returns true when enrollment includes staff role → GREEN: expand method (may already pass — if so, note and move on)
-- [ ] 1.3 RED: test `can_manage_attendance?` returns false when enrollment has no instructor or staff role → GREEN: adjust if needed
+- [x] 1.1 RED: test `can_manage_attendance?` returns true when enrollment includes instructor role → GREEN: add `can_manage_attendance?` method to `AttendanceAuthorization`
+- [x] 1.2 RED: test `can_manage_attendance?` returns true when enrollment includes staff role → GREEN: expand method
+- [x] 1.3 RED: test `can_manage_attendance?` returns false when enrollment has no instructor or staff role → GREEN: already passes (+ nil enrollment test added)
 
 ### Slice 2: UpdateParticipantAttendance service
 
 Order: happy path first, then error/edge cases.
 
-- [ ] 2.1 RED: test instructor marks student as attended (creates attendance) → GREEN: implement service with authorize + create logic
-- [ ] 2.2 RED: test instructor unmarks student attendance (deletes attendance) → GREEN: add delete path
-- [ ] 2.3 RED: test rejects requestor without instructor or staff role (forbidden) → GREEN: adjust if needed
-- [ ] 2.4 RED: test rejects non-enrolled target student → GREEN: add enrollment check
-- [ ] 2.5 RED: test rejects future event → GREEN: add event timing check
-- [ ] 2.6 RED: test rejects event not belonging to course → GREEN: add course-event validation
+- [x] 2.1 RED: test instructor marks student as attended (creates attendance) → GREEN: implement service with authorize + create logic
+- [x] 2.2 RED: test instructor unmarks student attendance (deletes attendance) → GREEN: already passes (delete path included in 2.1)
+- [x] 2.3 RED: test rejects requestor without instructor or staff role (forbidden) → GREEN: already passes
+- [x] 2.4 RED: test rejects non-enrolled target student → GREEN: already passes
+- [x] 2.5 RED: test rejects future event → GREEN: already passes
+- [x] 2.6 RED: test rejects event not belonging to course → GREEN: already passes (+ past event test added)
 
 ### Slice 3: ListEventParticipants service
 
 Order: happy path, then authorization.
 
-- [ ] 3.1 RED: test returns enrolled students with attendance status for an event → GREEN: implement service
-- [ ] 3.2 RED: test response includes `can_manage_attendance` policy in summary → GREEN: add policy summary to service response
-- [ ] 3.3 RED: test rejects non-instructor/staff (forbidden) → GREEN: adjust if needed
+- [x] 3.1 RED: test returns enrolled students with attendance status for an event → GREEN: implement service
+- [x] 3.2 RED: test response includes `can_manage_attendance` policy in summary → GREEN: already passes (+ owner false test added)
+- [x] 3.3 RED: test rejects non-teaching-staff (forbidden) → GREEN: already passes
 
 ### Slice 4: Routes + Representer
 
-- [ ] 4.1 Add `EventParticipants` representer (participants list + policies hash with `can_manage_attendance`)
-- [ ] 4.2 Add PUT route `/api/course/:course_id/attendance/:event_id/participant/:account_id` wired to `UpdateParticipantAttendance`
-- [ ] 4.3 Add GET route `/api/course/:course_id/attendance/:event_id/participants` wired to `ListEventParticipants`
-- [ ] 4.4 Run full test suite — confirm all green
+- [x] 4.1 No separate representer needed — service returns plain hashes, serialized directly to JSON
+- [x] 4.2 Add PUT route `/api/course/:course_id/attendance/:event_id/participant/:account_id` wired to `UpdateParticipantAttendance`
+- [x] 4.3 Add GET route `/api/course/:course_id/attendance/:event_id/participants` wired to `ListEventParticipants`
+- [x] 4.4 Full test suite green: 873 runs, 2070 assertions, 0 failures, 0 errors
 
 ### Slice 5: Frontend — Attendance Management UI
 
-- [ ] 5.1 Create `ManageEventAttendance.vue` component — student list with attendance toggles
-- [ ] 5.2 Update `AttendanceEventCard.vue` — add click handler to open attendance management dialog
-- [ ] 5.3 Wire up API calls (GET participants, PUT toggle); use `policies.can_manage_attendance` from GET response to show/hide toggles
+- [x] 5.1 Create `ManageEventAttendance.vue` component — student list with attendance toggles (el-switch)
+- [x] 5.2 Update `AttendanceEventCard.vue` — add User icon click handler to open attendance management dialog
+- [x] 5.3 API calls wired up; `policies.can_manage_attendance` controls toggle vs. read-only display
 
 ### Verification
 
-- [ ] 6.1 Manual verification: end-to-end test of instructor toggling student attendance
+- [x] 6.1 Backend code review: review backend implementation for quality, consistency, and naming conventions
+- [ ] 6.2 Manual verification: end-to-end test of instructor toggling student attendance
+- [ ] 6.3 Frontend code review: review frontend implementation for quality, UX, and consistency
 
 ## Completed
 
-(none yet)
+- Slice 1: Authorization — `can_manage_attendance?` (instructor + staff only, not owner)
+- Slice 2: UpdateParticipantAttendance service (toggle create/delete, all edge cases)
+- Slice 3: ListEventParticipants service (students + attendance status + policy summary)
+- Slice 4: Routes (GET participants, PUT toggle) nested under existing attendance routes
+- Slice 5: Frontend ManageEventAttendance component with el-switch toggles
 
 ---
 

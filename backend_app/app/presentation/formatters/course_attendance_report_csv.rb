@@ -5,9 +5,9 @@ require 'csv'
 module Tyto
   module Presentation
     module Formatters
-      # Formats an AttendanceReport entity as CSV
+      # Formats a CourseAttendanceReport entity as CSV
       # Columns: Student Email, attend_sum, attend_percent, ...event_names
-      class AttendanceReportCsv
+      class CourseAttendanceReportCsv
         def self.to_csv(report)
           events = report.events
           event_names = events.map(&:name)

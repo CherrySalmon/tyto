@@ -5,8 +5,8 @@ require 'roar/json'
 
 module Tyto
   module Representer
-    # Representer for AttendanceReport entity to JSON
-    class AttendanceReport < Roar::Decorator
+    # Representer for CourseAttendanceReport entity to JSON
+    class CourseAttendanceReport < Roar::Decorator
       include Roar::JSON
 
       property :course_name

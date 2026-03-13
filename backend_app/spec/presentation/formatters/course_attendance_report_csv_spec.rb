@@ -2,7 +2,7 @@
 
 require_relative '../../spec_helper'
 
-describe 'Presentation::Formatters::AttendanceReportCsv' do
+describe 'Presentation::Formatters::CourseAttendanceReportCsv' do
   def build_course(name:, events: [], enrollments: [])
     Tyto::Domain::Courses::Entities::Course.new(
       id: 1, name: name, logo: nil, start_at: nil, end_at: nil,
@@ -39,7 +39,7 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
   end
 
   def build_report(course:, attendances: [])
-    Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: attendances)
+    Tyto::Domain::Attendance::Entities::CourseAttendanceReport.new(course: course, attendances: attendances)
   end
 
   describe '.to_csv' do
@@ -47,7 +47,7 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
       events = [build_event(id: 1, name: 'Lecture 1'), build_event(id: 2, name: 'Lecture 2')]
       report = build_report(course: build_course(name: 'C', events: events))
 
-      csv = Tyto::Presentation::Formatters::AttendanceReportCsv.to_csv(report)
+      csv = Tyto::Presentation::Formatters::CourseAttendanceReportCsv.to_csv(report)
       lines = csv.split("\n")
 
       _(lines.first).must_equal 'Student Email,attend_sum,attend_percent,Lecture 1,Lecture 2'
@@ -66,7 +66,7 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
       ]
 
       report = build_report(course: course, attendances: attendances)
-      csv = Tyto::Presentation::Formatters::AttendanceReportCsv.to_csv(report)
+      csv = Tyto::Presentation::Formatters::CourseAttendanceReportCsv.to_csv(report)
       lines = csv.split("\n")
 
       _(lines.length).must_equal 3
@@ -77,7 +77,7 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
     it 'handles empty report (no events, no students)' do
       report = build_report(course: build_course(name: 'C'))
 
-      csv = Tyto::Presentation::Formatters::AttendanceReportCsv.to_csv(report)
+      csv = Tyto::Presentation::Formatters::CourseAttendanceReportCsv.to_csv(report)
       lines = csv.split("\n")
 
       _(lines.length).must_equal 1
@@ -88,7 +88,7 @@ describe 'Presentation::Formatters::AttendanceReportCsv' do
       alice = build_enrollment(account_id: 1, email: 'alice@example.com')
       report = build_report(course: build_course(name: 'C', enrollments: [alice]))
 
-      csv = Tyto::Presentation::Formatters::AttendanceReportCsv.to_csv(report)
+      csv = Tyto::Presentation::Formatters::CourseAttendanceReportCsv.to_csv(report)
       lines = csv.split("\n")
 
       _(lines.length).must_equal 2
