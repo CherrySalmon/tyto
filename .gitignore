@@ -18,6 +18,7 @@ dist/
 # AI tooling
 CLAUDE.local.md
 .claude/*
+!.claude/CLAUDE.md
 !.claude/settings.json
 !.claude/skills/
 coverage/
