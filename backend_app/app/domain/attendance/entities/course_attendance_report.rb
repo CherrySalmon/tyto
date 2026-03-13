@@ -9,7 +9,7 @@ module Tyto
       module Entities
         # Domain entity representing an attendance report for a course.
         # Takes course and attendances in constructor; computes report data on demand.
-        class AttendanceReport
+        class CourseAttendanceReport
           ReportEvent = Data.define(:id, :name)
 
           attr_reader :course_name, :generated_at

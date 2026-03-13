@@ -2,7 +2,7 @@
 
 require_relative '../../../spec_helper'
 
-describe 'Domain::Attendance::Entities::AttendanceReport' do
+describe 'Domain::Attendance::Entities::CourseAttendanceReport' do
   def build_course(name:, events: [], enrollments: [])
     Tyto::Domain::Courses::Entities::Course.new(
       id: 1, name: name, logo: nil, start_at: nil, end_at: nil,
@@ -41,7 +41,7 @@ describe 'Domain::Attendance::Entities::AttendanceReport' do
   describe '.build' do
     it 'builds report with course name and generated_at' do
       course = build_course(name: 'Test Course')
-      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::CourseAttendanceReport.new(course: course, attendances: [])
 
       _(report.course_name).must_equal 'Test Course'
       _(report.generated_at).must_be_kind_of Time
@@ -52,7 +52,7 @@ describe 'Domain::Attendance::Entities::AttendanceReport' do
       event2 = build_event(id: 20, name: 'Lecture 2')
       course = build_course(name: 'C', events: [event1, event2])
 
-      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::CourseAttendanceReport.new(course: course, attendances: [])
 
       _(report.events.length).must_equal 2
       _(report.events[0].id).must_equal 10
@@ -67,7 +67,7 @@ describe 'Domain::Attendance::Entities::AttendanceReport' do
       course = build_course(name: 'C', events: [event1], enrollments: [enrollment])
       attendances = [build_attendance(account_id: 100, event_id: 10)]
 
-      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: attendances)
+      report = Tyto::Domain::Attendance::Entities::CourseAttendanceReport.new(course: course, attendances: attendances)
 
       _(report.student_records.length).must_equal 1
       record = report.student_records.first
@@ -90,7 +90,7 @@ describe 'Domain::Attendance::Entities::AttendanceReport' do
         build_attendance(account_id: 200, event_id: 10)
       ]
 
-      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: attendances)
+      report = Tyto::Domain::Attendance::Entities::CourseAttendanceReport.new(course: course, attendances: attendances)
 
       _(report.student_records.length).must_equal 2
 
@@ -112,7 +112,7 @@ describe 'Domain::Attendance::Entities::AttendanceReport' do
       enrollment = build_enrollment(account_id: 100, email: 'alice@example.com')
       course = build_course(name: 'C', events: [], enrollments: [enrollment])
 
-      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::CourseAttendanceReport.new(course: course, attendances: [])
 
       _(report.events).must_be_empty
       record = report.student_records.first
@@ -124,7 +124,7 @@ describe 'Domain::Attendance::Entities::AttendanceReport' do
       event = build_event(id: 10, name: 'Lecture 1')
       course = build_course(name: 'C', events: [event], enrollments: [])
 
-      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::CourseAttendanceReport.new(course: course, attendances: [])
 
       _(report.student_records).must_be_empty
       _(report.events.length).must_equal 1
@@ -134,7 +134,7 @@ describe 'Domain::Attendance::Entities::AttendanceReport' do
       enrollment = build_enrollment(account_id: 100, email: 'alice@example.com')
       course = build_course(name: 'C', events: [], enrollments: [enrollment])
 
-      report = Tyto::Domain::Attendance::Entities::AttendanceReport.new(course: course, attendances: [])
+      report = Tyto::Domain::Attendance::Entities::CourseAttendanceReport.new(course: course, attendances: [])
 
       _(report.student_records.first).must_be_kind_of(
         Tyto::Domain::Attendance::Values::StudentAttendanceRecord

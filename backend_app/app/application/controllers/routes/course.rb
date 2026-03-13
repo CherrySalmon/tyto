@@ -113,20 +113,6 @@ module Tyto
             end
 
             r.on 'attendance' do
-              r.on 'list_all' do
-                # GET api/course/:course_id/attendance/list_all
-                r.get do
-                  case Service::Attendances::ListAllAttendances.new.call(requestor:, course_id:)
-                  in Success(api_result)
-                    response.status = api_result.http_status_code
-                    { success: true, data: Representer::AttendancesList.from_entities(api_result.message).to_array }.to_json
-                  in Failure(api_result)
-                    response.status = api_result.http_status_code
-                    api_result.to_json
-                  end
-                end
-              end
-
               r.on 'report' do
                 # GET api/course/:course_id/attendance/report[?format=csv]
                 r.get do
@@ -134,12 +120,12 @@ module Tyto
                   in Success(api_result)
                     response.status = api_result.http_status_code
                     if r.params['format'] == 'csv'
-                      csv = Presentation::Formatters::AttendanceReportCsv.to_csv(api_result.message)
+                      csv = Presentation::Formatters::CourseAttendanceReportCsv.to_csv(api_result.message)
                       response['Content-Type'] = 'text/csv'
                       response['Content-Disposition'] = 'attachment; filename="attendance-report.csv"'
                       csv
                     else
-                      { success: true, data: Representer::AttendanceReport.new(api_result.message).to_hash }.to_json
+                      { success: true, data: Representer::CourseAttendanceReport.new(api_result.message).to_hash }.to_json
                     end
                   in Failure(api_result)
                     response.status = api_result.http_status_code
@@ -149,6 +135,43 @@ module Tyto
               end
 
               r.on String do |event_id|
+                r.on 'participants' do
+                  # GET api/course/:course_id/attendance/:event_id/participants
+                  r.get do
+                    case Service::Attendances::ListEventParticipants.new.call(requestor:, course_id:, event_id:)
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, **api_result.message.to_h }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  end
+                end
+
+                r.on 'participant', String do |account_id|
+                  # PUT api/course/:course_id/attendance/:event_id/participant/:account_id
+                  r.put do
+                    request_body = JSON.parse(r.body.read)
+
+                    case Service::Attendances::UpdateParticipantAttendance.new.call(
+                      requestor:, course_id:, event_id:,
+                      target_account_id: account_id,
+                      attended: request_body['attended']
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, message: api_result.message }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  rescue JSON::ParserError => e
+                    response.status = 400
+                    { error: 'Invalid JSON', details: e.message }.to_json
+                  end
+                end
+
                 # GET api/course/:course_id/attendance/:event_id
                 r.get do
                   case Service::Attendances::ListAttendancesByEvent.new.call(requestor:, course_id:, event_id:)
