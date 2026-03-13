@@ -63,6 +63,7 @@ export default {
       ).then(() => {
         participant.attended = attended
       }).catch(error => {
+        participant.attended = !attended
         console.error('Error updating attendance:', error)
         ElMessage.error(error.response?.data?.message || 'Failed to update attendance')
       }).finally(() => {

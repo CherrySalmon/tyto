@@ -10,9 +10,9 @@ Every policy follows the same shape:
 
 ```ruby
 class SomePolicy
-  def initialize(requestor, enrollment)
+  def initialize(requestor, ...)
     @requestor = requestor
-    @enrollment = enrollment
+    # remaining args provide context (e.g., enrollment, course)
   end
 
   def can_do_thing?
@@ -25,7 +25,7 @@ class SomePolicy
 end
 ```
 
-- **Constructor**: Takes `requestor` (AuthCapability — global roles) and `enrollment` (Enrollment entity — course roles). Enrollment may be nil (not enrolled).
+- **Constructor**: `requestor` (AuthCapability — global roles) is always the first parameter. Additional parameters provide context needed for authorization decisions (e.g., an enrollment, a course with enrollments loaded). Enrollment may be nil (not enrolled).
 - **Public `can_*?` methods**: One per action. Return boolean. Named from the actor's perspective ("can I do X?").
 - **`summary` method**: Returns a hash of all permissions. Used by services to send policy decisions to the frontend as JSON.
 - **Private predicates**: Compose enrollment role checks and global role checks. Always guard against nil enrollment with `&.` and `|| false`.

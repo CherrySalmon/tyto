@@ -82,6 +82,7 @@ module Tyto
         end
 
         def toggle_attendance(account_id, course_id, event_id, attended)
+          attended = (attended == true)
           if attended
             create_attendance(account_id, course_id, event_id)
           else
@@ -91,6 +92,8 @@ module Tyto
 
         def create_attendance(account_id, course_id, event_id)
           student_role = Role.first(name: 'student')
+          return Failure(internal_error('Student role not configured')) unless student_role
+
           entity = Domain::Attendance::Entities::Attendance.new(
             id: nil,
             account_id: account_id,
