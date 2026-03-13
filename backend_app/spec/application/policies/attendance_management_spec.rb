@@ -2,7 +2,7 @@
 
 require_relative '../../spec_helper'
 
-describe Tyto::AttendanceManagementAuthorization do
+describe Tyto::Policy::AttendanceManagement do
   let(:account) { Tyto::Account.create(email: 'test@example.com', name: 'Test User') }
   let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
 
@@ -37,7 +37,7 @@ describe Tyto::AttendanceManagementAuthorization do
 
   describe 'can_manage? with instructor role' do
     let(:course) { create_course_with_enrollment(account, roles: ['instructor']) }
-    let(:policy) { Tyto::AttendanceManagementAuthorization.new(requestor, course) }
+    let(:policy) { Tyto::Policy::AttendanceManagement.new(requestor, course) }
 
     it 'grants access when enrollment includes instructor role' do
       _(policy.can_manage?).must_equal true
@@ -46,7 +46,7 @@ describe Tyto::AttendanceManagementAuthorization do
 
   describe 'can_manage? with staff role' do
     let(:course) { create_course_with_enrollment(account, roles: ['staff']) }
-    let(:policy) { Tyto::AttendanceManagementAuthorization.new(requestor, course) }
+    let(:policy) { Tyto::Policy::AttendanceManagement.new(requestor, course) }
 
     it 'grants access when enrollment includes staff role' do
       _(policy.can_manage?).must_equal true
@@ -55,7 +55,7 @@ describe Tyto::AttendanceManagementAuthorization do
 
   describe 'can_manage? without instructor or staff role' do
     let(:course) { create_course_with_enrollment(account, roles: ['student']) }
-    let(:policy) { Tyto::AttendanceManagementAuthorization.new(requestor, course) }
+    let(:policy) { Tyto::Policy::AttendanceManagement.new(requestor, course) }
 
     it 'denies access when enrollment lacks instructor and staff roles' do
       _(policy.can_manage?).must_equal false
@@ -63,7 +63,7 @@ describe Tyto::AttendanceManagementAuthorization do
   end
 
   describe 'can_manage? with nil course (not enrolled)' do
-    let(:policy) { Tyto::AttendanceManagementAuthorization.new(requestor, nil) }
+    let(:policy) { Tyto::Policy::AttendanceManagement.new(requestor, nil) }
 
     it 'denies access when course is nil' do
       _(policy.can_manage?).must_equal false
@@ -72,7 +72,7 @@ describe Tyto::AttendanceManagementAuthorization do
 
   describe 'can_view_all? with owner role' do
     let(:course) { create_course_with_enrollment(account, roles: ['owner']) }
-    let(:policy) { Tyto::AttendanceManagementAuthorization.new(requestor, course) }
+    let(:policy) { Tyto::Policy::AttendanceManagement.new(requestor, course) }
 
     it 'grants view access to teaching staff (owner)' do
       _(policy.can_view_all?).must_equal true
@@ -81,7 +81,7 @@ describe Tyto::AttendanceManagementAuthorization do
 
   describe 'can_view_all? with student role' do
     let(:course) { create_course_with_enrollment(account, roles: ['student']) }
-    let(:policy) { Tyto::AttendanceManagementAuthorization.new(requestor, course) }
+    let(:policy) { Tyto::Policy::AttendanceManagement.new(requestor, course) }
 
     it 'denies view access to non-teaching staff' do
       _(policy.can_view_all?).must_equal false
@@ -90,7 +90,7 @@ describe Tyto::AttendanceManagementAuthorization do
 
   describe '#summary' do
     let(:course) { create_course_with_enrollment(account, roles: ['instructor']) }
-    let(:policy) { Tyto::AttendanceManagementAuthorization.new(requestor, course) }
+    let(:policy) { Tyto::Policy::AttendanceManagement.new(requestor, course) }
 
     it 'returns hash of management permissions' do
       summary = policy.summary
@@ -103,7 +103,7 @@ describe Tyto::AttendanceManagementAuthorization do
 
   describe '#summary for student' do
     let(:course) { create_course_with_enrollment(account, roles: ['student']) }
-    let(:policy) { Tyto::AttendanceManagementAuthorization.new(requestor, course) }
+    let(:policy) { Tyto::Policy::AttendanceManagement.new(requestor, course) }
 
     it 'returns hash with denied permissions' do
       summary = policy.summary

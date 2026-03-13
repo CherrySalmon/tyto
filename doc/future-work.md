@@ -19,7 +19,7 @@ Planned improvements and features to be addressed in future tasks.
 ## Security (Priority)
 
 - [ ] **Input whitelisting on PUT routes** - Prevent mass assignment vulnerabilities. PUT routes currently accept arbitrary JSON fields that get written to DB (e.g., users could potentially update their own roles). Implement Sequel's `set_allowed_columns` or manual input filtering in services. *Note: Input validation contracts (above) would also address this.*
-- [ ] **Review RolePolicy** - Exists but unused. Either wire it into AccountService for role assignment authorization, or remove if not needed.
+- [ ] **Review Policy::Role** - Exists but unused. Either wire it into AccountService for role assignment authorization, or remove if not needed.
 - [ ] **Security tests** - Add tests verifying that sensitive fields (roles, etc.) cannot be modified via API without proper authorization.
 
 ## Testing

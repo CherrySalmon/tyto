@@ -57,7 +57,7 @@ module Tyto
             participant: Domain::Courses::Values::Participant.new(email: nil, name: nil),
             roles: course_roles, created_at: nil, updated_at: nil
           )
-          policy = CoursePolicy.new(requestor, enrollment)
+          policy = Policy::Course.new(requestor, enrollment)
 
           Response::CourseDetails.new(
             id: course.id,

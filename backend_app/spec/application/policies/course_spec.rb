@@ -2,7 +2,7 @@
 
 require_relative '../../spec_helper'
 
-describe Tyto::CoursePolicy do
+describe Tyto::Policy::Course do
   let(:account) { Tyto::Account.create(email: 'test@example.com', name: 'Test User') }
   let(:course) { Tyto::Course.create(name: 'Test Course') }
 
@@ -23,7 +23,7 @@ describe Tyto::CoursePolicy do
   describe 'global role checks (admin, creator)' do
     describe 'with admin role' do
       let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['admin']) }
-      let(:policy) { Tyto::CoursePolicy.new(requestor) }
+      let(:policy) { Tyto::Policy::Course.new(requestor) }
 
       it 'allows viewing all courses' do
         _(policy.can_view_all?).must_equal true
@@ -40,7 +40,7 @@ describe Tyto::CoursePolicy do
 
     describe 'with creator role' do
       let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator']) }
-      let(:policy) { Tyto::CoursePolicy.new(requestor) }
+      let(:policy) { Tyto::Policy::Course.new(requestor) }
 
       it 'allows creating courses' do
         _(policy.can_create?).must_equal true
@@ -53,7 +53,7 @@ describe Tyto::CoursePolicy do
 
     describe 'with member role (no special permissions)' do
       let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
-      let(:policy) { Tyto::CoursePolicy.new(requestor) }
+      let(:policy) { Tyto::Policy::Course.new(requestor) }
 
       it 'denies global operations' do
         _(policy.can_view_all?).must_equal false
@@ -67,7 +67,7 @@ describe Tyto::CoursePolicy do
 
     describe 'with owner enrollment' do
       let(:enrollment) { create_enrollment(roles: ['owner']) }
-      let(:policy) { Tyto::CoursePolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Course.new(requestor, enrollment) }
 
       it 'allows view, update, and delete' do
         _(policy.can_view?).must_equal true
@@ -78,7 +78,7 @@ describe Tyto::CoursePolicy do
 
     describe 'with instructor enrollment' do
       let(:enrollment) { create_enrollment(roles: ['instructor']) }
-      let(:policy) { Tyto::CoursePolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Course.new(requestor, enrollment) }
 
       it 'allows view and update but not delete' do
         _(policy.can_view?).must_equal true
@@ -89,7 +89,7 @@ describe Tyto::CoursePolicy do
 
     describe 'with staff enrollment' do
       let(:enrollment) { create_enrollment(roles: ['staff']) }
-      let(:policy) { Tyto::CoursePolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Course.new(requestor, enrollment) }
 
       it 'allows view and update but not delete' do
         _(policy.can_view?).must_equal true
@@ -100,7 +100,7 @@ describe Tyto::CoursePolicy do
 
     describe 'with student enrollment' do
       let(:enrollment) { create_enrollment(roles: ['student']) }
-      let(:policy) { Tyto::CoursePolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Course.new(requestor, enrollment) }
 
       it 'allows view but not update or delete' do
         _(policy.can_view?).must_equal true
@@ -110,7 +110,7 @@ describe Tyto::CoursePolicy do
     end
 
     describe 'with nil enrollment (not enrolled)' do
-      let(:policy) { Tyto::CoursePolicy.new(requestor, nil) }
+      let(:policy) { Tyto::Policy::Course.new(requestor, nil) }
 
       it 'denies course-specific operations' do
         _(policy.can_view?).must_equal false
@@ -123,7 +123,7 @@ describe Tyto::CoursePolicy do
   describe '#summary' do
     let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['admin']) }
     let(:enrollment) { create_enrollment(roles: ['owner']) }
-    let(:policy) { Tyto::CoursePolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::Policy::Course.new(requestor, enrollment) }
 
     it 'returns hash of all permissions' do
       summary = policy.summary

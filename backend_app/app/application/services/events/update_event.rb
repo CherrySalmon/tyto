@@ -65,7 +65,7 @@ module Tyto
 
         def authorize(requestor, course_id)
           enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
-          policy = EventPolicy.new(requestor, enrollment)
+          policy = Policy::Event.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to update events')) unless policy.can_update?
 

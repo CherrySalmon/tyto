@@ -9,18 +9,20 @@ Application policies answer: "Can this actor perform this action in this context
 Every policy follows the same shape:
 
 ```ruby
-class SomePolicy
-  def initialize(requestor, ...)
-    @requestor = requestor
-    # remaining args provide context (e.g., enrollment, course)
-  end
+module Policy
+  class SomePolicy
+    def initialize(requestor, ...)
+      @requestor = requestor
+      # remaining args provide context (e.g., enrollment, course)
+    end
 
-  def can_do_thing?
-    # compose private predicates
-  end
+    def can_do_thing?
+      # compose private predicates
+    end
 
-  def summary
-    { can_do_thing: can_do_thing? }
+    def summary
+      { can_do_thing: can_do_thing? }
+    end
   end
 end
 ```
@@ -82,9 +84,9 @@ From `requestor` (AuthCapability — global roles):
 
 The `summary` hash is how the frontend learns what UI to show. Two patterns exist:
 
-1. **Course-level policies**: `CoursePolicy.summary` is embedded in the `CourseWithEnrollment` representer via `GetCourse` service. The frontend reads `course.policies.can_update` etc. to gate management tabs.
+1. **Course-level policies**: `Policy::Course.summary` is embedded in the `CourseWithEnrollment` representer via `GetCourse` service. The frontend reads `course.policies.can_update` etc. to gate management tabs.
 
-2. **Resource-level policies**: When a service returns a resource with its own policy decisions (e.g., `ListEventParticipants` returns participants + attendance policies), include the relevant policy summary in the service response. The representer serializes it alongside the data. This keeps policies with their owning domain — don't add attendance concerns to `CoursePolicy`.
+2. **Resource-level policies**: When a service returns a resource with its own policy decisions (e.g., `ListEventParticipants` returns participants + attendance policies), include the relevant policy summary in the service response. The representer serializes it alongside the data. This keeps policies with their owning domain — don't add attendance concerns to `Policy::Course`.
 
 ## Domain policies vs. application policies
 
