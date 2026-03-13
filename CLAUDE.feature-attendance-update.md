@@ -141,8 +141,8 @@ Order: happy path, then authorization.
 ### Verification
 
 - [x] 6.1 Backend code review: review backend implementation for quality, consistency, and naming conventions
-- [ ] 6.2 Manual verification: end-to-end test of instructor toggling student attendance
-- [ ] 6.3 Frontend code review: review frontend implementation for quality, UX, and consistency
+- [x] 6.2 Manual verification: end-to-end test of instructor toggling student attendance (fixed `response.data.data` → `response.data.participants` in ManageEventAttendance.vue)
+- [x] 6.3 Frontend code review: review frontend implementation for quality, UX, and consistency — clean, follows codebase patterns
 
 ## Completed
 
