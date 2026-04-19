@@ -8,6 +8,9 @@ node_modules/
 # build output (built on Heroku deploy)
 dist/
 
+# temporary assets during development
+tmp/
+
 # test/dev infrastructure
 *.db
 
