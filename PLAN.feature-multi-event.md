@@ -28,7 +28,7 @@ Each slice is test-first: failing spec → implementation → frontend update �
 ## Current State
 
 - [x] Plan created
-- [x] All scope questions (Q1–Q7) resolved with user
+- [x] All scope questions (Q1–Q9) resolved with user
 - [ ] Slice 1: route rename + schema cleanup shipped
   - [x] 1.1a event_route_spec updated to new URLs + array contract (red, as expected — 13 failures, endpoint doesn't exist yet)
   - [x] 1.1b current_event_route_spec updated to `/api/current_events`
@@ -43,6 +43,8 @@ Each slice is test-first: failing spec → implementation → frontend update �
 - [ ] Slice 3: retrospective → skill-file edits proposed
 
 ## Key Findings
+
+> **Snapshot at time of research** (pre-refactor). Line numbers and API paths below reflect the *original* singular-`event` route. After Slice 1's `refactor: events route uses plural path and array payload` commit (022dbb1) the route namespace is `events`, POSTs wrap as `{ events: [...] }`, and the handler is substantially larger. The logical structure (service / policy / repo / entity / representer) is unchanged.
 
 Research summary (from `Explore` agent — full notes kept in conversation):
 
@@ -74,7 +76,7 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 
 **Gotchas to preserve / decide**:
 
-1. **`unique (start_at, end_at)` is DB-global.** A bulk create that accidentally reuses an existing `start_at/end_at` pair (even from a different course) will fail on insert. Need transactional behavior so partial failures don't leave half the batch committed. Worth flagging as `Q3`.
+1. **`unique (start_at, end_at)` is DB-global** (as of migration 007). A bulk create that accidentally reused an existing `start_at/end_at` pair would fail on insert. Resolved by **Q3** → dropped entirely in Slice 1 migration `009` (no replacement — multiple legitimate events can share times, e.g. parallel workshop sessions). Transactional bulk persistence still required for partial-failure safety (handled by Slice 2's `CreateEvents` service).
 2. **Authorization is per-course, not per-event.** One `can_create?` check at the start of the bulk service is sufficient.
 3. **Enrichment.** Single-event response enriches with location coords. Bulk service should fetch all needed locations once (via `repo.find_ids(ids)`) rather than N times.
 4. **No contract classes.** Validation is inline in `CreateEvent` private methods — mirror that style rather than introducing dry-validation.
@@ -84,7 +86,7 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 
 > Questions must be numbered (Q1, Q2, ...) and crossed off when resolved. Note the decision made.
 
-- [x] ~~Q1. **Endpoint shape.** Add new `POST /api/course/:course_id/events` (plural) that accepts `{ events: [...] }`, or extend the existing singular `POST /.../event` to accept either an object or an array?~~ **Decision**: Rename the resource from singular `event` to plural `events` (matching REST convention), and unify under a single endpoint `POST /api/course/:course_id/events` that always takes `{ events: [...] }`. Single-event create becomes a 1-row array. Also rename `GET /event` → `GET /events` and `PUT /event/:id` → `PUT /events/:id` for consistency. Pending confirmation that there are no external API consumers beyond the Vue frontend.
+- [x] ~~Q1. **Endpoint shape.** Add new `POST /api/course/:course_id/events` (plural) that accepts `{ events: [...] }`, or extend the existing singular `POST /.../event` to accept either an object or an array?~~ **Decision**: Rename the resource from singular `event` to plural `events` (matching REST convention), and unify under a single endpoint `POST /api/course/:course_id/events` that always takes `{ events: [...] }`. Single-event create becomes a 1-row array. Also rename `GET /event` → `GET /events` and `PUT /event/:id` → `PUT /events/:id` for consistency. **Confirmed 2026-04-21**: the Vue frontend is the only consumer of the backend API — no third-party clients to break.
 - [x] ~~Q2. **All-or-nothing semantics.** If one row fails validation or insert, should the entire batch be rejected (transaction rollback), or should valid rows still be created and the failed ones reported?~~ **Decision**: All-or-nothing with detailed error report. The bulk service validates every row up-front before persisting anything, and wraps persistence in a `DB.transaction` so any insert failure rolls back the whole batch. The failure response returns a per-row error map (row index → error message) so the frontend can highlight the specific offending rows in the review grid.
 - [x] ~~Q3. **Unique `(start_at, end_at)` constraint.** The current DB constraint is cross-course and will cause collisions in bulk scenarios.~~ **Decision**: Drop the uniqueness constraint entirely — no replacement. Use cases like repeated workshop sessions legitimately need multiple events sharing the same `(start_at, end_at)` within a single course. Separately, tighten `start_at` and `end_at` to `NOT NULL` — null times don't make sense for attendance events. **Prerequisite**: audit the production database for any existing rows with null `start_at` or `end_at` before rolling out the `NOT NULL` migration; clean up or surface to the user for resolution before the migration runs. Folded into Slice 1.
 - [x] ~~Q4. **Name-pattern generation — server or client?**~~ **Decision**: Client-side. The pattern (prefix + pad2/nopad/date-short/none + startNum) is presentation-layer formatting — the domain entity only cares about `Event.name` as a plain string, the pattern itself is never persisted, and the reference design's step-2 spreadsheet explicitly allows per-row overrides. Server accepts already-rendered names. **Caveat for future work**: if we later add server-rendered previews (email, PDF, calendar imports) or a "rename this whole series" feature, the pattern becomes domain data and we'd introduce `series_id` + pattern metadata. Out of scope for this branch.
@@ -104,7 +106,7 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 
 - [x] ~~Q8. **Step 2 → Step 1 back navigation — allow or one-way?**~~ **Decision**: One-way. No Back button on the review step. Rationale: step 2 already allows editing every field per row (name, date, location, start, end), plus fill-down for shared columns and add/remove rows — so going back to step 1 is almost never necessary. If the user really wants to redo the date picking or quick-pick pattern from scratch, Cancel restarts the flow. Simpler implementation, no edge cases around preserving row-level edits vs. regenerating from pattern.
 
-- [x] ~~Q9. **Timezone support — this branch or later?**~~ **Decision**: Later. Timezone is a cross-cutting concern with no clean "lite version": schema change (TIMESTAMPTZ or UTC + tz string), prod-data migration with ambiguous source-of-truth for existing rows, every service/representer/picker needs tz context, business rules shift, and UX must disambiguate viewer-tz vs. event-tz. Folding it into this branch would triple the surface area. Current branch keeps the existing local-time-string behavior unchanged. **Action**: add an entry to `doc/future-work.md` with the problem statement, hard parts (existing-data ambiguity, multi-tz UX), and rough shape of the proper fix. Tracked as task 2.17 below.
+- [x] ~~Q9. **Timezone support — this branch or later?**~~ **Decision**: Later. Timezone is a cross-cutting concern with no clean "lite version": schema change (TIMESTAMPTZ or UTC + tz string), prod-data migration with ambiguous source-of-truth for existing rows, every service/representer/picker needs tz context, business rules shift, and UX must disambiguate viewer-tz vs. event-tz. Folding it into this branch would triple the surface area. Current branch keeps the existing local-time-string behavior unchanged. **Action**: add an entry to `doc/future-work.md` with the problem statement, hard parts (existing-data ambiguity, multi-tz UX), and rough shape of the proper fix. Tracked as task 2.18 below.
 
 ## Scope
 
@@ -117,7 +119,7 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 - `PUT /events/:id` unchanged in behavior, just renamed
 - Update route-level specs (`spec/routes/event_route_spec.rb`, `spec/routes/current_event_route_spec.rb`) to hit new URLs + new array payload
 - Update all frontend API callers (`SingleCourse.vue`, any other files referencing `/event`) to use `/events` and wrap POSTs as 1-element arrays
-- **DB schema corrections** (per Q3): migration to drop `unique (start_at, end_at)` constraint; separate migration to tighten `start_at` and `end_at` to `NOT NULL`. Audit prod DB for null-time rows before the NOT NULL migration
+- **DB schema corrections** (per Q3 + post-audit insight 1.6f): three migrations — 009 drops the `unique (start_at, end_at)` constraint; 010 tightens `start_at`/`end_at` to `NOT NULL`; 011 adds a CHECK constraint `start_at <= end_at` to replace the dropped uniqueness with a real integrity guarantee. Each preceded by a prod-data audit (null-time rows before 010; `start_at > end_at` rows before 011)
 
 **Slice 1 — Out of scope**: transactional bulk, new service, any UI change. Slice 1 is a pure contract rename + schema cleanup.
 
@@ -139,8 +141,8 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 
 - New service `Tyto::Service::Events::CreateEvents` (plural) at `backend_app/app/application/services/events/create_events.rb`, mirroring `CreateEvent` structure
 - Swap route `POST /events` to delegate to new bulk service (instead of Slice 1's loop)
-- Possible migration to adjust the `unique` constraint (pending Q3)
-- Optional repository helper `EventsRepository#create_many(entities)` that wraps a DB transaction and returns the persisted entities with IDs
+- Repository helper `EventsRepository#create_many(entities)` per Q6 — wraps a `DB.transaction` and returns the persisted entities with IDs
+- *(No uniqueness-constraint migration: dropped entirely in Slice 1 per Q3.)*
 
 **Slice 2 — Frontend changes**:
 
@@ -156,9 +158,9 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 >
 > **Test-first**: Write or update tests that fail (red) before writing the implementation to make them pass (green).
 
-- [ ] 0 Resolve Q2–Q7 with user (record decisions in Questions section)
+- [x] 0 Resolve open questions with user (all of Q1–Q9 recorded in the Questions section above)
 
-### Slice 1 — Route rename + array contract
+### Slice 1 — Route rename + schema cleanup
 
 - [x] 1.1a Update `spec/routes/event_route_spec.rb`: change POST paths to `/events` and wrap bodies as `{ events: [payload] }`; change GET paths to `/events`; change PUT/DELETE to `/events/:id`. Added three failing specs for malformed payloads: bare object (no events key), `events` not an array, and empty events array — all expected to return 400. Asserts POST response returns `events_info` (array) instead of `event_info` (singular). PUT response still uses singular `event_info` since it operates on one row. **Verified red**: 13 failures, all because `/events` routes don't exist yet
 - [x] 1.1b Update `spec/routes/current_event_route_spec.rb` similarly (route prefix rename only) — `/api/current_event` → `/api/current_events` throughout
@@ -193,7 +195,11 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
   1. Run `bundle exec rake db:migrate`
   2. Re-dump events; diff against the pre-snapshot — must be identical (row count + every field)
   3. Insert a new event with `(start_at, end_at)` matching an existing row in the same course — must now succeed (this is the positive case 1.6d guards in a spec, re-verified here with real data)
-  4. Run `bundle exec sequel -m backend_app/db/migrations -M <previous_version> <DATABASE_URL>` (or the project's documented rollback command — check `Rakefile` for `db:rollback`) and re-dump. The extra row from step 3 will be present but otherwise original rows intact. Re-migrate up
+  4. Rollback via the Sequel CLI (no `rake db:rollback` task exists — confirmed by inspecting `Rakefile`; only `db:migrate` is defined). Concrete command for dev:
+     ```
+     bundle exec sequel -m backend_app/db/migrations -M 008 sqlite://backend_app/db/store/development.db
+     ```
+     Replace `008` with the target pre-009 version and swap the URL for test (`sqlite://backend_app/db/store/test.db`). Re-dump: the extra row from step 3 will be present, but original rows intact. Re-migrate up with `bundle exec rake db:migrate`. **Optional chore**: add a small `db:rollback` rake task that wraps `Sequel::Migrator.run(db, migration_path, target: ENV['VERSION'].to_i)` — leave out of Slice 1 unless rollback rehearsal becomes painful
 
   **Exercise migration 010 (NOT NULL)**:
   1. Run `bundle exec rake db:migrate`
@@ -201,16 +207,39 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
   3. Attempt to insert an event with `start_at: nil` — must fail with a NOT NULL constraint error (positive confirmation the migration took)
   4. Rollback 010; re-migrate up. Verify data intact at every step
 
-  **Repeat in test env** (`RACK_ENV=test bundle exec rake db:migrate`) to confirm the migration behaves consistently across adapters (SQLite dev, whatever test uses).
+  **Repeat in test env** (`RACK_ENV=test bundle exec rake db:migrate`) to confirm the migrations apply cleanly against the test DB as well. **Caveat**: both dev and test use SQLite here (`backend_app/db/store/{development,test}.db`). Prod uses PostgreSQL — any adapter-specific surprises (e.g. CHECK syntax quirks, NOT NULL on populated columns needing `USING`) only surface at staging rehearsal (1.7b) or the prod release phase (1.7d). This step is **data-integrity rehearsal on the dev adapter**, not a cross-adapter smoke test.
 
-  Record the snapshots + checksums in this plan or a sibling scratch file so the comparison is reproducible if anything needs re-doing. Only tick 1.6e off once both migrations round-trip cleanly with zero data damage.
+  Record the snapshots + checksums in this plan or a sibling scratch file so the comparison is reproducible if anything needs re-doing. Only tick 1.6e off once all three migrations (009 drop-unique, 010 NOT-NULL, 011 CHECK start≤end — see 1.6f) round-trip cleanly with zero data damage.
+
+- [ ] 1.6f **CHECK constraint: `start_at <= end_at`.** Dropping the old `(start_at, end_at)` uniqueness (1.6a) leaves *no* schema-level guarantees on the time columns. "End before start" is a nonsense state we shouldn't trust the service layer alone to prevent — migrations, seeds, and future bulk writes can bypass `CreateEvent` validation. Add a DB-level CHECK. Inclusive (`<=`) so zero-duration placeholder events remain legal.
+
+  Three sub-tasks mirroring the 1.6b/c/d pattern:
+  - [ ] **1.6f-audit (HUMAN ONLY, NOT AI)** — before writing the migration, verify prod has no existing violations. On the Heroku dyno (`heroku run rake console --app <app>`):
+    ```ruby
+    Tyto::DB[:events]
+      .where { start_at > end_at }
+      .select(:id, :course_id, :name, :start_at, :end_at).all
+    ```
+    (Or via `heroku pg:psql --app <app>`.) **Zero rows** → proceed. **Non-zero** → paste into the planning conversation; triage per-row before the CHECK migration can land
+  - [ ] **1.6f-migration** — `011_events_start_before_end.rb` with explicit `up`/`down`:
+    ```ruby
+    Sequel.migration do
+      up   { alter_table(:events) { add_constraint(:start_before_end) { start_at <= end_at } } }
+      down { alter_table(:events) { drop_constraint(:start_before_end) } }
+    end
+    ```
+    Run in dev + test
+  - [ ] **1.6f-spec** — failing-then-green repo/ORM spec: inserting an event with `start_at > end_at` raises `Sequel::CheckConstraintViolation` (Postgres) or `Sequel::ConstraintViolation` (SQLite). Use `Sequel::ConstraintViolation` (the cross-adapter parent class) in the assertion
+  - [ ] **1.6f-rehearsal** — extend 1.6e by attempting a violating row on the populated dev DB, confirming rejection, then rollback → re-migrate. Data intact at every step
+
+  **Replaces** the now-deleted Slice 2 task 2.5 (which would have re-added a multi-column unique constraint — obsoleted by the Q3 decision to drop uniqueness entirely).
 
 ### Slice 1 — Production rollout safety
 
 - [ ] 1.7a **Add Heroku release phase to `Procfile`**: prepend `release: bundle exec rake db:migrate` above the existing `web:` line. This makes every deploy atomic — if migrations fail, the new release does not promote and the previous release stays live. Closes the gap where devs must remember to run `heroku run rake db:migrate` after every push
 - [ ] 1.7b Verify release-phase behavior on a staging app (or a throwaway Heroku app if no staging exists). Push a deliberately broken migration, confirm deploy is rejected, revert
 - [ ] 1.7c **Before deploying the NOT NULL migration to prod**: human dev captures a backup — `heroku pg:backups:capture --app <app>` — and notes the backup ID in the deploy log. Free insurance even with point-in-time recovery
-- [ ] 1.7d Deploy Slice 1 to prod: push the branch → release phase runs migrations 009 + 010 in order → new slug promoted only if both succeed. If 010 fails (unexpected NULL rows), 009 has still applied cleanly and the deploy halts — no half-state in application code. **Prerequisite: 1.6e passed** (both migrations round-tripped cleanly on a semi-populated dev/test DB)
+- [ ] 1.7d Deploy Slice 1 to prod: push the branch → release phase runs migrations 009 + 010 + 011 in order → new slug promoted only if all three succeed. Failure-atomicity: if 010 fails (unexpected NULL rows) or 011 fails (unexpected `start_at > end_at` rows), earlier migrations remain applied and the deploy halts — no half-state in application code. **Prerequisite: 1.6e passed** (all three migrations round-tripped cleanly on a semi-populated dev/test DB) **and 1.6f-audit clean**
 - [ ] 1.7e Post-deploy smoke check: hit `/api/course/:id/events` in prod with a known course, confirm event list loads. Create and delete a test event via the UI
 
 > **Note**: original task 1.8 (manual dev verification of the single-event CRUD flow) has been promoted to **1.5b** so the rename is verified end-to-end before any schema migration runs. This slot is kept empty as a back-reference.
@@ -223,11 +252,11 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 - [ ] 2.1b Failing spec: rejects with `Failure(forbidden)` when requestor is a student (not teaching staff)
 - [ ] 2.1c Failing spec: rejects with `Failure(bad_request)` when any row has missing name / invalid times / unknown `location_id`; no rows persisted (transaction rollback)
 - [ ] 2.1d Failing spec: rejects with `Failure(not_found)` when course does not exist
-- [ ] 2.1e Failing spec (pending Q6): rejects oversized batches
-- [ ] 2.2 Implement `Tyto::Service::Events::CreateEvents` (validate course → authorize once → validate all rows → persist transactionally → enrich with locations → return collection)
-- [ ] 2.3 Add `EventsRepository#create_many` if it makes the service cleaner; otherwise wrap `DB.transaction` in the service
-- [ ] 2.4 Swap `POST /events` route to delegate to `CreateEvents` (replacing Slice 1's dumb loop). Keep the same response shape for frontend compatibility
-- [ ] 2.5 (Pending Q3) Migration to change unique constraint to `(course_id, location_id, start_at, end_at)`
+- [ ] 2.1e Failing spec: batches larger than 100 rows are rejected with `Failure(bad_request)` and message `Batch too large: 100 events max, got N` (per Q6). Happy-path upper bound: exactly 100 rows succeeds
+- [ ] 2.2 Implement `Tyto::Service::Events::CreateEvents` (validate course → authorize once → validate all rows → enforce ≤100 cap → persist transactionally → enrich with locations → return collection)
+- [ ] 2.3 Add `EventsRepository#create_many(entities)` per Q6 — `DB.transaction { entities.map { |e| create(e) } }`. Kept separate from `create(entity)` to preserve single-method return types and make the transaction boundary explicit at the callsite (see audit 2026-04-21 for rationale against collapsing)
+- [ ] 2.4 Swap `POST /events` route to delegate to `CreateEvents` (replacing Slice 1's loop). Keep the `{ success, message: 'Events created', events_info: [...] }` response shape for frontend compatibility
+- [ ] 2.5 *(removed)* — was "migration to change unique constraint"; obsoleted by Q3 (drop entirely) and replaced by Slice 1 migrations 009 + 011 (drop-unique + CHECK start≤end via 1.6a / 1.6f)
 - [ ] 2.6 Run full spec suite and fix any regressions
 
 #### Frontend
@@ -245,14 +274,14 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 
 #### Verification
 
-- [ ] 2.15 Manual verification in browser at `http://localhost:9292`:
+- [ ] 2.16 Manual verification in browser at `http://localhost:9292`:
   - Single flow still works (toggle off)
   - Bulk: pick 4 dates via calendar + 1 quick-pick, enter shared defaults, review & tweak one row, submit
   - Events list refreshes and shows all created rows
-  - Validation errors surface cleanly for a deliberately bad row
+  - Validation errors surface cleanly for a deliberately bad row (all-or-nothing per Q2: zero rows committed, per-row error map returned)
   - Authorization: a student account sees no "Create" button (existing behavior unchanged)
-- [ ] 2.16 Update `doc/future-work.md` if any of Q3/Q5/Q6 decisions defer follow-up work
-- [ ] 2.17 Add timezone-support entry to `doc/future-work.md` (per Q9): problem statement, hard parts (existing-data source-of-truth ambiguity, multi-tz UX for instructors-vs-students in different zones, attendance-window business rules), and rough shape of proper fix (TIMESTAMPTZ or UTC+tz string; course-level default tz; picker disambiguation)
+- [ ] 2.17 Update `doc/future-work.md` if any of Q3/Q5/Q6 decisions defer follow-up work
+- [ ] 2.18 Add timezone-support entry to `doc/future-work.md` (per Q9): problem statement, hard parts (existing-data source-of-truth ambiguity, multi-tz UX for instructors-vs-students in different zones, attendance-window business rules), and rough shape of proper fix (TIMESTAMPTZ or UTC+tz string; course-level default tz; picker disambiguation)
 
 ### Slice 3 — Retrospective: feed lessons back into `/ray-branch-plan` skill
 
@@ -267,7 +296,7 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 
 - **Consider an initial refactoring slice before feature work.** When a new feature will break or awkwardly extend an existing structure (e.g. renaming routes, widening a payload contract, loosening a DB constraint), plan a dedicated refactoring slice *first* — behavior-preserving, test-covered — so the feature slice only adds new behavior on top of a clean foundation. This keeps each PR reviewable and limits the blast radius of any single change.
 - **Numbered slices with prefixed task IDs (1.1a, 2.3, …) scale better than a flat list** once a branch plan exceeds ~10 tasks or crosses slice boundaries.
-- **Capture scope questions explicitly and resolve them before coding.** The Q1–Q7 list surfaced endpoint-shape and DB-constraint decisions up-front that would have caused rework if discovered mid-implementation.
+- **Capture scope questions explicitly and resolve them before coding.** The Q1–Q9 list surfaced endpoint-shape, DB-constraint, and timezone decisions up-front that would have caused rework if discovered mid-implementation.
 - **Link to any external reference designs with file paths and a summary of what to port** — the reference React prototype at `tmp/DESIGN-multi-events/create-events-modal.jsx` was far more actionable once named + summarized in the plan than it would have been as a raw file.
 - **Audit the deploy / migration mechanism before planning any schema change.** We discovered mid-planning that this app had no Heroku release phase — migrations were manual and a dev could deploy code that referenced a schema that hadn't been applied yet. Plans touching the DB should start by verifying `Procfile` (or equivalent) runs migrations automatically, and add that wiring if it's missing.
 
@@ -277,4 +306,4 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 
 ---
 
-Last updated: 2026-04-19
+Last updated: 2026-04-21
