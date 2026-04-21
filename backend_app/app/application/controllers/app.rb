@@ -51,8 +51,8 @@ module Tyto
           r.run Routes::Courses
         end
 
-        # All curren-event-related routes are under 'api/course'
-        r.on 'current_event' do
+        # All current-event-related routes are under 'api/current_events'
+        r.on 'current_events' do
           r.run Routes::CurrentEvents
         end
 

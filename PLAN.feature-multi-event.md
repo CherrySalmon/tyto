@@ -30,6 +30,14 @@ Each slice is test-first: failing spec → implementation → frontend update �
 - [x] Plan created
 - [x] All scope questions (Q1–Q7) resolved with user
 - [ ] Slice 1: route rename + schema cleanup shipped
+  - [x] 1.1a event_route_spec updated to new URLs + array contract (red, as expected — 13 failures, endpoint doesn't exist yet)
+  - [x] 1.1b current_event_route_spec updated to `/api/current_events`
+  - [x] 1.1c Service specs audited — none reference route paths (as expected)
+  - [x] 1.2 Route namespace renamed `event` → `events`; top-level mount `current_event` → `current_events`
+  - [x] 1.3 POST /events validates `{ events: [...] }` array; loops CreateEvent; returns `{ success, events_info: [...] }` via Representer::EventsList. Rejects bare object, non-array, empty array with 400
+  - [x] 1.4 Full spec suite green: 873 runs, 2057 assertions, 0 failures
+  - [x] 1.5 Frontend callers updated: `SingleCourse.vue` (4 call sites — POST now wraps as `{ events: [form] }`), `AttendanceTrack.vue` + `AllCourse.vue` (`/current_event/` → `/current_events/`)
+  - [x] 1.5b Manual dev verification passed — create/edit/delete/list + current_events all clean, no log errors
 - [ ] Slice 2: bulk service + split-component modal shipped
 - [ ] Manual verification of both flows
 - [ ] Slice 3: retrospective → skill-file edits proposed
@@ -152,37 +160,60 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 
 ### Slice 1 — Route rename + array contract
 
-- [ ] 1.1a Update `spec/routes/event_route_spec.rb`: change POST paths to `/events` and wrap bodies as `{ events: [payload] }`; change GET paths to `/events`. Also add a new failing spec: POST `/events` with a bare object (no array) returns 400
-- [ ] 1.1b Update `spec/routes/current_event_route_spec.rb` similarly (route prefix rename only)
-- [ ] 1.1c Update `spec/application/services/events/*_spec.rb` if any reference the route path — service specs shouldn't, but check
-- [ ] 1.2 Rename `r.on 'event'` → `r.on 'events'` in `backend_app/app/application/controllers/routes/course.rb`. Rename any CurrentEvent route prefix similarly
-- [ ] 1.3 In `POST /events`, parse `request_body['events']`, reject with 400 if missing / not an array / empty. Loop over array, call `CreateEvent` per row, accumulate results. Return `{ success, events_info: [...] }` with `Representer::EventsList`
-- [ ] 1.4 Run backend spec suite until green
-- [ ] 1.5 Update frontend callers: grep `frontend_app/` for `/event` (path and filename string) and update to `/events`; wrap POST bodies as `{ events: [form] }`. Key files: `frontend_app/pages/course/SingleCourse.vue`, `CreateAttendanceEventDialog.vue` (wiring), `ModifyAttendanceEventDialog.vue`, any API-client layer
+- [x] 1.1a Update `spec/routes/event_route_spec.rb`: change POST paths to `/events` and wrap bodies as `{ events: [payload] }`; change GET paths to `/events`; change PUT/DELETE to `/events/:id`. Added three failing specs for malformed payloads: bare object (no events key), `events` not an array, and empty events array — all expected to return 400. Asserts POST response returns `events_info` (array) instead of `event_info` (singular). PUT response still uses singular `event_info` since it operates on one row. **Verified red**: 13 failures, all because `/events` routes don't exist yet
+- [x] 1.1b Update `spec/routes/current_event_route_spec.rb` similarly (route prefix rename only) — `/api/current_event` → `/api/current_events` throughout
+- [x] 1.1c Audit `spec/application/services/events/*_spec.rb` for route paths — none found (service specs test services, not routes)
+- [x] 1.2 Renamed `r.on 'event'` → `r.on 'events'` in `course.rb`. Renamed top-level mount `r.on 'current_event'` → `r.on 'current_events'` in `app.rb`
+- [x] 1.3 In `POST /events`, parse `request_body['events']`, reject with 400 if missing / not an array / empty. Loop over array, call `CreateEvent` per row, accumulate results. Return `{ success, events_info: [...] }` with `Representer::EventsList`. On per-row failure, break out and propagate the failure's http_status_code (consistent with current single-event error behavior)
+- [x] 1.4 Full spec suite green: **873 runs, 2057 assertions, 0 failures, 1 skip**. Coverage 98.05%
+- [x] 1.5 Frontend callers updated: `SingleCourse.vue` (createAttendanceEvent → wraps `{ events: [eventForm] }`; fetchAttendanceEvents/deleteAttendanceEvent/updateAttendanceEvent → `/events`), `AttendanceTrack.vue` + `AllCourse.vue` (`/current_event/` → `/current_events/`)
+- [x] 1.5b Manual verification (dev), pre-schema-change — **passed 2026-04-21**. Walked through list / create x2 / edit / delete / current-events. Backend log confirms correct SQL: two INSERTs into `events` (both via `POST /api/course/1/events` with array payload), one UPDATE (name edit), one DELETE (row 3). Zero error/exception/warn lines in the log. Final DB state = original `frist post` row + edited `slice-1 test A (edited)`.
 - [ ] 1.6a Migration `009_drop_events_start_end_unique.rb`: drop `unique (start_at, end_at)` index from `events` table. Explicit `up`/`down` blocks so revert is a well-defined statement. Run `bundle exec rake db:migrate` in dev + `RACK_ENV=test bundle exec rake db:migrate` in test
-- [ ] 1.6b **Prod DB audit — HUMAN ONLY, NOT AI.** This step must be performed by a developer via `heroku run rails dbconsole` (or equivalent Sequel / psql shell on the Heroku dyno). AI tooling must not be given direct access to the production database. The dev runs:
+- [ ] 1.6b **Prod DB audit — HUMAN ONLY, NOT AI.** This app is Roda + Sequel (no Rails). The developer runs `heroku run rake console --app <app>` to open an interactive Ruby console with all code + DB loaded, then queries via the Sequel dataset:
 
-  ```sql
-  SELECT id, course_id, name, start_at, end_at, created_at
-  FROM events
-  WHERE start_at IS NULL OR end_at IS NULL;
+  ```ruby
+  Tyto::DB[:events]
+    .where(Sequel.|({ start_at: nil }, { end_at: nil }))
+    .select(:id, :course_id, :name, :start_at, :end_at, :created_at)
+    .all
   ```
+
+  (Or use `heroku pg:psql --app <app>` for a raw `psql` shell if preferred — same intent, different surface.) AI tooling must not be given direct access to the production database.
 
   Expected outcomes:
   - **Zero rows** → report back "prod clean", proceed to 1.6c
   - **Some rows** → paste the result into this planning conversation; we decide per-row whether to backfill, delete, or defer the NOT NULL migration. No writes to prod until a plan is agreed
 - [ ] 1.6c Migration `010_events_times_not_null.rb`: add `NOT NULL` to `events.start_at` and `events.end_at` via explicit `up`/`down` blocks (`set_column_not_null` / `set_column_allow_null`). Only run after 1.6b is clean (or the user has resolved violations). Exercise in dev + test
 - [ ] 1.6d Add a failing spec (then green) for the repository / ORM: creating two events with identical `(start_at, end_at)` in the same course now succeeds (regression guard against re-adding the dropped constraint)
+- [ ] 1.6e **Data-integrity rehearsal against a semi-populated dev/test DB.** Before the prod rollout, prove both migrations preserve existing rows. Dev DB only — no prod access.
+
+  **Setup**: from a clean `rake db:reset`, populate the `events` table with a representative mix by either (a) using the UI to create ~10 events across 2–3 courses and 2 locations, including at least one pair sharing `(start_at, end_at)` *would-be-collisions* that are currently blocked by the existing unique constraint — so create them across different courses/locations to get them in — or (b) writing a throwaway `rake` task / console snippet that inserts the same shape. Take a snapshot: total row count, a `SELECT id, course_id, location_id, name, start_at, end_at` dump of every event, checksum of that dump (`md5`).
+
+  **Exercise migration 009 (drop unique)**:
+  1. Run `bundle exec rake db:migrate`
+  2. Re-dump events; diff against the pre-snapshot — must be identical (row count + every field)
+  3. Insert a new event with `(start_at, end_at)` matching an existing row in the same course — must now succeed (this is the positive case 1.6d guards in a spec, re-verified here with real data)
+  4. Run `bundle exec sequel -m backend_app/db/migrations -M <previous_version> <DATABASE_URL>` (or the project's documented rollback command — check `Rakefile` for `db:rollback`) and re-dump. The extra row from step 3 will be present but otherwise original rows intact. Re-migrate up
+
+  **Exercise migration 010 (NOT NULL)**:
+  1. Run `bundle exec rake db:migrate`
+  2. Re-dump events; diff against the post-009 snapshot (minus the deliberately-added step-3 row, or including it) — no row lost, no field corrupted
+  3. Attempt to insert an event with `start_at: nil` — must fail with a NOT NULL constraint error (positive confirmation the migration took)
+  4. Rollback 010; re-migrate up. Verify data intact at every step
+
+  **Repeat in test env** (`RACK_ENV=test bundle exec rake db:migrate`) to confirm the migration behaves consistently across adapters (SQLite dev, whatever test uses).
+
+  Record the snapshots + checksums in this plan or a sibling scratch file so the comparison is reproducible if anything needs re-doing. Only tick 1.6e off once both migrations round-trip cleanly with zero data damage.
 
 ### Slice 1 — Production rollout safety
 
 - [ ] 1.7a **Add Heroku release phase to `Procfile`**: prepend `release: bundle exec rake db:migrate` above the existing `web:` line. This makes every deploy atomic — if migrations fail, the new release does not promote and the previous release stays live. Closes the gap where devs must remember to run `heroku run rake db:migrate` after every push
 - [ ] 1.7b Verify release-phase behavior on a staging app (or a throwaway Heroku app if no staging exists). Push a deliberately broken migration, confirm deploy is rejected, revert
 - [ ] 1.7c **Before deploying the NOT NULL migration to prod**: human dev captures a backup — `heroku pg:backups:capture --app <app>` — and notes the backup ID in the deploy log. Free insurance even with point-in-time recovery
-- [ ] 1.7d Deploy Slice 1 to prod: push the branch → release phase runs migrations 009 + 010 in order → new slug promoted only if both succeed. If 010 fails (unexpected NULL rows), 009 has still applied cleanly and the deploy halts — no half-state in application code
+- [ ] 1.7d Deploy Slice 1 to prod: push the branch → release phase runs migrations 009 + 010 in order → new slug promoted only if both succeed. If 010 fails (unexpected NULL rows), 009 has still applied cleanly and the deploy halts — no half-state in application code. **Prerequisite: 1.6e passed** (both migrations round-tripped cleanly on a semi-populated dev/test DB)
 - [ ] 1.7e Post-deploy smoke check: hit `/api/course/:id/events` in prod with a known course, confirm event list loads. Create and delete a test event via the UI
 
-- [ ] 1.8 Manual verification (dev): existing single-event create / edit / list / delete all still work end-to-end in browser at `http://localhost:9292`
+> **Note**: original task 1.8 (manual dev verification of the single-event CRUD flow) has been promoted to **1.5b** so the rename is verified end-to-end before any schema migration runs. This slot is kept empty as a back-reference.
 
 ### Slice 2 — Bulk creation feature
 
