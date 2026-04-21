@@ -235,7 +235,9 @@ describe 'Tyto::Repository::Locations' do
       Tyto::Event.create(
         course_id: course.id,
         location_id: orm_location.id,
-        name: 'Test Event'
+        name: 'Test Event',
+        start_at: now,
+        end_at: now + 3600
       )
 
       _(repository.has_events?(orm_location.id)).must_equal true

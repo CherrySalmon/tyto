@@ -11,8 +11,14 @@ describe 'Tyto::Repository::Attendances' do
   let(:account) { Tyto::Account.create(email: 'student@example.com') }
   let(:another_account) { Tyto::Account.create(email: 'another@example.com') }
   let(:event_location) { Tyto::Location.create(course_id: course.id, name: 'Room 101') }
-  let(:event) { Tyto::Event.create(course_id: course.id, location_id: event_location.id, name: 'Lecture 1') }
-  let(:another_event) { Tyto::Event.create(course_id: course.id, location_id: event_location.id, name: 'Lecture 2') }
+  let(:event) do
+    Tyto::Event.create(course_id: course.id, location_id: event_location.id,
+                       name: 'Lecture 1', start_at: now, end_at: now + 3600)
+  end
+  let(:another_event) do
+    Tyto::Event.create(course_id: course.id, location_id: event_location.id,
+                       name: 'Lecture 2', start_at: now + 3600, end_at: now + 7200)
+  end
   let(:student_role) { Tyto::Role.first(name: 'student') }
 
   describe '#create' do
