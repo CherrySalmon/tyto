@@ -259,12 +259,13 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 
 ### Slice 1 → Slice 2 hand-off
 
-- [ ] 1.9 **Merge Slice 1 PR and fork Slice 2 branch.** After 1.8e passes clean:
-  1. Update PR #59 so its scope matches what's actually shipping (route rename + schema cleanup + release phase + console), then merge to `main`. **Squash vs merge commit**: merge-commit preferred here so the sub-commit history (route rename / schema migrations / DX tooling) is preserved for future archaeology; squash if the team convention on this repo is squash-only
-  2. Delete the remote `feature-multi-event` branch (`gh pr merge --delete-branch` or manually) — the branch name was aspirational for the whole feature, but its life ends with Slice 1. Keep the local worktree around for a day or two in case of rollback; then delete
-  3. The `PLAN.feature-multi-event.md` doc travels with the merge and is now on `main`. Slice 2 and Slice 3 sections remain open (unchecked tasks), serving as the single-source-of-truth for follow-on work
-  4. Create a new branch — proposed name `feature-multi-event-bulk` (explicit about scope this time) — off the updated `main`. Pick up at **Slice 2, backend tests first (2.1a)**. Open a fresh PR against `main` when there's enough to review
-  5. First commit on the new branch: tick **1.9** off in the plan so the handoff itself is recorded as done
+- [ ] 1.9 **Merge Slice 1 PR, keep working on the same branch for Slice 2.** After 1.8e passes clean:
+  1. **Verify merge strategy first.** GitHub → Settings → General → Pull Requests — confirm "Allow merge commits" is enabled (or just check what the green button on PR #59 offers). Reason: Slice 2 will continue on this same `feature-multi-event` branch, which only works if the merge preserves the Slice 1 commit SHAs as ancestors of `main`. Squash or rebase merges rewrite SHAs → branch diverges → next PR would appear to re-include all of Slice 1. If only squash is available, either toggle merge-commit on, or accept the ceremony of a fresh branch (`git reset --hard origin/main` on this branch, or create `feature-multi-event-2`).
+  2. Update PR #59 description so its scope matches what's actually shipping (route rename + schema cleanup + release phase + console + the rehearsal evidence). Do NOT rename the PR — "multi-event" still describes the branch's overall destination.
+  3. Merge PR #59 via **merge-commit** (preserves sub-commit history for future archaeology). Do NOT tick the "Delete branch after merge" checkbox — we're keeping the branch alive for Slice 2.
+  4. Locally: `git fetch origin && git rebase origin/main` (no-op since merge-commit kept SHAs as ancestors, but confirms cleanliness). Branch now has 0 commits ahead of `origin/main`.
+  5. Continue Slice 2 work on this same branch. First new commit on top (e.g. 2.1a failing spec) naturally becomes Slice 2's PR material. When there's enough reviewable work, open a fresh PR against `main`.
+  6. First post-merge commit: tick **1.9** off in this plan so the hand-off itself is recorded. `PLAN.feature-multi-event.md` continues to travel with the branch — Slice 2 and Slice 3 sections remain open as the single source of truth.
 
 ### Slice 2 — Bulk creation feature
 
