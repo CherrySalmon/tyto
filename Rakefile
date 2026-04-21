@@ -14,6 +14,28 @@ task test: :spec
 
 task default: :spec
 
+desc 'Lint Ruby code with RuboCop'
+task :style do
+  sh 'bundle exec rubocop'
+end
+
+desc 'Audit bundled gems for known CVEs'
+task :audit do
+  sh 'bundle exec bundle-audit check --update'
+end
+
+desc 'Full pre-release check: tests + style + audit'
+task quality: %i[spec style audit]
+
+task :print_env do
+  puts "Environment: #{ENV['RACK_ENV'] || 'development'}"
+end
+
+desc 'Open interactive Tyto console (pry) with full app loaded'
+task console: :print_env do
+  sh 'pry -r ./console', verbose: false
+end
+
 desc 'Setup project for first time (install dependencies, configure secrets)'
 task :setup do
   puts '==> Installing backend dependencies...'

@@ -8,7 +8,7 @@ Planned improvements and features to be addressed in future tasks.
 
 ## Infrastructure & DevOps
 
-- [ ] **Automated migrations on deploy** - Add `release: bundle exec rake db:migrate` to Procfile to run migrations automatically before each deploy
+- [x] **Automated migrations on deploy** — shipped 2026-04-21 (Slice 1 of `feature-multi-event`). `Procfile` declares `release: bundle exec rake db:migrate`; every Heroku deploy runs migrations in the release phase and fails atomically if any migration raises.
 - [ ] **CI/CD pipeline** - Set up continuous integration for automated testing on PRs
 - [ ] **Heroku Review Apps** - Configure `app.json` to enable auto-provisioned review environments for PRs
 
@@ -21,6 +21,7 @@ Planned improvements and features to be addressed in future tasks.
 - [ ] **Input whitelisting on PUT routes** - Prevent mass assignment vulnerabilities. PUT routes currently accept arbitrary JSON fields that get written to DB (e.g., users could potentially update their own roles). Implement Sequel's `set_allowed_columns` or manual input filtering in services. *Note: Input validation contracts (above) would also address this.*
 - [ ] **Review Policy::Role** - Exists but unused. Either wire it into AccountService for role assignment authorization, or remove if not needed.
 - [ ] **Security tests** - Add tests verifying that sensitive fields (roles, etc.) cannot be modified via API without proper authorization.
+- [ ] **CVE sweep of Ruby gem lockfile** — `bundle exec rake audit` (wired in Slice 1 of `feature-multi-event`) currently reports 17 pre-existing advisories as of 2026-04-21: 1 on `puma` (medium, CVE-2024-45614 header clobbering — Heroku also flags this on every deploy, recommends Puma 7.0.3+), 11 on `rack 3.0.9.1` (mix of medium and high — log injection, escape-sequence injection, path traversal), and 6 on `rexml 3.2.6` (medium/high — DoS via crafted XML). Each gem needs a minor-version bump plus regression testing; deferred from Slice 1 to avoid scope creep during a refactor-only deploy. Follow-up task: open a dedicated `security/cve-sweep` branch, bump puma → 7.x, rack → 3.1.x (or 2.2.x line depending on public API compat), rexml → 3.3+, run full spec suite + manual route smoke, deploy to prod.
 
 ## Testing
 

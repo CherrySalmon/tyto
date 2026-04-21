@@ -163,7 +163,8 @@ describe 'Tyto::Repository::Courses' do
     it 'returns course with children not loaded (nil)' do
       orm_course = Tyto::Course.create(name: 'Test Course')
       orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
-      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id,
+                         name: 'Event 1', start_at: now, end_at: now + 3600)
 
       result = repository.find_id(orm_course.id)
 
@@ -186,8 +187,10 @@ describe 'Tyto::Repository::Courses' do
     it 'returns course with events loaded' do
       orm_course = Tyto::Course.create(name: 'Test Course')
       orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
-      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
-      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 2')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id,
+                         name: 'Event 1', start_at: now, end_at: now + 3600)
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id,
+                         name: 'Event 2', start_at: now + 3600, end_at: now + 7200)
 
       result = repository.find_with_events(orm_course.id)
 
@@ -247,7 +250,8 @@ describe 'Tyto::Repository::Courses' do
     it 'does not load events' do
       orm_course = Tyto::Course.create(name: 'Test Course')
       orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
-      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id,
+                         name: 'Event 1', start_at: now, end_at: now + 3600)
 
       result = repository.find_with_locations(orm_course.id)
 
@@ -309,7 +313,8 @@ describe 'Tyto::Repository::Courses' do
     it 'does not load events or locations' do
       orm_course = Tyto::Course.create(name: 'Test Course')
       orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
-      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id,
+                         name: 'Event 1', start_at: now, end_at: now + 3600)
 
       result = repository.find_with_enrollments(orm_course.id)
 
@@ -514,7 +519,8 @@ describe 'Tyto::Repository::Courses' do
     it 'returns course with all children loaded' do
       orm_course = Tyto::Course.create(name: 'Test Course')
       orm_location = Tyto::Location.create(course_id: orm_course.id, name: 'Room A')
-      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id, name: 'Event 1')
+      Tyto::Event.create(course_id: orm_course.id, location_id: orm_location.id,
+                         name: 'Event 1', start_at: now, end_at: now + 3600)
       account = Tyto::Account.create(email: 'student@example.com', name: 'Student')
       Tyto::AccountCourse.create(course_id: orm_course.id, account_id: account.id, role_id: student_role.id)
 

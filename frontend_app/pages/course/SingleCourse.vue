@@ -279,7 +279,7 @@ export default {
       });
     },
     createAttendanceEvent(eventForm) {
-      api.post(`/course/${this.course.id}/event`, eventForm).then(() => {
+      api.post(`/course/${this.course.id}/events`, { events: [eventForm] }).then(() => {
         this.showCreateAttendanceEventDialog = false
         this.createAttendanceEventForm = {}
         this.fetchAttendanceEvents() // Refresh the list after adding
@@ -288,7 +288,7 @@ export default {
       });
     },
     fetchAttendanceEvents() {
-      api.get(`/course/${this.course.id}/event`).then(response => {
+      api.get(`/course/${this.course.id}/events`).then(response => {
         let attendanceEvents = response.data.data;
         this.attendanceEvents = attendanceEvents
       }).catch(error => {
@@ -340,7 +340,7 @@ export default {
       });
     },
     deleteAttendanceEvent(eventId) {
-      api.delete(`/course/${this.course.id}/event/${eventId}`).then(() => {
+      api.delete(`/course/${this.course.id}/events/${eventId}`).then(() => {
         console.log(`Event ${eventId} deleted successfully.`);
         // Refresh the attendance events list
         this.fetchAttendanceEvents(this.course.id);
@@ -373,7 +373,7 @@ export default {
     },
 
     updateAttendanceEvent() {
-      api.put(`/course/${this.course.id}/event/${this.currentEventID}`, this.attendanceEventForm).then(() => {
+      api.put(`/course/${this.course.id}/events/${this.currentEventID}`, this.attendanceEventForm).then(() => {
         this.showModifyAttendanceEventDialog = false;
         this.fetchAttendanceEvents(); // Refresh the list after adding
       }).catch(error => {

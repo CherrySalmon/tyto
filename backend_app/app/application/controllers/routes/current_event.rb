@@ -16,7 +16,7 @@ module Tyto
           auth_header = r.headers['Authorization']
           requestor = AuthToken::Mapper.new.from_auth_header(auth_header)
 
-          # GET api/current_event/
+          # GET api/current_events/
           r.get do
             case Service::Events::FindActiveEvents.new.call(requestor:, time: Time.now)
             in Success(api_result)
