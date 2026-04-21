@@ -248,7 +248,7 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 - [x] 1.8e **Post-deploy smoke check passed — 2026-04-21.** Ran via `heroku run --app tyto bash -c 'psql $DATABASE_URL -c "..."'` (direct SQL over the dyno; avoids boot-up cost of `rake console` for a one-shot read). Single aggregated query returned:
 
   | check | expected | actual |
-  |---|---|---|
+  | --- | --- | --- |
   | schema_version | 11 | **11** |
   | null_start | 0 | **0** |
   | null_end | 0 | **0** |
