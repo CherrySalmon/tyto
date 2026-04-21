@@ -39,6 +39,7 @@ gem 'rake', '~>13.0'
 
 # DATABASE
 gem 'sequel', '~>5.0'
+gem 'table_print', '~>1.0' # Console / REPL formatting (loaded by .pryrc)
 
 group :production do
   gem 'pg', '~>1.0'
@@ -63,6 +64,7 @@ end
 
 # CODE QUALITY
 group :development do
+  gem 'bundler-audit'
   gem 'rubocop'
 end
 
