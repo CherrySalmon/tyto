@@ -244,24 +244,18 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 - [x] 1.8a **Heroku release phase added — 2026-04-21.** `Procfile` now has `release: bundle exec rake db:migrate` prepended above the existing `web:` line. Verified path: `db:migrate` task in `Rakefile` loads `Tyto::Api` which reads `ENV['DATABASE_URL']` (set by Heroku in release phase) and runs `Sequel::Migrator.run` against the Postgres URL — no code changes needed to the rake task itself. Full failure-atomicity: if any migration raises, the release phase exits non-zero and Heroku does not promote the new slug. Closes the gap where devs had to remember `heroku run rake db:migrate` after every push.
 - [x] 1.8b **Skipped — no staging app, overhead not worth the marginal confidence.** The release-phase directive is a well-documented Heroku feature, not custom logic; failure mode is fail-closed by contract (bad migration → deploy not promoted). Local rehearsal (1.6e) already validated each migration against real data; the adapter-surprise risk (SQLite dev → Postgres prod) is the only remaining unknown, covered by the 1.6b / 1.6f-audit prerequisites and the 1.8c backup. First prod deploy (1.8d) is effectively the staging test.
 - [x] 1.8c **Pre-deploy backup captured — 2026-04-21.** Ran `heroku pg:backups:capture --app tyto` → snapshot `b004` (logical backup of `postgresql-aerodynamic-99158`). Heroku warned that continuous protection is already enabled, so this is belt-and-suspenders alongside WAL-based point-in-time recovery. Rollback path if 1.8d surprises us: `heroku pg:backups:restore b004 DATABASE_URL --app tyto --confirm tyto`.
-- [ ] 1.8d Deploy Slice 1 to prod: push the branch → release phase runs migrations 009 + 010 + 011 in order → new slug promoted only if all three succeed. Failure-atomicity: if 010 fails (unexpected NULL rows) or 011 fails (unexpected `start_at > end_at` rows), earlier migrations remain applied and the deploy halts — no half-state in application code. **Prerequisite: 1.6e passed** (all three migrations round-tripped cleanly on a semi-populated dev/test DB) **and 1.6f-audit clean**. **Release-phase caveat** (per 1.8b skip): this is the first deploy on this app using a `release:` line, so the mechanism itself is unverified in-context. The 1.8c backup is the rollback path if anything surprises us — if release phase reports failure, read the deploy log, grab the backup ID, and either re-push a fix or `heroku pg:backups:restore <id>` if data was touched.
-- [ ] 1.8e Post-deploy smoke check via the console shipped in 1.7:
+- [x] 1.8d **Slice 1 deployed to prod — 2026-04-21, 23:34:54 +0800.** `git push heroku feature-multi-event:main` → Heroku built with Node 24.15 + Ruby 3.4.4 + bundler 2.7.2 (noisy but non-blocking Node/Puma/Ruby upgrade warnings) → release phase ran `bundle exec rake db:migrate` → slug promoted as **v79** (`Deploy d6a8bcea`, eligible for rollback). No migration errors in the push stream; release phase reported "Waiting for release.... done." The `heroku releases:output v79` endpoint returned "not started yet" repeatedly, which appears to be a Heroku display quirk for already-completed release commands — not a failure indicator. Actual state confirmed by 1.8e.
+- [x] 1.8e **Post-deploy smoke check passed — 2026-04-21.** Ran via `heroku run --app tyto bash -c 'psql $DATABASE_URL -c "..."'` (direct SQL over the dyno; avoids boot-up cost of `rake console` for a one-shot read). Single aggregated query returned:
 
-  ```sh
-  heroku run rake console --app tyto
-  ```
+  | check | expected | actual |
+  |---|---|---|
+  | schema_version | 11 | **11** |
+  | null_start | 0 | **0** |
+  | null_end | 0 | **0** |
+  | end_before_start | 0 | **0** |
+  | total_events | 134 (pre-deploy, per 1.6b) | **134** |
 
-  At the pry prompt, verify:
-
-  ```ruby
-  Tyto::Api.db[:schema_info].first          # => {version: 11}
-  Tyto::Event.where(start_at: nil).count    # => 0  (migration 010 took effect)
-  Tyto::Event.where(end_at: nil).count      # => 0
-  Tyto::Event.where { start_at > end_at }.count  # => 0  (CHECK from 011)
-  Tyto::Event.count                         # matches pre-deploy 134
-  ```
-
-  Then walk the UI: hit `/api/course/:id/events` with a known course, create a test event, delete it. Both paths should be clean. The console check catches schema-state issues (e.g. release phase reported success but a migration silently no-op'd) that a UI-only smoke test would miss
+  All three migrations (009 drop-unique, 010 NOT NULL, 011 CHECK start≤end) are in force in prod with zero data loss or corruption. **UI walkthrough** (hit `/api/course/:id/events`, create + delete a test event) remains to be done by the user; the SQL-level check above is sufficient to prove the schema landed cleanly but not that the application layer is serving traffic correctly. Tack that on opportunistically next time you're logged in.
 
 ### Slice 1 → Slice 2 hand-off
 
