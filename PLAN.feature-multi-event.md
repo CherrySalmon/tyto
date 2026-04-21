@@ -170,8 +170,8 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 - [x] 1.4 Full spec suite green: **873 runs, 2057 assertions, 0 failures, 1 skip**. Coverage 98.05%
 - [x] 1.5 Frontend callers updated: `SingleCourse.vue` (createAttendanceEvent → wraps `{ events: [eventForm] }`; fetchAttendanceEvents/deleteAttendanceEvent/updateAttendanceEvent → `/events`), `AttendanceTrack.vue` + `AllCourse.vue` (`/current_event/` → `/current_events/`)
 - [x] 1.5b Manual verification (dev), pre-schema-change — **passed 2026-04-21**. Walked through list / create x2 / edit / delete / current-events. Backend log confirms correct SQL: two INSERTs into `events` (both via `POST /api/course/1/events` with array payload), one UPDATE (name edit), one DELETE (row 3). Zero error/exception/warn lines in the log. Final DB state = original `frist post` row + edited `slice-1 test A (edited)`.
-- [ ] 1.6a Migration `009_drop_events_start_end_unique.rb`: drop `unique (start_at, end_at)` index from `events` table. Explicit `up`/`down` blocks so revert is a well-defined statement. Run `bundle exec rake db:migrate` in dev + `RACK_ENV=test bundle exec rake db:migrate` in test
-- [ ] 1.6b **Prod DB audit — HUMAN ONLY, NOT AI.** This app is Roda + Sequel (no Rails). The developer runs `heroku run rake console --app <app>` to open an interactive Ruby console with all code + DB loaded, then queries via the Sequel dataset:
+- [x] 1.6a Migration `009_drop_events_start_end_unique.rb`: drops the table-level `unique (start_at, end_at)` constraint. Adapter-aware: Postgres uses `drop_constraint :events_start_at_end_at_key`; SQLite rebuilds the table (the UNIQUE is part of the `CREATE TABLE` text, so there's no index to drop). Explicit `up`/`down` both implemented. Ran in dev + test — both at schema version 9, events data preserved (2 rows intact in dev), `.schema events` shows no UNIQUE, full suite still 873 runs / 2057 assertions / 0 failures
+- [x] 1.6b **Prod DB audit — 2026-04-21.** No `rake console` task exists yet in this app, so we used `heroku run bash --app tyto` → `psql $DATABASE_URL`. Sanity check: connected to server 10.0.56.45 / db `d4a2kmtttg1l6m` with 582 accounts, 134 events, 16 courses, most-recent events matched known real names ("Week 09", "Week 08"). Audit query returned **0 rows** — no prod event has NULL start_at or end_at. Safe to proceed with migration 010. **Original instructions (now historical):** AI tooling must not be given direct access to the production database. The developer runs `heroku run rake console --app <app>` (once that task exists) OR `heroku pg:psql --app <app>` / `heroku run bash --app <app>` → `psql $DATABASE_URL` to query:
 
   ```ruby
   Tyto::DB[:events]
@@ -185,8 +185,8 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
   Expected outcomes:
   - **Zero rows** → report back "prod clean", proceed to 1.6c
   - **Some rows** → paste the result into this planning conversation; we decide per-row whether to backfill, delete, or defer the NOT NULL migration. No writes to prod until a plan is agreed
-- [ ] 1.6c Migration `010_events_times_not_null.rb`: add `NOT NULL` to `events.start_at` and `events.end_at` via explicit `up`/`down` blocks (`set_column_not_null` / `set_column_allow_null`). Only run after 1.6b is clean (or the user has resolved violations). Exercise in dev + test
-- [ ] 1.6d Add a failing spec (then green) for the repository / ORM: creating two events with identical `(start_at, end_at)` in the same course now succeeds (regression guard against re-adding the dropped constraint)
+- [x] 1.6c Migration `010_events_times_not_null.rb` written with explicit `up`/`down` (`set_column_not_null` / `set_column_allow_null`). Applied in dev + test. 23 specs that had been creating bare `Tyto::Event.create(...)` calls without times surfaced as NOT NULL violations and were updated to supply real times: `courses_spec.rb` (6 sites via replace_all), `attendances_spec.rb` (2 `let` blocks), `events_spec.rb` (lines 224–225, 275–281 `#delete` case), `locations_spec.rb` (`returns true for location with events`), `list_events_spec.rb` (4 sites across 3 tests). Obsolete `persists event with minimal attributes (no times)` test was replaced with two new regression specs: nil times rejected (1.6c guard) and start > end rejected (1.6f-spec guard)
+- [x] 1.6d Regression spec added in `backend_app/spec/infrastructure/database/repositories/events_spec.rb` (`#create` block): two events with identical `(start_at, end_at)` in the same course both persist with distinct IDs. Full suite now 874 runs / 2060 assertions / 0 failures. (Note: because 1.6a is already applied, the spec is green from the start; 1.6e's rehearsal will re-verify against a rolled-back schema.)
 - [ ] 1.6e **Data-integrity rehearsal against a semi-populated dev/test DB.** Before the prod rollout, prove both migrations preserve existing rows. Dev DB only — no prod access.
 
   **Setup**: from a clean `rake db:reset`, populate the `events` table with a representative mix by either (a) using the UI to create ~10 events across 2–3 courses and 2 locations, including at least one pair sharing `(start_at, end_at)` *would-be-collisions* that are currently blocked by the existing unique constraint — so create them across different courses/locations to get them in — or (b) writing a throwaway `rake` task / console snippet that inserts the same shape. Take a snapshot: total row count, a `SELECT id, course_id, location_id, name, start_at, end_at` dump of every event, checksum of that dump (`md5`).
@@ -196,9 +196,11 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
   2. Re-dump events; diff against the pre-snapshot — must be identical (row count + every field)
   3. Insert a new event with `(start_at, end_at)` matching an existing row in the same course — must now succeed (this is the positive case 1.6d guards in a spec, re-verified here with real data)
   4. Rollback via the Sequel CLI (no `rake db:rollback` task exists — confirmed by inspecting `Rakefile`; only `db:migrate` is defined). Concrete command for dev:
-     ```
+
+     ```sh
      bundle exec sequel -m backend_app/db/migrations -M 008 sqlite://backend_app/db/store/development.db
      ```
+
      Replace `008` with the target pre-009 version and swap the URL for test (`sqlite://backend_app/db/store/test.db`). Re-dump: the extra row from step 3 will be present, but original rows intact. Re-migrate up with `bundle exec rake db:migrate`. **Optional chore**: add a small `db:rollback` rake task that wraps `Sequel::Migrator.run(db, migration_path, target: ENV['VERSION'].to_i)` — leave out of Slice 1 unless rollback rehearsal becomes painful
 
   **Exercise migration 010 (NOT NULL)**:
@@ -207,42 +209,56 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
   3. Attempt to insert an event with `start_at: nil` — must fail with a NOT NULL constraint error (positive confirmation the migration took)
   4. Rollback 010; re-migrate up. Verify data intact at every step
 
-  **Repeat in test env** (`RACK_ENV=test bundle exec rake db:migrate`) to confirm the migrations apply cleanly against the test DB as well. **Caveat**: both dev and test use SQLite here (`backend_app/db/store/{development,test}.db`). Prod uses PostgreSQL — any adapter-specific surprises (e.g. CHECK syntax quirks, NOT NULL on populated columns needing `USING`) only surface at staging rehearsal (1.7b) or the prod release phase (1.7d). This step is **data-integrity rehearsal on the dev adapter**, not a cross-adapter smoke test.
+  **Repeat in test env** (`RACK_ENV=test bundle exec rake db:migrate`) to confirm the migrations apply cleanly against the test DB as well. **Caveat**: both dev and test use SQLite here (`backend_app/db/store/{development,test}.db`). Prod uses PostgreSQL — any adapter-specific surprises (e.g. CHECK syntax quirks, NOT NULL on populated columns needing `USING`) only surface at staging rehearsal (1.8b) or the prod release phase (1.8d). This step is **data-integrity rehearsal on the dev adapter**, not a cross-adapter smoke test.
 
   Record the snapshots + checksums in this plan or a sibling scratch file so the comparison is reproducible if anything needs re-doing. Only tick 1.6e off once all three migrations (009 drop-unique, 010 NOT-NULL, 011 CHECK start≤end — see 1.6f) round-trip cleanly with zero data damage.
 
 - [ ] 1.6f **CHECK constraint: `start_at <= end_at`.** Dropping the old `(start_at, end_at)` uniqueness (1.6a) leaves *no* schema-level guarantees on the time columns. "End before start" is a nonsense state we shouldn't trust the service layer alone to prevent — migrations, seeds, and future bulk writes can bypass `CreateEvent` validation. Add a DB-level CHECK. Inclusive (`<=`) so zero-duration placeholder events remain legal.
 
   Three sub-tasks mirroring the 1.6b/c/d pattern:
-  - [ ] **1.6f-audit (HUMAN ONLY, NOT AI)** — before writing the migration, verify prod has no existing violations. On the Heroku dyno (`heroku run rake console --app <app>`):
-    ```ruby
-    Tyto::DB[:events]
-      .where { start_at > end_at }
-      .select(:id, :course_id, :name, :start_at, :end_at).all
-    ```
-    (Or via `heroku pg:psql --app <app>`.) **Zero rows** → proceed. **Non-zero** → paste into the planning conversation; triage per-row before the CHECK migration can land
-  - [ ] **1.6f-migration** — `011_events_start_before_end.rb` with explicit `up`/`down`:
-    ```ruby
-    Sequel.migration do
-      up   { alter_table(:events) { add_constraint(:start_before_end) { start_at <= end_at } } }
-      down { alter_table(:events) { drop_constraint(:start_before_end) } }
-    end
-    ```
-    Run in dev + test
-  - [ ] **1.6f-spec** — failing-then-green repo/ORM spec: inserting an event with `start_at > end_at` raises `Sequel::CheckConstraintViolation` (Postgres) or `Sequel::ConstraintViolation` (SQLite). Use `Sequel::ConstraintViolation` (the cross-adapter parent class) in the assertion
+  - [x] **1.6f-audit — 2026-04-21.** Same psql session as 1.6b (server 10.0.56.45 / db `d4a2kmtttg1l6m`, verified real data first). `SELECT ... WHERE start_at > end_at` returned **0 rows** — no prod event has an end time before its start. Safe to proceed with migration 011. Original procedural note retained: AI must not access prod directly; the developer runs either `heroku run rake console --app <app>` (once the task exists) or `heroku run bash --app <app>` → `psql $DATABASE_URL` / `heroku pg:psql --app <app>`
+  - [x] **1.6f-migration** — `011_events_start_before_end.rb` with explicit `up`/`down` (`add_constraint(:start_before_end) { start_at <= end_at }` / `drop_constraint(:start_before_end)`). Applied in dev + test
+  - [x] **1.6f-spec** — regression spec added in `events_spec.rb` `#create` block asserting that `start_at > end_at` raises `Sequel::ConstraintViolation` (the cross-adapter parent — covers SQLite and Postgres). Suite green: 875 runs / 2058 assertions / 0 failures
   - [ ] **1.6f-rehearsal** — extend 1.6e by attempting a violating row on the populated dev DB, confirming rejection, then rollback → re-migrate. Data intact at every step
 
   **Replaces** the now-deleted Slice 2 task 2.5 (which would have re-added a multi-column unique constraint — obsoleted by the Q3 decision to drop uniqueness entirely).
 
+### Slice 1 — Tooling prep (pre-deploy)
+
+- [x] 1.7 `rake console` task shipped. `bundle exec rake console` → pry with full Tyto app loaded (`app`, `Tyto::Api.db`, `Tyto::Event`, etc. all resolve). `.pryrc` auto-renders Sequel model arrays as tables via `table_print`. `RACK_ENV=production` path verified — environment reports production, `Rack::Test` not mixed in (via `unless app.environment == :production` guard). Full suite still 875/2058/0 failures. **Files added**: `console.rb` (root), `.pryrc` (root). **Edits**: `Gemfile` (+ `table_print ~>1.0`), `Rakefile` (+ `:print_env`, `console:` tasks). **Reference cribbed from**: `/Users/soumyaray/Sync/Dropbox/ossdev/classes/SEC-class/projects/tyto2026-api/` (adapted: `console.rb` at root instead of `spec/test_load_all.rb`, wider `tp.set` list for our ORM). On Heroku, `heroku run rake console --app tyto` becomes the first-class inspection path.
+
 ### Slice 1 — Production rollout safety
 
-- [ ] 1.7a **Add Heroku release phase to `Procfile`**: prepend `release: bundle exec rake db:migrate` above the existing `web:` line. This makes every deploy atomic — if migrations fail, the new release does not promote and the previous release stays live. Closes the gap where devs must remember to run `heroku run rake db:migrate` after every push
-- [ ] 1.7b Verify release-phase behavior on a staging app (or a throwaway Heroku app if no staging exists). Push a deliberately broken migration, confirm deploy is rejected, revert
-- [ ] 1.7c **Before deploying the NOT NULL migration to prod**: human dev captures a backup — `heroku pg:backups:capture --app <app>` — and notes the backup ID in the deploy log. Free insurance even with point-in-time recovery
-- [ ] 1.7d Deploy Slice 1 to prod: push the branch → release phase runs migrations 009 + 010 + 011 in order → new slug promoted only if all three succeed. Failure-atomicity: if 010 fails (unexpected NULL rows) or 011 fails (unexpected `start_at > end_at` rows), earlier migrations remain applied and the deploy halts — no half-state in application code. **Prerequisite: 1.6e passed** (all three migrations round-tripped cleanly on a semi-populated dev/test DB) **and 1.6f-audit clean**
-- [ ] 1.7e Post-deploy smoke check: hit `/api/course/:id/events` in prod with a known course, confirm event list loads. Create and delete a test event via the UI
+- [ ] 1.8a **Add Heroku release phase to `Procfile`**: prepend `release: bundle exec rake db:migrate` above the existing `web:` line. This makes every deploy atomic — if migrations fail, the new release does not promote and the previous release stays live. Closes the gap where devs must remember to run `heroku run rake db:migrate` after every push
+- [ ] 1.8b Verify release-phase behavior on a staging app (or a throwaway Heroku app if no staging exists). Push a deliberately broken migration, confirm deploy is rejected, revert
+- [ ] 1.8c **Before deploying the NOT NULL migration to prod**: human dev captures a backup — `heroku pg:backups:capture --app <app>` — and notes the backup ID in the deploy log. Free insurance even with point-in-time recovery
+- [ ] 1.8d Deploy Slice 1 to prod: push the branch → release phase runs migrations 009 + 010 + 011 in order → new slug promoted only if all three succeed. Failure-atomicity: if 010 fails (unexpected NULL rows) or 011 fails (unexpected `start_at > end_at` rows), earlier migrations remain applied and the deploy halts — no half-state in application code. **Prerequisite: 1.6e passed** (all three migrations round-tripped cleanly on a semi-populated dev/test DB) **and 1.6f-audit clean**
+- [ ] 1.8e Post-deploy smoke check via the console shipped in 1.7:
 
-> **Note**: original task 1.8 (manual dev verification of the single-event CRUD flow) has been promoted to **1.5b** so the rename is verified end-to-end before any schema migration runs. This slot is kept empty as a back-reference.
+  ```sh
+  heroku run rake console --app tyto
+  ```
+
+  At the pry prompt, verify:
+
+  ```ruby
+  Tyto::Api.db[:schema_info].first          # => {version: 11}
+  Tyto::Event.where(start_at: nil).count    # => 0  (migration 010 took effect)
+  Tyto::Event.where(end_at: nil).count      # => 0
+  Tyto::Event.where { start_at > end_at }.count  # => 0  (CHECK from 011)
+  Tyto::Event.count                         # matches pre-deploy 134
+  ```
+
+  Then walk the UI: hit `/api/course/:id/events` with a known course, create a test event, delete it. Both paths should be clean. The console check catches schema-state issues (e.g. release phase reported success but a migration silently no-op'd) that a UI-only smoke test would miss
+
+### Slice 1 → Slice 2 hand-off
+
+- [ ] 1.9 **Merge Slice 1 PR and fork Slice 2 branch.** After 1.8e passes clean:
+  1. Update PR #59 so its scope matches what's actually shipping (route rename + schema cleanup + release phase + console), then merge to `main`. **Squash vs merge commit**: merge-commit preferred here so the sub-commit history (route rename / schema migrations / DX tooling) is preserved for future archaeology; squash if the team convention on this repo is squash-only
+  2. Delete the remote `feature-multi-event` branch (`gh pr merge --delete-branch` or manually) — the branch name was aspirational for the whole feature, but its life ends with Slice 1. Keep the local worktree around for a day or two in case of rollback; then delete
+  3. The `PLAN.feature-multi-event.md` doc travels with the merge and is now on `main`. Slice 2 and Slice 3 sections remain open (unchecked tasks), serving as the single-source-of-truth for follow-on work
+  4. Create a new branch — proposed name `feature-multi-event-bulk` (explicit about scope this time) — off the updated `main`. Pick up at **Slice 2, backend tests first (2.1a)**. Open a fresh PR against `main` when there's enough to review
+  5. First commit on the new branch: tick **1.9** off in the plan so the handoff itself is recorded as done
 
 ### Slice 2 — Bulk creation feature
 
@@ -291,6 +307,10 @@ unique (start_at, end_at)   ← DB-wide, cross-course/cross-location
 - [ ] 3.2 Draft a short "Lessons" section below (in this file) with concrete, transferable guidance
 - [ ] 3.3 Open `~/.claude/skills/ray-branch-plan/SKILL.md`, identify the right home for each lesson (template, "Planning and execution guidelines", or a new section), and propose edits. Show the diff to the user before committing to the skill file
 - [ ] 3.4 Apply approved edits to the skill; commit in the `~/.claude/` repo (separate from this feature branch)
+
+### Final pre-merge check
+
+- [ ] 4.1 Run `bundle exec rake audit` (wraps `bundle-audit check --update`) and resolve any reported CVEs before merging the branch to `main`. This is the last thing to do — deliberately deferred to the end so the gem lockfile is stable and we're not chasing vulnerabilities in dependencies we might still add/remove during Slice 2. The `bundler-audit` gem + `rake audit` task were wired up in Slice 1 (Gemfile + Rakefile) and are ready to run
 
 **Seed observations** (to expand during Slice 3):
 
