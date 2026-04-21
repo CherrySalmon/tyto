@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Tyto — Create Events (Bulk)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #e9eaec; font-family: 'Inter', system-ui, sans-serif; }
+    body { display: flex; align-items: center; justify-content: center; padding: 24px; }
+    /* Tyto brand — pulled from screenshot */
+    :root {
+      --tyto-olive: #4a5240;
+      --tyto-olive-dark: #3a4033;
+      --tyto-gold: #c8a34a;
+      --tyto-gold-hover: #b38f3a;
+      --tyto-ink: #1f2328;
+      --tyto-ink-muted: #5a6068;
+      --tyto-ink-soft: #8a9098;
+      --tyto-line: #e5e7eb;
+      --tyto-line-strong: #d0d5db;
+      --tyto-bg: #f6f7f8;
+      --tyto-surface: #ffffff;
+      --tyto-surface-alt: #fafbfc;
+      --tyto-danger: #c0392b;
+      --tyto-warn: #b8872f;
+      --tyto-warn-bg: #fdf6e3;
+      --tyto-success: #2d7a4f;
+    }
+    button { font-family: inherit; }
+    input, select { font-family: inherit; }
+  </style>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="browser-window.jsx"></script>
+  <script type="text/babel" src="tyto-page.jsx"></script>
+  <script type="text/babel" src="create-events-modal.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

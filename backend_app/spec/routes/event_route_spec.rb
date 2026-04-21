@@ -81,6 +81,47 @@ describe 'Event Routes' do
       _(created).must_include 'end_at'
     end
 
+    it 'creates multiple events in a single bulk request' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+
+      rows = (0..2).map do |i|
+        base = Time.now + ((i + 1) * 3600)
+        {
+          name: "Bulk Event #{i + 1}",
+          location_id: location.id,
+          start_at: base.to_s,
+          end_at: (base + 3600).to_s
+        }
+      end
+
+      post "/api/course/#{course.id}/events", { events: rows }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 201
+      _(json_response['success']).must_equal true
+      _(json_response['events_info'].length).must_equal 3
+      _(json_response['events_info'].map { |e| e['name'] }).must_equal ['Bulk Event 1', 'Bulk Event 2', 'Bulk Event 3']
+    end
+
+    it 'rolls back the whole bulk batch when any row is invalid' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+
+      good = {
+        name: 'Good',
+        location_id: location.id,
+        start_at: (Time.now + 3600).to_s,
+        end_at: (Time.now + 7200).to_s
+      }
+      bad = good.merge(name: '')
+      post "/api/course/#{course.id}/events", { events: [good, bad] }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 400
+      _(Tyto::Event.where(course_id: course.id).count).must_equal 0
+    end
+
     it 'creates event as owner' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
