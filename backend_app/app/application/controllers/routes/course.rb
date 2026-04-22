@@ -241,25 +241,14 @@ module Tyto
                   next({ error: 'Invalid payload', details: 'Body must include a non-empty "events" array' }.to_json)
                 end
 
-                created_events = []
-                failure_result = nil
-                events_data.each do |event_data|
-                  case Service::Events::CreateEvent.new.call(requestor:, course_id:, event_data:)
-                  in Success(api_result)
-                    created_events << api_result.message
-                  in Failure(api_result)
-                    failure_result = api_result
-                    break
-                  end
-                end
-
-                if failure_result
-                  response.status = failure_result.http_status_code
-                  failure_result.to_json
-                else
-                  response.status = 201
+                case Service::Events::CreateEvents.new.call(requestor:, course_id:, events_data:)
+                in Success(api_result)
+                  response.status = api_result.http_status_code
                   { success: true, message: 'Events created',
-                    events_info: Representer::EventsList.from_entities(created_events).to_array }.to_json
+                    events_info: Representer::EventsList.from_entities(api_result.message).to_array }.to_json
+                in Failure(api_result)
+                  response.status = api_result.http_status_code
+                  api_result.to_json
                 end
               rescue JSON::ParserError => e
                 response.status = 400

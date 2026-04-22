@@ -15,10 +15,10 @@ module Tyto
       property :name
       property :start_at, exec_context: :decorator
       property :end_at, exec_context: :decorator
-      property :longitude, exec_context: :decorator
-      property :latitude, exec_context: :decorator
-      property :course_name, exec_context: :decorator
-      property :location_name, exec_context: :decorator
+      property :longitude
+      property :latitude
+      property :course_name
+      property :location_name
       property :user_attendance_status, exec_context: :decorator
 
       def start_at
@@ -29,23 +29,8 @@ module Tyto
         represented.end_at&.utc&.iso8601
       end
 
-      # Location coordinates - requires location to be loaded
-      def longitude
-        represented.respond_to?(:longitude) ? represented.longitude : nil
-      end
-
-      def latitude
-        represented.respond_to?(:latitude) ? represented.latitude : nil
-      end
-
-      def course_name
-        represented.respond_to?(:course_name) ? represented.course_name : nil
-      end
-
-      def location_name
-        represented.respond_to?(:location_name) ? represented.location_name : nil
-      end
-
+      # Only ActiveEventDetails (FindActiveEvents) carries user_attendance_status;
+      # EventDetails (everywhere else) does not.
       def user_attendance_status
         represented.respond_to?(:user_attendance_status) ? represented.user_attendance_status : nil
       end

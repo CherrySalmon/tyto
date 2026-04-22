@@ -48,6 +48,22 @@ describe 'Tyto::Domain::Courses::Entities::Course' do
         .must_raise Dry::Struct::Error
     end
 
+    it 'rejects end_at equal to start_at (zero-duration)' do
+      err = _ do
+        Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(end_at: now))
+      end.must_raise ArgumentError
+
+      _(err.message).must_equal 'End time must be after start time'
+    end
+
+    it 'rejects end_at before start_at' do
+      err = _ do
+        Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(end_at: now - one_day))
+      end.must_raise ArgumentError
+
+      _(err.message).must_equal 'End time must be after start time'
+    end
+
     it 'rejects course name over 200 characters' do
       _ { Tyto::Domain::Courses::Entities::Course.new(valid_attributes.merge(name: 'A' * 201)) }
         .must_raise Dry::Struct::Error

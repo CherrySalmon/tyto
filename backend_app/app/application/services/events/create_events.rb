@@ -10,9 +10,12 @@ require_relative '../application_operation'
 module Tyto
   module Service
     module Events
-      # Service: Create a new event for a course
-      # Returns Success(ApiResult) with created event or Failure(ApiResult) with error
-      class CreateEvent < ApplicationOperation
+      # Service: Create many events for a course in a single transaction.
+      # All-or-nothing: if any row fails validation or insert, the whole batch rolls back.
+      # Returns Success(ApiResult) with an array of enriched events, or Failure(ApiResult).
+      class CreateEvents < ApplicationOperation
+        MAX_BATCH_SIZE = 100
+
         def initialize(events_repo: Repository::Events.new, locations_repo: Repository::Locations.new,
                        courses_repo: Repository::Courses.new)
           @events_repo = events_repo
@@ -21,13 +24,13 @@ module Tyto
           super()
         end
 
-        def call(requestor:, course_id:, event_data:)
+        def call(requestor:, course_id:, events_data:)
           course_id = step validate_course_id(course_id)
           course = step verify_course_exists(course_id)
           step authorize(requestor, course_id)
-          validated = step validate_input(event_data, course_id)
-          event = step persist_event(validated)
-          enriched = enrich_with_location(event, course)
+          validated_rows = step validate_rows(events_data, course_id)
+          events = step persist_events(validated_rows)
+          enriched = enrich_with_locations(events, course)
 
           created(enriched)
         end
@@ -57,14 +60,36 @@ module Tyto
           Success(true)
         end
 
-        def validate_input(event_data, course_id)
-          name = validate_name(event_data['name'])
+        def validate_rows(events_data, course_id)
+          shape = validate_shape(events_data)
+          return shape if shape.failure?
+
+          validated = events_data.map { |row| validate_row(row, course_id) }
+          first_failure = validated.find(&:failure?)
+          return first_failure if first_failure
+
+          Success(validated.map(&:value!))
+        end
+
+        def validate_shape(events_data)
+          unless events_data.is_a?(Array) && !events_data.empty?
+            return Failure(bad_request('Events payload must be a non-empty array'))
+          end
+          if events_data.size > MAX_BATCH_SIZE
+            return Failure(bad_request("Batch too large: #{MAX_BATCH_SIZE} events max, got #{events_data.size}"))
+          end
+
+          Success(events_data)
+        end
+
+        def validate_row(row, course_id)
+          name = validate_name(row['name'])
           return name if name.failure?
 
-          location_id = validate_location_id(event_data['location_id'])
+          location_id = validate_location_id(row['location_id'])
           return location_id if location_id.failure?
 
-          time_range = Value::TimeRange.parse(event_data['start_at'], event_data['end_at'])
+          time_range = Value::TimeRange.parse(row['start_at'], row['end_at'])
 
           Success(
             course_id:,
@@ -89,8 +114,9 @@ module Tyto
           Success(location_id.to_i)
         end
 
-        def persist_event(validated)
-          Success(@events_repo.create(build_event_entity(validated)))
+        def persist_events(validated_rows)
+          entities = validated_rows.map { |row| build_event_entity(row) }
+          Success(@events_repo.create_many(entities))
         rescue StandardError => e
           Failure(internal_error(e.message))
         end
@@ -103,8 +129,14 @@ module Tyto
           )
         end
 
-        def enrich_with_location(event, course)
-          location = @locations_repo.find_id(event.location_id)
+        def enrich_with_locations(events, course)
+          location_lookup = events.map(&:location_id).uniq.each_with_object({}) do |id, acc|
+            acc[id] = @locations_repo.find_id(id)
+          end
+          events.map { |event| build_event_details(event, location_lookup[event.location_id], course) }
+        end
+
+        def build_event_details(event, location, course)
           Response::EventDetails.new(
             id: event.id, course_id: event.course_id, location_id: event.location_id,
             name: event.name, start_at: event.start_at, end_at: event.end_at,
