@@ -25,37 +25,38 @@ Allow instructors/staff to create many attendance events at once for a course vi
 
 ## Reference Design
 
-**Source** (checked in, durable): `doc/design/multi-events/prototype/` — the unzipped Claude Design project ([claude.ai/design](https://claude.ai/design), launched late 2025). Previously lived in gitignored `tmp/`; moved to `doc/` on 2026-04-22 so the reference survives worktree resets and cross-machine work. Main file is `create-events-modal.jsx` (833 lines, single file, all components inlined).
+**Source** (removed post-port, 2026-04-22): The Claude Design React prototype (`doc/design/multi-events/prototype/`) was deleted once Slice 2 frontend landed — the port is complete and the 1.2 MB source tree doesn't need to live in main. Deletion was amended into the frontend commit so the prototype never enters main's tree on merge. The component index table below is preserved as a port log — line references point to the now-removed `create-events-modal.jsx` and are useful only if the prototype is temporarily restored (see Recovery below).
 
-**Screenshots** (checked in alongside): `doc/design/multi-events/01-current-single-modal.png`, `02-new-single-modal-with-toggle.png`, `03-timeinput-detail.png`. Coverage is currently single-event-flow only; bulk-UI screenshots (calendar + chips selected, step 2 review grid, fill-down, same-location warning) would need to be added when we run the prototype to port each component.
+**Screenshots** (retained): `doc/design/multi-events/01-current-single-modal.png`, `02-new-single-modal-with-toggle.png`, `03-timeinput-detail.png`. Kept alongside for future planners — useful visual reference for the single-event flow variant.
 
-**Component index for `create-events-modal.jsx`** (so each Slice 2 frontend task can point at a specific reference):
+**Recovery**: if the prototype is ever needed again (re-port, design review), restore with `git show <pre-deletion-commit>:doc/design/multi-events/prototype/create-events-modal.jsx > /tmp/proto.jsx` against commit 5372c2d or the parent of the current frontend commit.
 
-| Line | React function | Ports to (Slice 2 task) |
+**Component index for `create-events-modal.jsx`** (port log — line references point to the now-removed file):
+
+| Line | React function | Ported to |
 | --- | --- | --- |
-| 20 | `Calendar` | 2.10 `EventCalendarStrip.vue` |
-| 76 | `QuickPick` | 2.11 `QuickPickChips.vue` |
-| 185 | `TimeInput` | 2.8 `TimeInput.vue` |
-| 257 | `SpreadsheetGrid` | 2.13 `BulkEventsStep2Review.vue` |
-| 351 | `addDays` | utility used in step 1 |
-| 357 | `detectConflicts` | same-location warning logic (2.13) |
-| 376 | `buildName` | name-pattern builder (`pad2 / nopad / date-short / none`) — used by 2.12 |
-| 397 | `CreateEventsModal` | 2.7 `CreateEventsDialog.vue` (outer wrapper) |
-| 789 | `SingleOrDatesHeader` | step-1 header composition for 2.12 |
-| 798 | `StepHeader` | step-progress header for both steps |
+| 20 | `Calendar` | `EventCalendarStrip.vue` |
+| 76 | `QuickPick` | `QuickPickChips.vue` |
+| 185 | `TimeInput` | `TimeInput.vue` |
+| 257 | `SpreadsheetGrid` | `BulkEventsStep2Review.vue` |
+| 351 | `addDays` | inlined in `BulkEventsStep2Review.vue` |
+| 357 | `detectConflicts` | inlined in `BulkEventsStep2Review.vue` |
+| 376 | `buildName` | exported from `BulkEventsStep1Dates.vue` |
+| 397 | `CreateEventsModal` | `CreateEventsDialog.vue` |
+| 789 | `SingleOrDatesHeader` | inlined in `CreateEventsDialog.vue` header slot |
+| 798 | `StepHeader` | inlined in `CreateEventsDialog.vue` header slot |
 
-Running the prototype: the folder also contains `CreateEvents.html` (built standalone) — open it directly in a browser to interact with the prototype. Or import `create-events-modal.jsx` into any React sandbox. No build step required for the HTML variant.
-
-**Target Vue port**: `frontend_app/pages/course/components/CreateAttendanceEventDialog.vue` (extended and/or superseded by `CreateEventsDialog.vue`) + new companion components under `frontend_app/pages/course/components/events/`.
+**Target Vue port (shipped)**: `frontend_app/pages/course/components/CreateEventsDialog.vue` (supersedes the old `CreateAttendanceEventDialog.vue`) + companion components under `frontend_app/pages/course/components/events/`.
 
 ## Current State
 
 - [x] Slice 1 shipped (see `PLAN.feature-multi-event-1.md`)
 - [x] All scope questions (Q1–Q9) resolved with user
-- [ ] Slice 2: bulk service + split-component modal shipped *(in progress: backend done through 2.6; frontend next)*
+- [x] Slice 2: bulk service + split-component modal shipped — *backend 2.1–2.6 + frontend 2.7–2.18 shipped 2026-04-22; user manual verification complete with feedback addressed*
 - [ ] Slice 2 refactoring pass (DDD domain extraction, behavior-preserving)
-- [ ] Manual verification of both flows
+- [x] Manual verification of both flows — *2026-04-22*
 - [ ] Slice 3: retrospective → skill-file edits proposed
+- [x] Cleanup: delete `doc/design/multi-events/prototype/` — *2026-04-22: amended into the frontend commit so the 1.2 MB prototype tree never enters main. Screenshots retained.*
 
 ## Key Findings
 
@@ -178,27 +179,22 @@ CHECK (start_at <= end_at)   ← migration 011
 
 #### Frontend
 
-- [ ] 2.7 Create `CreateEventsDialog.vue` wrapper: `view` state machine (`single` / `bulk-dates` / `bulk-review`), "Create multiple at once" toggle, modal width per view, final submit wrapping `{ events: [...] }`. **No back navigation from review** (per Q8). Replaces `CreateAttendanceEventDialog.vue` (which can be renamed/moved, or the new file can supersede it — update the parent `SingleCourse.vue` import either way). **Reference**: `doc/design/multi-events/prototype/create-events-modal.jsx` function `CreateEventsModal` (line 397) — that's the outer component managing the full flow.
-- [ ] 2.8 `events/TimeInput.vue`: port the reference's custom 24-hour HH:MM numeric text input. **Not `el-time-picker`** (seconds rendering on some browsers). **Reference**: `doc/design/multi-events/prototype/create-events-modal.jsx` function `TimeInput` (line 185) + visual in `doc/design/multi-events/03-timeinput-detail.png`.
-- [ ] 2.9 `events/SingleEventForm.vue`: port current single-event fields (name, location, datetime-start, datetime-end) as a pure child component emitting changes up. **Reference**: visual in `doc/design/multi-events/02-new-single-modal-with-toggle.png` (the toggle-off state of the unified modal). Keep existing Tyto field behavior — this task is mostly a refactor of `CreateAttendanceEventDialog.vue`'s form body into a child component.
-- [ ] 2.10 `events/EventCalendarStrip.vue`: month tiles, date toggle, existing-event dots (sourced from an `existingEventDates` prop supplied by parent), add/remove month. **Reference**: `doc/design/multi-events/prototype/create-events-modal.jsx` function `Calendar` (line 20) — note the `monthOffset`, `selected`, `onToggle`, `existingDates` prop shape; the React version renders one month per call, the wrapper composes the strip. No checked-in screenshot yet; run the prototype's `CreateEvents.html` to see the rendered strip with 2-month default and + / − month controls.
-- [ ] 2.11 `events/QuickPickChips.vue`: `Every Mon`, `Mon + Wed`, etc. — emits a pattern payload that the parent applies. **Reference**: `doc/design/multi-events/prototype/create-events-modal.jsx` function `QuickPick` (line 76) — emits `{ days: [dayNumbers], from, to }` via `onApply`; the parent uses that + `addDays` (line 351) to project the selection onto the calendar.
-- [ ] 2.12 `events/BulkEventsStep1Dates.vue`: composes the calendar strip + quick-pick chips + name-pattern panel (with live preview: `pad2 / nopad / date-short / none`) + shared-defaults panel (location, start time, end time). Disable "Review N events" button until all required fields filled. Fetch existing course events to pass as `existingEventDates` to the calendar strip. **Reference**: `doc/design/multi-events/prototype/create-events-modal.jsx` — the step-1 block lives inside `CreateEventsModal` (line 397), composing `Calendar`, `QuickPick`, and the name-pattern fields. Name generation logic in `buildName` (line 376). Header composition in `SingleOrDatesHeader` (line 789) / `StepHeader` (line 798).
-- [ ] 2.13 `events/BulkEventsStep2Review.vue`: spreadsheet grid with per-row editing, fill-down, move up/down, remove, same-location **soft warning** (warning does not block submit, per Q5). Client-side preflight: disable Create button when row count > 100 (per Q6). **Reference**: `doc/design/multi-events/prototype/create-events-modal.jsx` function `SpreadsheetGrid` (line 257) for the grid component itself; `detectConflicts` (line 357) for the same-location warning logic — note it returns a Set of row indices whose (date, location) collides with another row, which the grid uses to render amber warning icons.
-- [ ] 2.14 Wire wrapper submit → `POST /course/:id/events` with `{ events: [...] }`; on success show `ElMessage` success toast, close modal, call existing `fetchAttendanceEvents` in `SingleCourse.vue`
-- [ ] 2.15a Loading state: while POST is in flight, disable the Create button with a "Creating events…" spinner, prevent closing the modal via Escape/backdrop
-- [ ] 2.15b Error handling: on failure, surface the per-row error map from the server (per Q2) by highlighting the offending rows in the review grid with their error messages; keep the modal open so the user can fix and retry. Non-per-row errors (e.g. auth, network) surface via `ElMessage` error toast
+- [x] 2.7 Create `CreateEventsDialog.vue` wrapper — *shipped 2026-04-22*
+- [x] 2.8 `events/TimeInput.vue` — *shipped 2026-04-22*
+- [x] 2.9 `events/SingleEventForm.vue` — *shipped 2026-04-22*
+- [x] 2.10 `events/EventCalendarStrip.vue` — *shipped 2026-04-22 (anchored on course.start_at; past cells greyed-but-clickable so retroactive events work)*
+- [x] 2.11 `events/QuickPickChips.vue` — *shipped 2026-04-22 (chip `weeks` removed; parent enumerates across course.start_at → course.end_at)*
+- [x] 2.12 `events/BulkEventsStep1Dates.vue` — *shipped 2026-04-22*
+- [x] 2.13 `events/BulkEventsStep2Review.vue` — *shipped 2026-04-22 (reorder arrows dropped + summary chip dropped per UX review)*
+- [x] 2.14 Wire wrapper submit — *shipped 2026-04-22*
+- [x] 2.15a Loading state — *shipped 2026-04-22: Create button disabled with `:loading` during POST; el-dialog `close-on-press-escape` / `close-on-click-modal` / `show-close` all bound to `!submitting`*
+- [x] 2.15b Error handling — *shipped 2026-04-22: non-row errors surface via `ElMessage` toast using `error.response.data.details` from the backend's `ApiResult#to_json`; row-level error-map hook exists client-side but backend currently short-circuits at first failure (follow-up tracked in `doc/future-work.md` "Per-row error map in bulk-event responses")*
 
 #### Verification
 
-- [ ] 2.16 Manual verification in browser at `http://localhost:9292`:
-  - Single flow still works (toggle off)
-  - Bulk: pick 4 dates via calendar + 1 quick-pick, enter shared defaults, review & tweak one row, submit
-  - Events list refreshes and shows all created rows
-  - Validation errors surface cleanly for a deliberately bad row (all-or-nothing per Q2: zero rows committed, per-row error map returned)
-  - Authorization: a student account sees no "Create" button (existing behavior unchanged)
-- [ ] 2.17 Update `doc/future-work.md` if any of Q3/Q5/Q6 decisions defer follow-up work
-- [ ] 2.18 Add timezone-support entry to `doc/future-work.md` (per Q9): problem statement, hard parts (existing-data source-of-truth ambiguity, multi-tz UX for instructors-vs-students in different zones, attendance-window business rules), and rough shape of proper fix (TIMESTAMPTZ or UTC+tz string; course-level default tz; picker disambiguation)
+- [x] 2.16 Manual verification in browser — *2026-04-22: user walked the flows in their own browser + Claude smoke-tested in a second Chrome tab. Feedback captured in "Manual test feedback" section below; all reported issues addressed before wrap-up*
+- [x] 2.17 Update `doc/future-work.md` for Q3/Q5/Q6 follow-ups — *2026-04-22: added "Per-row error map in bulk-event responses" entry (backend gap surfaced during frontend wiring). Q3 / Q5 / Q6 themselves are final decisions with no deferred work*
+- [x] 2.18 Add timezone-support entry to `doc/future-work.md` — *shipped 2026-04-22 under "Timezone Support" section*
 
 #### Refactoring pass — DDD domain extraction (runs only after 2.1–2.17 are green)
 
@@ -253,6 +249,24 @@ CHECK (start_at <= end_at)   ← migration 011
 - **Link to any external reference designs with file paths and a summary of what to port** — the reference React prototype at `doc/design/multi-events/prototype/create-events-modal.jsx` was far more actionable once named + summarized in the plan than it would have been as a raw file. Lesson refinement during Slice 1: **check the reference into the repo** (i.e., out of `tmp/` and into `doc/`) and **pin individual tasks at specific functions/line numbers in the reference** — implicit "see the reference" lines rot the moment the prototype file is moved or a session clears. A component-index table in the Reference Design section pays dividends during Slice 2 implementation.
 - **Audit the deploy / migration mechanism before planning any schema change.** We discovered mid-planning that this app had no Heroku release phase — migrations were manual and a dev could deploy code that referenced a schema that hadn't been applied yet. Plans touching the DB should start by verifying `Procfile` (or equivalent) runs migrations automatically, and add that wiring if it's missing.
 - **Split the plan file at slice boundaries once a slice seals.** On 2026-04-22 we split the unified 40k-char plan into `PLAN.feature-multi-event-1.md` (shipped, reference only) and `PLAN.feature-multi-event-2.md` (active). The shipped file preserves audit evidence and deploy history; the active file stands alone for the next slice. Worth doing when the shipped slice's historical detail starts crowding the active slice's actionable tasks.
+
+## Manual test feedback (Slice 2 frontend)
+
+> Captured during 2.16 manual verification, 2026-04-22. Each item is a user observation to triage — some will become small follow-up tweaks before PR, others may be deferred.
+
+- [ ] **Toggle → bulk transition feels like a new modal**, not a continuation. When user checks "Create multiple at once", the dialog instantly jumps from 560px → 820px and the whole body swaps content. Feels jarring / as if context was lost. **Decision (user, 2026-04-22)**: keep the single-modal → bulk toggle path as designed; fix the abruptness with a smooth transition. Rejected alternative: collapsing the single-event flow into "bulk with 1 row" (would remove the toggle entirely but loses the simplicity of the current single-event form for the common case). **Fix**: animate the width transition (CSS `transition: width 220ms ease` on `.el-dialog` — the prototype has this via `transition: max-width 220ms ease` on line 511 of `create-events-modal.jsx`), and consider fading the body content cross-fade style so the container reads as "same modal expanding", not "new modal replacing". Note that el-dialog sets its width via inline style, so the transition needs to land on `.el-dialog` itself — may need `:deep()` from the wrapper's scoped style or a global override.
+- [x] **Existing-event dot is redundant with the light-orange cell background** — deferred on reflection. Pale-cream fill (`#fdf6ec`) on white has very low contrast for users with red/green colorblindness; the dot functions as a redundant non-color signal, so keep it. **Decision (user, 2026-04-22)**: keep the dot as-is for now. Revisit if/when we do an accessibility pass on the calendar palette.
+- [ ] **Step-2 summary chip is redundant with the grid below.** The `.summary` block in `BulkEventsStep2Review.vue` ("3 dates · Pattern: Week 08 · Online (Zoom) · 09:00–10:00") duplicates info that's already visible in every row of the grid right below it. **Decision (user, 2026-04-22)**: remove. **Fix**: delete the `.summary` block from the template + CSS in `BulkEventsStep2Review.vue`, drop the `summary` prop from both the grid component's `props` and the wrapper's (`CreateEventsDialog.vue`) prop-passing and `reviewSummary` computed. Reclaim the vertical space for the grid.
+- [ ] **Quick-pick chips project the wrong horizon** — the prototype hardcodes `weeks: 8` (line 78-82 of `create-events-modal.jsx`, copied to `QuickPickChips.vue`), so "Every Mon" fills 8 Mondays from today regardless of whether the course runs 4 weeks or 16. This is a *correctness* issue, not just aesthetic: for a semester course, "Every Mon" should fill every Monday in the semester. **Decision (user, 2026-04-22)**: fix by projecting across the course's actual date range. **Fix**: thread `course.start_at` / `course.end_at` from `SingleCourse.vue` down through `CreateEventsDialog.vue` into `BulkEventsStep1Dates.vue` into `QuickPickChips.vue`. Change the chip handler to enumerate every matching weekday between course-start and course-end instead of looping `weeks` × `dows`. If the course is already partially past (end_at is in the past? or today > start_at?), clamp the start to `max(today, course.start_at)` so the chip doesn't project backward in time. Also drop `weeks: 8` from the chip data; it's derived from the range now. Depends on `course.start_at` / `course.end_at` being passed as props — they're already fetched in `SingleCourse.vue` for the course card, so no new API.
+- [ ] **Name pattern format options** — decision 2026-04-22: **keep all 4 (`pad2 / nopad / date-short / none`)** as currently implemented. No change needed.
+- [ ] **Calendar month count should default to course span, keep + Add month escape hatch** — currently the calendar defaults to 2 months of tiles regardless of the course's term. **Decision (user, 2026-04-22)**: default to showing the full range from `max(today, course.start_at)` → `course.end_at` (so 1-month course shows 1 tile, semester shows 4–5 tiles). Keep the `+ Add month` button so instructors can tack on a date after the scheduled term (makeup session, final review after exam week, etc.). Remove or hide the `− Remove month` button since the default now corresponds to the course itself — no reason to shrink below the course span. **Fix**: same course-dates prop threading as item above; compute `monthCount` in the wrapper from `(course.end_at - max(today, course.start_at)) in months, +1`, and pass as initial value to `EventCalendarStrip.vue`. Strip keeps `+ Add month`, loses `− Remove`.
+- [ ] **Weekend shading on calendar** — decision 2026-04-22: **keep** the grey weekend cells. They provide a useful visual of the week's structure (Mon–Fri clustering, Sat/Sun flanks), not a nudge against weekend events.
+- [ ] **Redundant step-1 hint text should live behind a `?` tooltip.** Currently `BulkEventsStep1Dates.vue` has ambient demo-copy: "You can edit any individual name on the next step." and "These apply to every date. You can override individual events on the next step." Both are true but chatty — first-time-user training that returning users read past. **Decision (user, 2026-04-22)**: move to `?` tooltips next to the relevant section labels ("Name pattern" and "Shared details"). **Fix**: replace the inline `<div class="panel__hint">…</div>` blocks with an `el-tooltip` wrapping a small `?` icon (or use Element Plus's `QuestionFilled` from `@element-plus/icons-vue`). Keep the exact wording inside the tooltip — it's still useful on hover.
+- [x] **Bug: calendar first tile always "this month", ignoring course start** — reported & fixed 2026-04-22. The strip was anchored on `new Date()` (today's month), so a course running Jan–May viewed in April only showed Apr–May, losing semester context. **Fix**: `EventCalendarStrip.vue` now takes a `courseStartAt` prop and computes its `anchor` at course.start_at's month regardless of today. Wrapper's `computeMonthSpan` switched to span anchor → end.
+- [x] **`buildName` forced a space between prefix and number** — `buildName` in `BulkEventsStep1Dates.vue` always output `"${prefix} ${number}"` (forced space), so typing "Week" produced "Week 01" regardless of user intent. User preference 2026-04-22: respect what the user typed — no forced spacing. **Fix**: `pad2` / `nopad` / `none` now concat directly (`${p}${pad2(n)}`), no `.trim()`, no forced space. If the user wants a gap they type "Week " with trailing space. `date-short` still normalizes the separator (" — ") because the em-dash is an intentional label/date divider, not user-provided spacing. Preview and actual row names now match exactly.
+- [x] **Name-pattern `startNum` default was `8` (prototype cargo)** — the React prototype showed "Week 8" as a demo. Changed default to `'1'` (start-of-semester, most common case). Rejected alternatives: `existing_events.length + 1` (brittle if events deleted), `current_week_of_course + 1` (assumes week numbering aligns with course weeks).
+- [x] **Allow retroactive event creation on past dates** — follow-up decision 2026-04-22. The instructor may have forgotten to set up Week 1 events and wants to create them after the fact to record attendance. **Fix**: (a) removed the `isPast` early-return in `EventCalendarStrip.toggle()` so past cells are clickable like future ones; (b) kept the greyer text color on unselected past cells as a subtle visual cue that the date is in the past, but stripped `cursor: not-allowed` so the affordance reads as clickable; selected past cells use the same orange fill as future selected cells (no special styling); (c) `applyQuickPick` in `BulkEventsStep1Dates.vue` now uses `course.start_at` as the range's `from` (not `max(today, start)`), so "Every Mon" over a mid-semester course picks up the past Mondays too — user can unselect the ones they don't want. Backend `CreateEvents` already accepts past timestamps (no "must be future" validation), so no server-side change needed.
+- [ ] **Row reorder arrows in the review grid serve no purpose.** Events are always rendered in the attendance events list in date order (server `ORDER BY start_at`). So moving row 5 above row 3 doesn't change anything about how they appear after creation — only the in-modal row number (#) shifts, which is cosmetic. The one edge case is name-pattern numbering (`Week 08`, `Week 09`, …) which uses row index — but in step 1 dates are pre-sorted before names are assigned, and step 2 lets the user edit any name directly, so reordering is a clunky way to change names. **Decision (user, 2026-04-22)**: remove only the reorder arrows. Keep per-row edit, delete, and add-new-row — the latter is genuinely useful for tacking on a one-off date the user forgot in step 1 without having to cancel and restart. **Fix**: drop the `↑` / `↓` buttons from `BulkEventsStep2Review.vue` (remove the two `<button title="Move up/down">` elements + the `move()` method). Keep `×` (remove) and the `+ Add event` button. Leave the row number (#) column as a passive index.
 
 ## Completed
 

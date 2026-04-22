@@ -79,9 +79,11 @@
     <ModifyCourseDialog class="dialog-container" :courseForm="courseForm" :visible="showModifyCourseDialog"
       @dialog-closed="showModifyCourseDialog = false" @update-course="updateCourse"></ModifyCourseDialog>
 
-    <CreateAttendanceEventDialog class="dialog-container" :visible="showCreateAttendanceEventDialog" :locations="locations"
-      @dialog-closed="showCreateAttendanceEventDialog = false" @create-event="createAttendanceEvent">
-    </CreateAttendanceEventDialog>
+    <CreateEventsDialog :visible="showCreateAttendanceEventDialog" :locations="locations"
+      :existing-event-dates="existingEventDates" :submitting="submittingEvents" :row-errors="eventRowErrors"
+      :course-start-at="course.start_at" :course-end-at="course.end_at"
+      @dialog-closed="showCreateAttendanceEventDialog = false" @create-events="createAttendanceEvents">
+    </CreateEventsDialog>
 
     <template v-if="showModifyAttendanceEventDialog">
       <ModifyAttendanceEventDialog class="dialog-container" :eventForm="createAttendanceEventForm" :visible="showModifyAttendanceEventDialog"
@@ -98,7 +100,7 @@ import session from '../../lib/session';
 import CourseInfoCard from './components/CourseInfoCard.vue';
 import ModifyCourseDialog from './components/ModifyCourseDialog.vue';
 import ManagePeopleCard from './components/ManagePeopleCard.vue';
-import CreateAttendanceEventDialog from './components/CreateAttendanceEventDialog.vue';
+import CreateEventsDialog from './components/CreateEventsDialog.vue';
 import ModifyAttendanceEventDialog from './components/ModifyAttendanceEventDialog.vue'
 import AttendanceEventCard from './components/AttendanceEventCard.vue';
 import LocationCard from './components/LocationCard.vue'
@@ -106,7 +108,7 @@ import { ElMessage } from 'element-plus'
 
 export default {
   name: 'SingleCourse',
-  components: { CourseInfoCard, ModifyCourseDialog, ManagePeopleCard, CreateAttendanceEventDialog, AttendanceEventCard, ModifyAttendanceEventDialog, LocationCard },
+  components: { CourseInfoCard, ModifyCourseDialog, ManagePeopleCard, CreateEventsDialog, AttendanceEventCard, ModifyAttendanceEventDialog, LocationCard },
   data() {
     return {
       course: {
@@ -133,6 +135,8 @@ export default {
       showModifyCourseDialog: false,
       showCreateAttendanceEventDialog: false,
       showModifyAttendanceEventDialog: false,
+      submittingEvents: false,
+      eventRowErrors: {},
       isAddedValue: false,
       enrollments: [],
       assignableRoles: [],
@@ -146,6 +150,14 @@ export default {
         return "top"
       }
       return "left"
+    },
+    existingEventDates() {
+      const pad2 = n => String(n).padStart(2, '0')
+      return (this.attendanceEvents || []).map(e => {
+        const d = new Date(e.start_at)
+        if (isNaN(d.getTime())) return null
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+      }).filter(Boolean)
     }
   },
   created() {
@@ -278,14 +290,35 @@ export default {
         console.error('Error fetching enrollments:', error);
       });
     },
-    createAttendanceEvent(eventForm) {
-      api.post(`/course/${this.course.id}/events`, { events: [eventForm] }).then(() => {
-        this.showCreateAttendanceEventDialog = false
-        this.createAttendanceEventForm = {}
-        this.fetchAttendanceEvents() // Refresh the list after adding
-      }).catch(error => {
-        console.error('Error creating attendance event:', error);
-      });
+    createAttendanceEvents({ events, rowIds }) {
+      this.submittingEvents = true
+      this.eventRowErrors = {}
+      api.post(`/course/${this.course.id}/events`, { events })
+        .then((response) => {
+          const count = events.length
+          ElMessage({ type: 'success', message: `Created ${count} event${count === 1 ? '' : 's'}` })
+          this.showCreateAttendanceEventDialog = false
+          this.fetchAttendanceEvents()
+        })
+        .catch(error => {
+          console.error('Error creating attendance events:', error)
+          const data = error?.response?.data || {}
+          const errorsByIndex = data.errors_by_row || data.row_errors || null
+          if (errorsByIndex && rowIds) {
+            const mapped = {}
+            Object.entries(errorsByIndex).forEach(([idx, msg]) => {
+              const id = rowIds[parseInt(idx, 10)]
+              if (id) mapped[id] = msg
+            })
+            this.eventRowErrors = mapped
+            ElMessage({ type: 'error', message: 'Some rows failed — see highlighted errors' })
+          } else {
+            ElMessage({ type: 'error', message: data.details || data.message || 'Failed to create events' })
+          }
+        })
+        .finally(() => {
+          this.submittingEvents = false
+        })
     },
     fetchAttendanceEvents() {
       api.get(`/course/${this.course.id}/events`).then(response => {
