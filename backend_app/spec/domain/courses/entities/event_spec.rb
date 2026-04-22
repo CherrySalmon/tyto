@@ -46,6 +46,22 @@ describe 'Tyto::Domain::Courses::Entities::Event' do
       _(event.id).must_be_nil
     end
 
+    it 'rejects end_at equal to start_at (zero-duration)' do
+      err = _ do
+        Tyto::Domain::Courses::Entities::Event.new(valid_attributes.merge(end_at: now))
+      end.must_raise ArgumentError
+
+      _(err.message).must_equal 'End time must be after start time'
+    end
+
+    it 'rejects end_at before start_at' do
+      err = _ do
+        Tyto::Domain::Courses::Entities::Event.new(valid_attributes.merge(end_at: now - one_hour))
+      end.must_raise ArgumentError
+
+      _(err.message).must_equal 'End time must be after start time'
+    end
+
     it 'rejects empty event name' do
       _ { Tyto::Domain::Courses::Entities::Event.new(valid_attributes.merge(name: '')) }
         .must_raise Dry::Struct::Error

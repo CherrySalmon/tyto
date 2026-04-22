@@ -197,4 +197,75 @@ describe 'Tyto::Value::TimeRange' do
       _(range.contains?(now + 3 * one_hour)).must_equal false
     end
   end
+
+  describe '.parse' do
+    it 'parses ISO8601 strings into a TimeRange' do
+      range = Tyto::Value::TimeRange.parse('2026-04-22T09:00:00Z', '2026-04-22T10:30:00Z')
+
+      _(range).must_be_instance_of Tyto::Value::TimeRange
+      _(range.start_at).must_equal Time.utc(2026, 4, 22, 9, 0, 0)
+      _(range.end_at).must_equal Time.utc(2026, 4, 22, 10, 30, 0)
+    end
+
+    it 'accepts Time objects directly and normalizes to UTC' do
+      start_at = Time.new(2026, 4, 22, 9, 0, 0)
+      end_at = Time.new(2026, 4, 22, 10, 0, 0)
+      range = Tyto::Value::TimeRange.parse(start_at, end_at)
+
+      _(range.start_at).must_equal start_at.utc
+      _(range.end_at).must_equal end_at.utc
+    end
+
+    it 'raises when start is nil' do
+      err = _ { Tyto::Value::TimeRange.parse(nil, '2026-04-22T10:00:00') }.must_raise ArgumentError
+      _(err.message).must_equal 'Start time is required'
+    end
+
+    it 'raises when end is nil' do
+      err = _ { Tyto::Value::TimeRange.parse('2026-04-22T09:00:00', nil) }.must_raise ArgumentError
+      _(err.message).must_equal 'End time is required'
+    end
+
+    it 'raises when start is unparseable' do
+      err = _ { Tyto::Value::TimeRange.parse('not a time', '2026-04-22T10:00:00') }.must_raise ArgumentError
+      _(err.message).must_equal 'Start time is required'
+    end
+
+    it 'raises when end is unparseable' do
+      err = _ { Tyto::Value::TimeRange.parse('2026-04-22T09:00:00', 'not a time') }.must_raise ArgumentError
+      _(err.message).must_equal 'End time is required'
+    end
+
+    it 'raises when end equals start' do
+      err = _ { Tyto::Value::TimeRange.parse('2026-04-22T09:00:00', '2026-04-22T09:00:00') }
+        .must_raise ArgumentError
+      _(err.message).must_equal 'End time must be after start time'
+    end
+
+    it 'raises when end is before start' do
+      err = _ { Tyto::Value::TimeRange.parse('2026-04-22T10:00:00', '2026-04-22T09:00:00') }
+        .must_raise ArgumentError
+      _(err.message).must_equal 'End time must be after start time'
+    end
+  end
+
+  describe '.parse_time' do
+    it 'returns nil for nil input' do
+      _(Tyto::Value::TimeRange.parse_time(nil)).must_be_nil
+    end
+
+    it 'returns nil for unparseable strings' do
+      _(Tyto::Value::TimeRange.parse_time('garbage')).must_be_nil
+    end
+
+    it 'parses an ISO8601 string to UTC Time' do
+      t = Tyto::Value::TimeRange.parse_time('2026-04-22T09:00:00Z')
+      _(t).must_equal Time.utc(2026, 4, 22, 9, 0, 0)
+    end
+
+    it 'normalizes an existing Time to UTC' do
+      t = Time.new(2026, 4, 22, 9, 0, 0, '+08:00')
+      _(Tyto::Value::TimeRange.parse_time(t)).must_equal t.utc
+    end
+  end
 end

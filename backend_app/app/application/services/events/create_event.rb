@@ -3,6 +3,8 @@
 require_relative '../../../infrastructure/database/repositories/events'
 require_relative '../../../infrastructure/database/repositories/locations'
 require_relative '../../../infrastructure/database/repositories/courses'
+require_relative '../../../domain/shared/values/time_range'
+require_relative '../../responses/event_details'
 require_relative '../application_operation'
 
 module Tyto
@@ -21,11 +23,11 @@ module Tyto
 
         def call(requestor:, course_id:, event_data:)
           course_id = step validate_course_id(course_id)
-          step verify_course_exists(course_id)
+          course = step verify_course_exists(course_id)
           step authorize(requestor, course_id)
           validated = step validate_input(event_data, course_id)
           event = step persist_event(validated)
-          enriched = enrich_with_location(event)
+          enriched = enrich_with_location(event, course)
 
           created(enriched)
         end
@@ -62,16 +64,17 @@ module Tyto
           location_id = validate_location_id(event_data['location_id'])
           return location_id if location_id.failure?
 
-          times = validate_times(event_data['start_at'], event_data['end_at'])
-          return times if times.failure?
+          time_range = Value::TimeRange.parse(event_data['start_at'], event_data['end_at'])
 
           Success(
             course_id:,
             location_id: location_id.value!,
             name: name.value!,
-            start_at: times.value![:start_at],
-            end_at: times.value![:end_at]
+            start_at: time_range.start_at,
+            end_at: time_range.end_at
           )
+        rescue ArgumentError => e
+          Failure(bad_request(e.message))
         end
 
         def validate_name(name)
@@ -86,55 +89,28 @@ module Tyto
           Success(location_id.to_i)
         end
 
-        def validate_times(start_at, end_at)
-          start_time = parse_time(start_at)
-          end_time = parse_time(end_at)
-
-          return Failure(bad_request('Start time is required')) if start_time.nil?
-          return Failure(bad_request('End time is required')) if end_time.nil?
-          return Failure(bad_request('End time must be after start time')) if end_time <= start_time
-
-          Success(start_at: start_time, end_at: end_time)
-        end
-
         def persist_event(validated)
-          entity = Domain::Courses::Entities::Event.new(
-            id: nil,
-            course_id: validated[:course_id],
-            location_id: validated[:location_id],
-            name: validated[:name],
-            start_at: validated[:start_at],
-            end_at: validated[:end_at],
-            created_at: nil,
-            updated_at: nil
-          )
-
-          Success(@events_repo.create(entity))
+          Success(@events_repo.create(build_event_entity(validated)))
         rescue StandardError => e
           Failure(internal_error(e.message))
         end
 
-        def enrich_with_location(event)
-          location = @locations_repo.find_id(event.location_id)
-
-          OpenStruct.new(
-            id: event.id,
-            course_id: event.course_id,
-            location_id: event.location_id,
-            name: event.name,
-            start_at: event.start_at,
-            end_at: event.end_at,
-            longitude: location&.longitude,
-            latitude: location&.latitude
+        def build_event_entity(row)
+          Domain::Courses::Entities::Event.new(
+            id: nil, created_at: nil, updated_at: nil,
+            course_id: row[:course_id], location_id: row[:location_id],
+            name: row[:name], start_at: row[:start_at], end_at: row[:end_at]
           )
         end
 
-        def parse_time(time_value)
-          return nil unless time_value
-
-          time_value.is_a?(Time) ? time_value.utc : Time.parse(time_value.to_s).utc
-        rescue ArgumentError
-          nil
+        def enrich_with_location(event, course)
+          location = @locations_repo.find_id(event.location_id)
+          Response::EventDetails.new(
+            id: event.id, course_id: event.course_id, location_id: event.location_id,
+            name: event.name, start_at: event.start_at, end_at: event.end_at,
+            longitude: location&.longitude, latitude: location&.latitude,
+            course_name: course.name, location_name: location&.name
+          )
         end
       end
     end

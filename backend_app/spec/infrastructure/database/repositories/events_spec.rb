@@ -74,15 +74,17 @@ describe 'Tyto::Repository::Events' do
       _ { repository.create(entity) }.must_raise Sequel::NotNullConstraintViolation
     end
 
-    it 'rejects events where start_at is after end_at' do
-      # Migration 011 added a CHECK constraint enforcing start_at <= end_at.
-      entity = Tyto::Domain::Courses::Entities::Event.new(
-        id: nil, course_id: course.id, location_id: event_location.id,
-        name: 'Backwards', start_at: now + one_hour, end_at: now,
-        created_at: nil, updated_at: nil
-      )
-
-      _ { repository.create(entity) }.must_raise Sequel::ConstraintViolation
+    it 'rejects events where start_at is after end_at (DB CHECK, migration 011)' do
+      # Belt-and-suspenders: the Event domain entity also enforces this via its
+      # self.new / time_range invariant (which raises ArgumentError before the
+      # repo ever sees the entity). Bypass the entity to verify the DB layer
+      # still guards against any raw insert that skips the domain.
+      _ do
+        Tyto::Event.create(
+          course_id: course.id, location_id: event_location.id,
+          name: 'Backwards', start_at: now + one_hour, end_at: now
+        )
+      end.must_raise Sequel::ConstraintViolation
     end
   end
 

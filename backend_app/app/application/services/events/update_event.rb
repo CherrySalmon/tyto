@@ -3,6 +3,8 @@
 require_relative '../../../infrastructure/database/repositories/events'
 require_relative '../../../infrastructure/database/repositories/locations'
 require_relative '../../../infrastructure/database/repositories/courses'
+require_relative '../../../domain/shared/values/time_range'
+require_relative '../../responses/event_details'
 require_relative '../application_operation'
 
 module Tyto
@@ -22,12 +24,12 @@ module Tyto
         def call(requestor:, course_id:, event_id:, event_data:)
           course_id = step validate_course_id(course_id)
           event_id = step validate_event_id(event_id)
-          step verify_course_exists(course_id)
+          course = step verify_course_exists(course_id)
           existing = step find_event(event_id, course_id)
           step authorize(requestor, course_id)
           validated = step validate_input(event_data, existing)
           updated = step persist_update(existing, validated)
-          enriched = enrich_with_location(updated)
+          enriched = enrich_with_location(updated, course)
 
           ok(enriched)
         end
@@ -110,8 +112,8 @@ module Tyto
 
         def validate_times(start_at, end_at, existing)
           # Use existing times as fallback
-          start_time = start_at ? parse_time(start_at) : existing.start_at
-          end_time = end_at ? parse_time(end_at) : existing.end_at
+          start_time = start_at ? Value::TimeRange.parse_time(start_at) : existing.start_at
+          end_time = end_at ? Value::TimeRange.parse_time(end_at) : existing.end_at
 
           # Only validate if explicit values were provided and are invalid
           return Failure(bad_request('Invalid start time format')) if start_at && start_time.nil?
@@ -138,27 +140,14 @@ module Tyto
           Failure(internal_error(e.message))
         end
 
-        def enrich_with_location(event)
+        def enrich_with_location(event, course)
           location = @locations_repo.find_id(event.location_id)
-
-          OpenStruct.new(
-            id: event.id,
-            course_id: event.course_id,
-            location_id: event.location_id,
-            name: event.name,
-            start_at: event.start_at,
-            end_at: event.end_at,
-            longitude: location&.longitude,
-            latitude: location&.latitude
+          Response::EventDetails.new(
+            id: event.id, course_id: event.course_id, location_id: event.location_id,
+            name: event.name, start_at: event.start_at, end_at: event.end_at,
+            longitude: location&.longitude, latitude: location&.latitude,
+            course_name: course.name, location_name: location&.name
           )
-        end
-
-        def parse_time(time_value)
-          return nil unless time_value
-
-          time_value.is_a?(Time) ? time_value.utc : Time.parse(time_value.to_s).utc
-        rescue ArgumentError
-          nil
         end
       end
     end
