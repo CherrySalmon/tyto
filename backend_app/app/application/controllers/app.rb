@@ -63,10 +63,12 @@ module Tyto
       end
 
       r.root do
+        response['Cache-Control'] = 'no-cache'
         File.read(File.join('dist', 'index.html'))
       end
 
       r.get [String, true], [String, true], [String, true], [true] do |_parsed_request|
+        response['Cache-Control'] = 'no-cache'
         File.read(File.join('dist', 'index.html'))
       end
     end
