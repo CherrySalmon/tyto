@@ -2,6 +2,7 @@
 
 require_relative '../../types'
 require_relative '../values/requirement_uploads'
+require_relative '../values/submitter'
 
 module Tyto
   module Domain
@@ -29,6 +30,11 @@ module Tyto
           # Callers must construct collection value objects explicitly via .from().
           attribute :requirement_uploads,
                     Types.Instance(Values::RequirementUploads).optional.default(nil)
+
+          # Submitter summary — nil when not loaded. Used by staff views so
+          # the frontend can show student name/email without an extra lookup.
+          attribute :submitter,
+                    Types.Instance(Values::Submitter).optional.default(nil)
 
           # Check if uploads are loaded
           def uploads_loaded? = !requirement_uploads.nil?

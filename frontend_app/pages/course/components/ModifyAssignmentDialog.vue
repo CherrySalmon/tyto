@@ -48,8 +48,11 @@
 
       <template v-else>
         <el-divider>Submission Requirements</el-divider>
-        <el-alert type="info" :closable="false" show-icon style="margin-bottom: 15px;">
+        <el-alert v-if="canUnpublish" type="info" :closable="false" show-icon style="margin-bottom: 15px;">
           Requirements cannot be edited for published assignments. To edit requirements, unpublish the assignment first.
+        </el-alert>
+        <el-alert v-else type="warning" :closable="false" show-icon style="margin-bottom: 15px;">
+          Requirements are locked because this assignment has submissions. To change requirements, create a new assignment.
         </el-alert>
       </template>
     </el-form>
@@ -73,6 +76,10 @@ export default {
     assignmentStatus: {
       type: String,
       default: 'draft'
+    },
+    canUnpublish: {
+      type: Boolean,
+      default: true
     },
     visible: Boolean,
     attendanceEvents: Array

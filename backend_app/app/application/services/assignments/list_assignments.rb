@@ -2,19 +2,24 @@
 
 require_relative '../../../infrastructure/database/repositories/assignments'
 require_relative '../../../infrastructure/database/repositories/courses'
+require_relative '../../../infrastructure/database/repositories/submissions'
 require_relative '../../responses/policy_wrapper'
 require_relative '../application_operation'
 
 module Tyto
   module Service
     module Assignments
-      # Service: List assignments for a course
-      # Teaching staff see all; students see only published
+      # Service: List assignments for a course.
+      # Teaching staff see all; students see only published.
+      # Each assignment's policy summary reflects its own submission-presence,
+      # computed from one batched query so the list is not N+1.
       class ListAssignments < ApplicationOperation
         def initialize(assignments_repo: Repository::Assignments.new,
-                       courses_repo: Repository::Courses.new)
+                       courses_repo: Repository::Courses.new,
+                       submissions_repo: Repository::Submissions.new)
           @assignments_repo = assignments_repo
           @courses_repo = courses_repo
+          @submissions_repo = submissions_repo
           super()
         end
 
@@ -50,7 +55,11 @@ module Tyto
                           @assignments_repo.find_by_course_and_status(@course_id, 'published')
                         end
 
-          wrapped = assignments.map { |a| Response::PolicyWrapper.new(a, policies: @policy.summary) }
+          ids_with_subs = @submissions_repo.assignment_ids_with_submissions(assignments.map(&:id)).to_a
+          wrapped = assignments.map do |a|
+            per_policy = Policy::Assignment.new(@requestor, @enrollment, has_submissions: ids_with_subs.include?(a.id))
+            Response::PolicyWrapper.new(a, policies: per_policy.summary)
+          end
           Success(wrapped)
         end
       end

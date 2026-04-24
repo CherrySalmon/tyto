@@ -53,5 +53,29 @@ describe Tyto::Service::Assignments::ListAssignments do
       _(result).must_be_kind_of Dry::Monads::Result::Failure
       _(result.failure.status).must_equal :forbidden
     end
+
+    it 'per-assignment policy summary reflects which assignments have submissions' do
+      # Attach a submission to the "Published HW" assignment only.
+      published = Tyto::Assignment.first(title: 'Published HW')
+      draft = Tyto::Assignment.first(title: 'Draft HW')
+      Tyto::Submission.create(
+        assignment_id: published.id, account_id: student_account.id, submitted_at: Time.now
+      )
+
+      result = Tyto::Service::Assignments::ListAssignments.new.call(
+        requestor: owner_requestor, course_id: course.id
+      )
+
+      _(result).must_be_kind_of Dry::Monads::Result::Success
+      wrapped = result.value!.message
+
+      published_wrap = wrapped.find { |a| a.id == published.id }
+      draft_wrap = wrapped.find { |a| a.id == draft.id }
+
+      _(published_wrap.policies[:can_unpublish]).must_equal false
+      _(published_wrap.policies[:can_delete]).must_equal false
+      _(draft_wrap.policies[:can_unpublish]).must_equal true
+      _(draft_wrap.policies[:can_delete]).must_equal true
+    end
   end
 end

@@ -1,6 +1,6 @@
 # Assignments: Design Decisions
 
-> Resolved design questions for the Assignments feature. Referenced from `CLAUDE.feature-assignments.md`.
+> Resolved design questions for the Assignments feature. Referenced from `CLAUDE.feature-assignments-1-2.md`.
 
 ## Scope and Boundaries
 

@@ -29,6 +29,15 @@ module Tyto
       end
     end
 
+    # Serializes Submitter value object (student identity summary on a submission)
+    class SubmitterRepr < Roar::Decorator
+      include Roar::JSON
+
+      property :account_id
+      property :name
+      property :email
+    end
+
     # Serializes Submission domain entity to JSON
     class Submission < Roar::Decorator
       include Roar::JSON
@@ -41,6 +50,7 @@ module Tyto
       property :updated_at, exec_context: :decorator
       collection :requirement_uploads, extend: RequirementUploadRepr,
                                        exec_context: :decorator
+      property :submitter, extend: SubmitterRepr, exec_context: :decorator
       property :policies, exec_context: :decorator
 
       def submitted_at
@@ -59,6 +69,10 @@ module Tyto
         return [] unless represented.uploads_loaded?
 
         represented.requirement_uploads.to_a
+      end
+
+      def submitter
+        represented.submitter
       end
 
       def policies

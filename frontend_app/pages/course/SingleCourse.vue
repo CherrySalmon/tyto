@@ -121,6 +121,7 @@
 
     <template v-if="showModifyAssignmentDialog">
       <ModifyAssignmentDialog class="dialog-container" :assignmentForm="assignmentForm" :assignmentStatus="currentAssignmentStatus"
+        :canUnpublish="currentAssignmentCanUnpublish"
         :visible="showModifyAssignmentDialog"
         :attendanceEvents="attendanceEvents" @dialog-closed="showModifyAssignmentDialog = false"
         @update-assignment="updateAssignment">
@@ -129,6 +130,7 @@
 
     <AssignmentDetailDialog :assignment="currentAssignment" :visible="showAssignmentDetailDialog"
       :attendanceEvents="attendanceEvents" :submissions="currentSubmissions" :submissionLoading="submissionLoading"
+      :submissionErrorNonce="submissionErrorNonce"
       @dialog-closed="closeAssignmentDetail" @create-submission="createSubmission">
     </AssignmentDetailDialog>
   </div>
@@ -192,9 +194,11 @@ export default {
       currentAssignment: {},
       currentAssignmentId: '',
       currentAssignmentStatus: 'draft',
+      currentAssignmentCanUnpublish: true,
       assignmentForm: {},
       currentSubmissions: [],
-      submissionLoading: false
+      submissionLoading: false,
+      submissionErrorNonce: 0
     };
   },
   computed: {
@@ -499,6 +503,7 @@ export default {
         };
         this.currentAssignmentId = assignmentId;
         this.currentAssignmentStatus = assignment.status;
+        this.currentAssignmentCanUnpublish = assignment.policies?.can_unpublish !== false;
         this.showModifyAssignmentDialog = true;
       }).catch(error => {
         console.error('Error fetching assignment for edit:', error);
@@ -580,8 +585,11 @@ export default {
         ElMessage({ type: 'success', message: 'Submission saved' });
         this.fetchSubmissions(assignmentId);
       }).catch(error => {
-        const msg = error.response?.data?.message || 'Error submitting';
+        // Backend error bodies are { error, details } — surface details when available.
+        const data = error.response?.data || {};
+        const msg = data.details || data.error || 'Error submitting';
         ElMessage({ type: 'error', message: msg });
+        this.submissionErrorNonce += 1;
         console.error('Error creating submission:', error);
       });
     },

@@ -509,6 +509,102 @@ describe 'Tyto::Repository::Submissions' do
     end
   end
 
+  describe '#find_by_assignment_full' do
+    it 'returns each submission with entries AND submitter loaded' do
+      Tyto::Submission.create(
+        assignment_id: orm_assignment.id, account_id: orm_account.id, submitted_at: now
+      )
+      Tyto::Submission.create(
+        assignment_id: orm_assignment.id, account_id: another_account.id, submitted_at: now + 60
+      )
+
+      result = repository.find_by_assignment_full(orm_assignment.id)
+
+      _(result.length).must_equal 2
+      result.each do |submission|
+        _(submission.uploads_loaded?).must_equal true
+        _(submission.submitter).must_be_kind_of Tyto::Domain::Assignments::Values::Submitter
+        _(submission.submitter.account_id).must_equal submission.account_id
+        _(submission.submitter.email).wont_be_nil
+      end
+    end
+
+    it 'returns empty array when no submissions exist' do
+      _(repository.find_by_assignment_full(orm_assignment.id)).must_equal []
+    end
+
+    it 'still populates submitter when the account has no name' do
+      nameless = Tyto::Account.create(email: 'noname@example.com')
+      Tyto::Submission.create(
+        assignment_id: orm_assignment.id, account_id: nameless.id, submitted_at: now
+      )
+
+      result = repository.find_by_assignment_full(orm_assignment.id)
+
+      _(result.length).must_equal 1
+      _(result.first.submitter.name).must_be_nil
+      _(result.first.submitter.email).must_equal 'noname@example.com'
+    end
+  end
+
+  describe '#any_for_assignment?' do
+    it 'returns true when at least one submission exists for the assignment' do
+      Tyto::Submission.create(
+        assignment_id: orm_assignment.id, account_id: orm_account.id, submitted_at: now
+      )
+
+      _(repository.any_for_assignment?(orm_assignment.id)).must_equal true
+    end
+
+    it 'returns false when no submission exists for the assignment' do
+      _(repository.any_for_assignment?(orm_assignment.id)).must_equal false
+    end
+
+    it 'returns false when submissions exist only for a different assignment' do
+      Tyto::Submission.create(
+        assignment_id: another_assignment.id, account_id: orm_account.id, submitted_at: now
+      )
+
+      _(repository.any_for_assignment?(orm_assignment.id)).must_equal false
+    end
+  end
+
+  describe '#assignment_ids_with_submissions' do
+    it 'returns the subset of given assignment IDs that have at least one submission' do
+      Tyto::Submission.create(
+        assignment_id: orm_assignment.id, account_id: orm_account.id, submitted_at: now
+      )
+
+      result = repository.assignment_ids_with_submissions([orm_assignment.id, another_assignment.id])
+
+      _(result).must_include orm_assignment.id
+      _(result).wont_include another_assignment.id
+    end
+
+    it 'returns empty collection when no submissions exist for any of the given IDs' do
+      result = repository.assignment_ids_with_submissions([orm_assignment.id, another_assignment.id])
+
+      _(result.to_a).must_be_empty
+    end
+
+    it 'returns empty collection when given an empty list' do
+      _(repository.assignment_ids_with_submissions([]).to_a).must_be_empty
+    end
+
+    it 'returns unique IDs even when multiple submissions exist per assignment' do
+      Tyto::Submission.create(
+        assignment_id: orm_assignment.id, account_id: orm_account.id, submitted_at: now
+      )
+      Tyto::Submission.create(
+        assignment_id: orm_assignment.id, account_id: another_account.id, submitted_at: now + 60
+      )
+
+      result = repository.assignment_ids_with_submissions([orm_assignment.id])
+
+      _(result.to_a).must_equal [orm_assignment.id]
+    end
+  end
+
   describe '#delete' do
     it 'deletes existing submission and returns true' do
       orm_submission = Tyto::Submission.create(

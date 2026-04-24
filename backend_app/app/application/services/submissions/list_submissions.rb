@@ -52,9 +52,9 @@ module Tyto
 
         def fetch_submissions
           submissions = if @policy.can_view_all?
-                          @submissions_repo.find_by_assignment_with_entries(@assignment.id)
+                          @submissions_repo.find_by_assignment_full(@assignment.id)
                         else
-                          sub = @submissions_repo.find_by_account_assignment_with_entries(
+                          sub = @submissions_repo.find_by_account_assignment_full(
                             @requestor.account_id, @assignment.id
                           )
                           sub ? [sub] : []

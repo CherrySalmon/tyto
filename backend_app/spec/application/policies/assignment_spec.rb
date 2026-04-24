@@ -166,4 +166,57 @@ describe Tyto::Policy::Assignment do
       _(summary[:can_submit]).must_equal false
     end
   end
+
+  describe 'teaching staff with submissions present' do
+    let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
+    let(:enrollment) { create_enrollment(roles: ['instructor']) }
+    let(:policy) { Tyto::Policy::Assignment.new(requestor, enrollment, has_submissions: true) }
+
+    it 'denies unpublish when submissions exist' do
+      _(policy.can_unpublish?).must_equal false
+    end
+
+    it 'denies delete when submissions exist' do
+      _(policy.can_delete?).must_equal false
+    end
+
+    it 'still allows create, view, update, publish, view_drafts' do
+      _(policy.can_create?).must_equal true
+      _(policy.can_view?).must_equal true
+      _(policy.can_update?).must_equal true
+      _(policy.can_publish?).must_equal true
+      _(policy.can_view_drafts?).must_equal true
+    end
+
+    it 'summary reflects denied unpublish and delete while keeping other permissions' do
+      summary = policy.summary
+
+      _(summary[:can_unpublish]).must_equal false
+      _(summary[:can_delete]).must_equal false
+      _(summary[:can_update]).must_equal true
+      _(summary[:can_publish]).must_equal true
+    end
+  end
+
+  describe 'teaching staff with no submissions (explicit has_submissions: false)' do
+    let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
+    let(:enrollment) { create_enrollment(roles: ['staff']) }
+    let(:policy) { Tyto::Policy::Assignment.new(requestor, enrollment, has_submissions: false) }
+
+    it 'allows unpublish and delete' do
+      _(policy.can_unpublish?).must_equal true
+      _(policy.can_delete?).must_equal true
+    end
+  end
+
+  describe 'student with submissions present' do
+    let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
+    let(:enrollment) { create_enrollment(roles: ['student']) }
+    let(:policy) { Tyto::Policy::Assignment.new(requestor, enrollment, has_submissions: true) }
+
+    it 'still denies unpublish and delete (role check still applies)' do
+      _(policy.can_unpublish?).must_equal false
+      _(policy.can_delete?).must_equal false
+    end
+  end
 end

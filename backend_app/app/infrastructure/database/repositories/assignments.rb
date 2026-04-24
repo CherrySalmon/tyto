@@ -3,6 +3,7 @@
 require_relative '../../../domain/assignments/entities/assignment'
 require_relative '../../../domain/assignments/entities/submission_requirement'
 require_relative '../../../domain/assignments/values/submission_requirements'
+require_relative '../../../domain/assignments/values/linked_event'
 
 module Tyto
   module Repository
@@ -12,6 +13,7 @@ module Tyto
     # Loading conventions:
     #   find_id                          - Assignment only (requirements = nil)
     #   find_with_requirements           - Assignment + SubmissionRequirements loaded
+    #   find_full                        - Assignment + SubmissionRequirements + LinkedEvent
     #   find_by_course                   - All assignments for course (requirements = nil)
     #   find_by_course_and_status        - Filtered by status (requirements = nil)
     #   find_by_course_with_requirements - All assignments + requirements loaded
@@ -30,6 +32,15 @@ module Tyto
         return nil unless orm_record
 
         rebuild_entity(orm_record, load_requirements: true)
+      end
+
+      # Find an assignment by ID with requirements AND linked event loaded.
+      # Used by the detail view which needs to show the event name.
+      def find_full(id)
+        orm_record = Tyto::Assignment[id]
+        return nil unless orm_record
+
+        rebuild_entity(orm_record, load_requirements: true, load_event: true)
       end
 
       # Find all assignments for a course (requirements not loaded)
@@ -156,7 +167,7 @@ module Tyto
 
       private
 
-      def rebuild_entity(orm_record, load_requirements: false)
+      def rebuild_entity(orm_record, load_requirements: false, load_event: false)
         Domain::Assignments::Entities::Assignment.new(
           id: orm_record.id,
           course_id: orm_record.course_id,
@@ -170,7 +181,22 @@ module Tyto
           updated_at: orm_record.updated_at,
           submission_requirements: load_requirements ? Domain::Assignments::Values::SubmissionRequirements.from(
             rebuild_requirements(orm_record)
-          ) : nil
+          ) : nil,
+          linked_event: load_event ? rebuild_linked_event(orm_record.event_id) : nil
+        )
+      end
+
+      def rebuild_linked_event(event_id)
+        return nil unless event_id
+
+        orm_event = Tyto::Event[event_id]
+        return nil unless orm_event
+
+        Domain::Assignments::Values::LinkedEvent.new(
+          id: orm_event.id,
+          name: orm_event.name,
+          start_at: orm_event.start_at,
+          end_at: orm_event.end_at
         )
       end
 

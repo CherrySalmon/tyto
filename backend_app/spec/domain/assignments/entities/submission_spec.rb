@@ -90,4 +90,25 @@ describe 'Tyto::Domain::Assignments::Entities::Submission' do
       _(submission.uploads_loaded?).must_equal true
     end
   end
+
+  describe 'submitter' do
+    it 'defaults submitter to nil (not loaded)' do
+      submission = Tyto::Domain::Assignments::Entities::Submission.new(valid_attributes)
+
+      _(submission.submitter).must_be_nil
+    end
+
+    it 'accepts a Submitter value object' do
+      submitter = Tyto::Domain::Assignments::Values::Submitter.new(
+        account_id: 5, name: 'Ada Lovelace', email: 'ada@example.com'
+      )
+      submission = Tyto::Domain::Assignments::Entities::Submission.new(
+        valid_attributes.merge(submitter: submitter)
+      )
+
+      _(submission.submitter).must_be_kind_of Tyto::Domain::Assignments::Values::Submitter
+      _(submission.submitter.name).must_equal 'Ada Lovelace'
+      _(submission.submitter.email).must_equal 'ada@example.com'
+    end
+  end
 end

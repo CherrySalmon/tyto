@@ -38,7 +38,7 @@
             <Promotion />
           </el-icon>
           <el-icon
-            v-if="assignment.status === 'published'"
+            v-if="assignment.status === 'published' && canUnpublish(assignment)"
             :size="18"
             @click="$emit('unpublish-assignment', assignment.id)"
             style="margin-left: 10px;"
@@ -46,7 +46,12 @@
           >
             <Hide />
           </el-icon>
-          <el-icon :size="18" @click="$emit('delete-assignment', assignment.id)" style="margin-left: 10px;">
+          <el-icon
+            v-if="canDelete(assignment)"
+            :size="18"
+            @click="$emit('delete-assignment', assignment.id)"
+            style="margin-left: 10px;"
+          >
             <Delete />
           </el-icon>
         </div>
@@ -79,6 +84,14 @@ export default {
         case 'disabled': return 'info'
         default: return ''
       }
+    },
+    // Treat a missing `policies` object as permissive (older responses),
+    // but an explicit `false` as a denial from the backend.
+    canUnpublish(assignment) {
+      return assignment?.policies?.can_unpublish !== false
+    },
+    canDelete(assignment) {
+      return assignment?.policies?.can_delete !== false
     }
   }
 }

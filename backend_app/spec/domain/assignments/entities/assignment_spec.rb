@@ -171,4 +171,24 @@ describe 'Tyto::Domain::Assignments::Entities::Assignment' do
       _(assignment.requirements_loaded?).must_equal true
     end
   end
+
+  describe 'linked event' do
+    it 'defaults linked_event to nil (not loaded or no event)' do
+      assignment = Tyto::Domain::Assignments::Entities::Assignment.new(valid_attributes)
+
+      _(assignment.linked_event).must_be_nil
+    end
+
+    it 'accepts a LinkedEvent value object' do
+      linked = Tyto::Domain::Assignments::Values::LinkedEvent.new(
+        id: 3, name: 'Week 1 Lecture', start_at: now, end_at: now + one_day
+      )
+      assignment = Tyto::Domain::Assignments::Entities::Assignment.new(
+        valid_attributes.merge(event_id: 3, linked_event: linked)
+      )
+
+      _(assignment.linked_event).must_be_kind_of Tyto::Domain::Assignments::Values::LinkedEvent
+      _(assignment.linked_event.name).must_equal 'Week 1 Lecture'
+    end
+  end
 end

@@ -18,6 +18,24 @@ module Tyto
       property :sort_order
     end
 
+    # Serializes the LinkedEvent value object (event summary attached to an Assignment)
+    class LinkedEventRepr < Roar::Decorator
+      include Roar::JSON
+
+      property :id
+      property :name
+      property :start_at, exec_context: :decorator
+      property :end_at, exec_context: :decorator
+
+      def start_at
+        represented.start_at&.utc&.iso8601
+      end
+
+      def end_at
+        represented.end_at&.utc&.iso8601
+      end
+    end
+
     # Serializes Assignment domain entity to JSON
     class Assignment < Roar::Decorator
       include Roar::JSON
@@ -34,6 +52,7 @@ module Tyto
       property :updated_at, exec_context: :decorator
       collection :submission_requirements, extend: SubmissionRequirementRepr,
                                            exec_context: :decorator
+      property :linked_event, extend: LinkedEventRepr, exec_context: :decorator
       property :policies, exec_context: :decorator
 
       def due_at
@@ -52,6 +71,10 @@ module Tyto
         return [] unless represented.requirements_loaded?
 
         represented.submission_requirements.to_a
+      end
+
+      def linked_event
+        represented.linked_event
       end
 
       def policies

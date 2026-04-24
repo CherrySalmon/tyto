@@ -34,9 +34,14 @@
         </el-table>
       </div>
 
-      <div v-if="linkedEventName" class="detail-section">
+      <div v-if="linkedEventSummary" class="detail-section">
         <h4>Linked Event</h4>
-        <p>{{ linkedEventName }}</p>
+        <p>
+          {{ linkedEventSummary.name }}
+          <span v-if="linkedEventSummary.start_at" class="event-start-at">
+            — {{ formatDateTime(linkedEventSummary.start_at) }}
+          </span>
+        </p>
       </div>
 
       <div class="detail-section detail-meta">
@@ -59,15 +64,27 @@
               <span v-else>{{ upload.filename || upload.content }}</span>
             </div>
           </div>
-          <el-button size="small" type="primary" @click="showSubmitForm = true" style="margin-top: 12px;">
+          <el-button v-if="canResubmit" size="small" type="primary" @click="showSubmitForm = true" style="margin-top: 12px;">
             Resubmit
           </el-button>
+          <el-alert v-else type="info" :closable="false" show-icon style="margin-top: 12px;">
+            The due date has passed and late resubmission is not allowed for this assignment. Your submission above is final.
+          </el-alert>
         </div>
       </div>
 
       <!-- Student: Submission Form -->
       <div v-if="canSubmit && (!mySubmission || showSubmitForm)" class="detail-section submission-section">
         <h4>{{ mySubmission ? 'Resubmit' : 'Submit' }}</h4>
+        <el-alert
+          v-if="!mySubmission && isPastDue"
+          type="warning"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 12px;"
+        >
+          This assignment is past its due date. Your submission will be marked late.
+        </el-alert>
         <div v-if="assignment.submission_requirements && assignment.submission_requirements.length">
           <div v-for="req in assignment.submission_requirements" :key="req.id" class="submit-requirement">
             <label class="submit-label">
@@ -91,10 +108,10 @@
             </div>
           </div>
           <div style="margin-top: 12px;">
-            <el-button type="primary" @click="submitEntries" :disabled="!hasValidEntries">
+            <el-button type="primary" @click="submitEntries" :disabled="!hasValidEntries || submitting" :loading="submitting">
               {{ mySubmission ? 'Resubmit' : 'Submit' }}
             </el-button>
-            <el-button v-if="mySubmission" @click="showSubmitForm = false">Cancel</el-button>
+            <el-button v-if="mySubmission" @click="showSubmitForm = false" :disabled="submitting">Cancel</el-button>
           </div>
         </div>
         <p v-else class="no-requirements">No submission requirements defined for this assignment.</p>
@@ -104,7 +121,28 @@
       <div v-if="canViewAll && submissions.length" class="detail-section submission-section">
         <h4>All Submissions ({{ submissions.length }})</h4>
         <el-table :data="submissions" style="width: 100%" size="small">
-          <el-table-column prop="account_id" label="Student ID" width="100"></el-table-column>
+          <el-table-column type="expand">
+            <template #default="scope">
+              <div v-if="(scope.row.requirement_uploads || []).length" class="submission-expand">
+                <div v-for="upload in scope.row.requirement_uploads" :key="upload.id" class="upload-entry">
+                  <span class="upload-label">{{ requirementDescription(upload.requirement_id) }}:</span>
+                  <a v-if="isUrl(upload)" :href="upload.content" target="_blank" rel="noopener">{{ upload.content }}</a>
+                  <span v-else>{{ upload.filename || upload.content }}</span>
+                </div>
+              </div>
+              <p v-else class="no-submissions">No entries submitted.</p>
+            </template>
+          </el-table-column>
+          <el-table-column label="Student">
+            <template #default="scope">
+              <div class="student-cell">
+                <div>{{ studentDisplayName(scope.row) }}</div>
+                <div v-if="scope.row.submitter && scope.row.submitter.email" class="student-email">
+                  {{ scope.row.submitter.email }}
+                </div>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column label="Submitted" width="180">
             <template #default="scope">
               {{ formatDateTime(scope.row.submitted_at) }}
@@ -116,7 +154,7 @@
               <el-tag v-else type="success" size="small">On time</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="Entries">
+          <el-table-column label="Entries" width="90">
             <template #default="scope">
               {{ (scope.row.requirement_uploads || []).length }} / {{ (assignment.submission_requirements || []).length }}
             </template>
@@ -151,12 +189,21 @@ export default {
     submissionLoading: {
       type: Boolean,
       default: false
+    },
+    // Incremented by the parent whenever a submission attempt fails.
+    // The dialog watches this to clear the in-flight state without
+    // closing the submit form, so the user can see the error toast
+    // and correct their input.
+    submissionErrorNonce: {
+      type: Number,
+      default: 0
     }
   },
   data() {
     return {
       showDialog: false,
       showSubmitForm: false,
+      submitting: false,
       entryValues: {}
     }
   },
@@ -165,10 +212,14 @@ export default {
       if (!this.assignment.description) return ''
       return marked.parse(this.assignment.description)
     },
-    linkedEventName() {
+    // Prefer the backend-embedded linked_event summary (authoritative,
+    // available to students who don't fetch the full attendance-events list).
+    // Fall back to looking up the event in attendanceEvents for older payloads.
+    linkedEventSummary() {
+      if (this.assignment.linked_event) return this.assignment.linked_event
       if (!this.assignment.event_id || !this.attendanceEvents) return null
       const event = this.attendanceEvents.find(e => e.id === this.assignment.event_id)
-      return event ? event.name : null
+      return event ? { id: event.id, name: event.name, start_at: event.start_at } : null
     },
     canSubmit() {
       return this.assignment.policies && this.assignment.policies.can_submit
@@ -185,6 +236,18 @@ export default {
       if (!this.canSubmit) return null
       return this.submissions.length ? this.submissions[0] : null
     },
+    isPastDue() {
+      if (!this.assignment.due_at) return false
+      return Date.now() > new Date(this.assignment.due_at).getTime()
+    },
+    // Mirrors backend rule in CreateSubmission: once a submission exists,
+    // the due date has passed, and late resubmit is disallowed, the student
+    // cannot resubmit. Hiding the button prevents a dead-end click.
+    canResubmit() {
+      if (!this.mySubmission) return true
+      if (this.assignment.allow_late_resubmit) return true
+      return !this.isPastDue
+    },
     hasValidEntries() {
       if (!this.assignment.submission_requirements) return false
       return this.assignment.submission_requirements.some(req => {
@@ -198,10 +261,24 @@ export default {
         this.showDialog = newVal
         if (newVal) {
           this.showSubmitForm = false
+          this.submitting = false
           this.entryValues = {}
           this.prefillEntries()
         }
       }
+    },
+    // Close the submit form only after the parent confirms success
+    // by refreshing submissions. A rejected submission leaves the
+    // form open so the user sees the error toast without losing context.
+    submissions() {
+      if (this.submitting) {
+        this.submitting = false
+        this.showSubmitForm = false
+      }
+    },
+    submissionErrorNonce() {
+      // Parent signalled a failed submission — re-enable the form, keep it open.
+      this.submitting = false
     }
   },
   methods: {
@@ -233,6 +310,11 @@ export default {
     requirementDescription(requirementId) {
       const req = this.findRequirement(requirementId)
       return req ? req.description : `Requirement #${requirementId}`
+    },
+    studentDisplayName(submission) {
+      if (submission.submitter?.name) return submission.submitter.name
+      if (submission.submitter?.email) return submission.submitter.email
+      return `Account #${submission.account_id}`
     },
     prefillEntries() {
       if (!this.mySubmission || !this.mySubmission.requirement_uploads) return
@@ -270,8 +352,8 @@ export default {
           }
         })
       if (entries.length === 0) return
+      this.submitting = true
       this.$emit('create-submission', this.assignment.id, entries)
-      this.showSubmitForm = false
     },
     onDialogClose() {
       this.$emit('dialog-closed')
@@ -357,5 +439,24 @@ export default {
 .no-requirements, .no-submissions {
   color: #909399;
   font-style: italic;
+}
+
+.event-start-at {
+  color: #666;
+}
+
+.student-cell {
+  line-height: 1.3;
+}
+
+.student-email {
+  font-size: 0.75rem;
+  color: #909399;
+}
+
+.submission-expand {
+  padding: 8px 16px;
+  background-color: #fafafa;
+  border-radius: 4px;
 }
 </style>

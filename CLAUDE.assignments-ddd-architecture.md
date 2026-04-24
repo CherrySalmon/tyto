@@ -1,6 +1,6 @@
 # Assignments Domain Model
 
-> Referenced from `CLAUDE.feature-assignments.md`. This is the authoritative definition of the Assignments bounded context domain model.
+> Referenced from `CLAUDE.feature-assignments-1-2.md`. This is the authoritative definition of the Assignments bounded context domain model.
 
 ## Bounded Context: Assignments
 

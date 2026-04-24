@@ -82,5 +82,22 @@ describe Tyto::Service::Assignments::UnpublishAssignment do
       _(result).must_be_kind_of Dry::Monads::Result::Failure
       _(result.failure.status).must_equal :not_found
     end
+
+    it 'returns Failure forbidden when the assignment has at least one submission' do
+      assignment = Tyto::Assignment.create(
+        course_id: course.id, title: 'Published with subs', status: 'published', allow_late_resubmit: false
+      )
+      Tyto::Submission.create(
+        assignment_id: assignment.id, account_id: student_account.id, submitted_at: Time.now
+      )
+
+      result = Tyto::Service::Assignments::UnpublishAssignment.new.call(
+        requestor: owner_requestor, course_id: course.id, assignment_id: assignment.id
+      )
+
+      _(result).must_be_kind_of Dry::Monads::Result::Failure
+      _(result.failure.status).must_equal :forbidden
+      _(Tyto::Assignment[assignment.id].status).must_equal 'published'
+    end
   end
 end

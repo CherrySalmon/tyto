@@ -3,6 +3,7 @@
 require_relative '../../../domain/assignments/entities/submission'
 require_relative '../../../domain/assignments/entities/requirement_upload'
 require_relative '../../../domain/assignments/values/requirement_uploads'
+require_relative '../../../domain/assignments/values/submitter'
 
 module Tyto
   module Repository
@@ -16,6 +17,8 @@ module Tyto
     #   find_by_account_assignment_with_entries   - Single student's submission + entries
     #   find_by_assignment                       - All submissions for assignment (entries = nil)
     #   find_by_assignment_with_entries           - All submissions + entries
+    #   find_by_assignment_full                   - All submissions + entries + submitter summaries
+    #   find_by_account_assignment_full           - Single student's submission + entries + submitter
     class Submissions
       # Find a submission by ID (entries not loaded)
       def find_id(id)
@@ -65,6 +68,30 @@ module Tyto
           .order(:submitted_at)
           .all
           .map { |record| rebuild_entity(record, load_entries: true) }
+      end
+
+      # Find all submissions for an assignment with entries AND submitter summaries
+      # loaded. Submitters are fetched in a single batched query to avoid N+1.
+      def find_by_assignment_full(assignment_id)
+        records = Tyto::Submission
+                  .where(assignment_id:)
+                  .order(:submitted_at)
+                  .all
+        submitter_by_account = submitters_by_account_id(records.map(&:account_id))
+        records.map do |record|
+          rebuild_entity(record,
+                         load_entries: true,
+                         submitter: submitter_by_account[record.account_id])
+        end
+      end
+
+      # Find a student's submission with entries AND submitter loaded.
+      def find_by_account_assignment_full(account_id, assignment_id)
+        orm_record = Tyto::Submission.first(account_id:, assignment_id:)
+        return nil unless orm_record
+
+        submitter = submitters_by_account_id([account_id])[account_id]
+        rebuild_entity(orm_record, load_entries: true, submitter:)
       end
 
       # Create a new submission from a domain entity
@@ -152,9 +179,29 @@ module Tyto
         true
       end
 
+      # Whether any submission exists for the given assignment.
+      # Cheap existence check used by authorization logic
+      # (teaching staff can delete/unpublish only when no submissions exist).
+      def any_for_assignment?(assignment_id)
+        !Tyto::Submission.first(assignment_id:).nil?
+      end
+
+      # The subset of the given assignment IDs that have at least one submission.
+      # Returns an array of integer IDs — order is not guaranteed.
+      # Used by ListAssignments to build per-assignment policy summaries
+      # in a single query rather than N+1.
+      def assignment_ids_with_submissions(assignment_ids)
+        return [] if assignment_ids.empty?
+
+        Tyto::Submission
+          .where(assignment_id: assignment_ids)
+          .distinct
+          .select_map(:assignment_id)
+      end
+
       private
 
-      def rebuild_entity(orm_record, load_entries: false)
+      def rebuild_entity(orm_record, load_entries: false, submitter: nil)
         Domain::Assignments::Entities::Submission.new(
           id: orm_record.id,
           assignment_id: orm_record.assignment_id,
@@ -162,10 +209,27 @@ module Tyto
           submitted_at: orm_record.submitted_at,
           created_at: orm_record.created_at,
           updated_at: orm_record.updated_at,
-          requirement_uploads: load_entries ? Domain::Assignments::Values::RequirementUploads.from(
-            rebuild_entries(orm_record)
-          ) : nil
+          requirement_uploads: load_entries ? build_uploads(orm_record) : nil,
+          submitter:
         )
+      end
+
+      def build_uploads(orm_record)
+        Domain::Assignments::Values::RequirementUploads.from(rebuild_entries(orm_record))
+      end
+
+      # Batched lookup: given a list of account IDs, return a Hash mapping each id → Submitter.
+      def submitters_by_account_id(account_ids)
+        return {} if account_ids.empty?
+
+        Tyto::Account
+          .where(id: account_ids.uniq)
+          .all
+          .each_with_object({}) do |acct, hash|
+            hash[acct.id] = Domain::Assignments::Values::Submitter.new(
+              account_id: acct.id, name: acct.name, email: acct.email
+            )
+          end
       end
 
       def rebuild_entries(orm_submission)

@@ -6,9 +6,10 @@ module Tyto
     # Teaching staff (owner, instructor, staff) have full CRUD + publish.
     # Students can only view published assignments and submit to them.
     class Assignment
-      def initialize(requestor, enrollment = nil)
+      def initialize(requestor, enrollment = nil, has_submissions: false)
         @requestor = requestor
         @enrollment = enrollment
+        @has_submissions = has_submissions
       end
 
       def can_create?
@@ -23,16 +24,20 @@ module Tyto
         teaching_staff?
       end
 
+      # Teaching staff can delete only while no submissions exist.
+      # Once a student has submitted, use the disabled lifecycle state instead.
       def can_delete?
-        teaching_staff?
+        teaching_staff? && !@has_submissions
       end
 
       def can_publish?
         teaching_staff?
       end
 
+      # Teaching staff can unpublish only while no submissions exist.
+      # Otherwise hiding the assignment would orphan student work.
       def can_unpublish?
-        teaching_staff?
+        teaching_staff? && !@has_submissions
       end
 
       def can_view_drafts?

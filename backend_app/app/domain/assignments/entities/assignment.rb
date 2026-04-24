@@ -2,6 +2,7 @@
 
 require_relative '../../types'
 require_relative '../values/submission_requirements'
+require_relative '../values/linked_event'
 
 module Tyto
   module Domain
@@ -34,6 +35,13 @@ module Tyto
           # Callers must construct collection value objects explicitly via .from().
           attribute :submission_requirements,
                     Types.Instance(Values::SubmissionRequirements).optional.default(nil)
+
+          # Linked event summary — nil if no event is linked OR if the detail
+          # load path (repository#find_full) was not used. The distinction isn't
+          # observable from the entity alone; callers that care about
+          # loaded-ness should use the repository method that populates it.
+          attribute :linked_event,
+                    Types.Instance(Values::LinkedEvent).optional.default(nil)
 
           # Check if requirements are loaded
           def requirements_loaded? = !submission_requirements.nil?

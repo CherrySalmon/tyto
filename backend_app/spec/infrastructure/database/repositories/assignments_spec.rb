@@ -249,6 +249,68 @@ describe 'Tyto::Repository::Assignments' do
     end
   end
 
+  describe '#find_full' do
+    it 'returns assignment with requirements AND linked event loaded when event_id is set' do
+      orm_assignment = Tyto::Assignment.create(
+        course_id: orm_course.id,
+        event_id: orm_event.id,
+        title: 'Tied To Event',
+        status: 'published',
+        allow_late_resubmit: false
+      )
+      Tyto::SubmissionRequirement.create(
+        assignment_id: orm_assignment.id,
+        submission_format: 'url',
+        description: 'Link',
+        sort_order: 0
+      )
+
+      result = repository.find_full(orm_assignment.id)
+
+      _(result.requirements_loaded?).must_equal true
+      _(result.submission_requirements.count).must_equal 1
+      _(result.linked_event).must_be_kind_of Tyto::Domain::Assignments::Values::LinkedEvent
+      _(result.linked_event.id).must_equal orm_event.id
+      _(result.linked_event.name).must_equal 'Lecture 1'
+      _(result.linked_event.start_at).must_be_close_to(now, 1)
+      _(result.linked_event.end_at).must_be_close_to(now + 3600, 1)
+    end
+
+    it 'returns assignment with nil linked_event when event_id is nil' do
+      orm_assignment = Tyto::Assignment.create(
+        course_id: orm_course.id,
+        title: 'No Event',
+        status: 'draft',
+        allow_late_resubmit: false
+      )
+
+      result = repository.find_full(orm_assignment.id)
+
+      _(result.requirements_loaded?).must_equal true
+      _(result.linked_event).must_be_nil
+    end
+
+    it 'returns assignment with nil linked_event when the referenced event was deleted' do
+      orm_assignment = Tyto::Assignment.create(
+        course_id: orm_course.id,
+        event_id: orm_event.id,
+        title: 'Orphaned',
+        status: 'draft',
+        allow_late_resubmit: false
+      )
+      orm_event.destroy # nullify the FK (on_delete: :set_null)
+      orm_assignment.refresh
+
+      result = repository.find_full(orm_assignment.id)
+
+      _(result.linked_event).must_be_nil
+    end
+
+    it 'returns nil for non-existent assignment' do
+      _(repository.find_full(999_999)).must_be_nil
+    end
+  end
+
   describe '#find_by_course' do
     it 'returns all assignments for a course' do
       Tyto::Assignment.create(course_id: orm_course.id, title: 'HW 1', status: 'draft', allow_late_resubmit: false)

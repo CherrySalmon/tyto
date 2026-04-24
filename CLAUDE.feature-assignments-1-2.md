@@ -42,7 +42,8 @@ Deliver a complete, testable feature end-to-end:
 - [x] Slice 2: Submissions backend (domain, infrastructure, application, presentation, routes, policy predicates)
 - [x] Slice 2: Submissions frontend (submission form, own-view, teaching staff list — build compiles)
 - [x] **Merge of `origin/main`** (47 commits absorbed: policy namespace refactor, multi-event + attendance management features, events schema invariants, timezone fixes, content-hashed prod bundles). Post-merge adaptation: policies renamed to `Policy::Assignment`/`Policy::Submission`, migrations renumbered 012–015, 1166 tests / 0 failures / 98.27% cov. See Merge Log below.
-- [ ] Slice 2: Submissions verification (task 2.9) **← next**
+- [x] Slice 2: Submissions verification (task 2.9) — Claude-in-Chrome walkthrough complete. Flows A/B/C/D/F + backend of E pass; bugs/gaps found in G, frontend of E, and event-linkage. See Slice 2 Review Log.
+- [x] Slice 2: Review fixes (tasks 2.10a–2.10e) — all five done. Ready for branch squash + PR to main, pending any final manual regression.
 - [ ] Slice 3: Production S3 infrastructure (gateway, config, docs)
 
 ## Key Findings
@@ -214,11 +215,21 @@ File storage (LocalGateway, Mapper, storage abstraction) moved to Slice 3 — no
 
 **Verify**:
 
-- [ ] 2.9 Hybrid verification: Chrome walkthrough of submission flows + manual developer pass
+- [x] 2.9 Hybrid verification: Chrome walkthrough of submission flows — **passes: Flows A, B, C, D, F (backend enforcement); partial/findings: Flows E, G, event-linkage regression**. Bugs + UX gaps logged below (Slice 2 Review Log). Follow-up tasks 2.10a–2.10e created.
 
 ### Slice 3: File Storage Infrastructure (Local + S3)
 
 > **TDD record**: Slices 1–2 had repeated lapses where tests and implementation were written together. Every task below marked 🚦 requires the red-green gate sequence. No exceptions.
+
+> **Design for future reuse — staff/instructor course materials feature** (2026-04-24): A planned follow-up feature will let instructors/staff upload files attached to courses, weeks (events), or assignments, with visibility rules (public-to-members vs. staff/instructor-only). That feature is **not** in this branch, but it will share this storage infrastructure. Design Slice 3 with that in mind:
+>
+> - **Gateway + LocalGateway**: keep them generic (`presign_upload(key, constraints)`, `presign_download(key)`, `head(key)`, `delete(key)`). No submission-specific vocabulary. Both features call the same gateway.
+> - **Mapper**: the submission-specific key pattern `<assignment_id>/<requirement_id>/<account_id>.<ext>` belongs in a *submission mapper* (or in the submissions repository), not in the generic storage layer. The future course-materials feature will want a different key pattern (e.g., `course/<course_id>/materials/<material_id>.<ext>`). Draw the seam cleanly so course-materials can add its own mapper without touching the gateway.
+> - **Constraints encoding** (max size, allowed extensions → presigned POST conditions) is generic and belongs in the shared mapper layer or as a reusable helper.
+> - **Gateway selection**: environment-based selection logic should be shared (one selector, not per-feature).
+> - **File listing/visibility**: out of scope for Slice 3 — that's a domain concern of the future feature. But do not bake submission-shaped assumptions (overwrite model, one-per-student) into the storage layer.
+>
+> The goal is: when the course-materials branch starts, it should be able to `require` the gateway + shared constraints helpers and add only its own mapper + domain/repository layer. No rework of Slice 3 expected.
 
 **Backend test (red)** — write tests ONLY, run, record failures:
 
@@ -265,13 +276,86 @@ File storage (LocalGateway, Mapper, storage abstraction) moved to Slice 3 — no
 - **Timezone display**: GitHub issue #47 (cross-cutting UX improvement). Main has since merged a `feature-timezone` PR (`bb9dd9d`, `9cf05b1`) that fixes browser-timezone handling for **bulk events**. Verify whether assignment due-date pickers benefit from that fix or still need work before closing #47.
 - **Markdown sanitization** (1.12e): `v-html` + `marked` in AssignmentDetailDialog — add DOMPurify after Slice 2 (may apply to submissions too)
 
-## Hybrid Testing Pain Points (meta-review after Slice 2)
+## Slice 2 Review Log (task 2.9 hybrid verification, 2026-04-24)
 
-> Track observations here during Slice 2 hybrid testing. After Slice 2, review this list to decide whether automated interface acceptance tests (Playwright/Capybara) are warranted before merging to main.
+Test setup: fresh `db:reset` (branch had not yet run the renumbered migrations 012–015 against dev, so the first server start failed with "no such table: submissions" — resolved by `rake db:reset` after confirming with user). Two Google accounts used: admin/creator (owner of the course) and a second account enrolled as `student`.
+
+### Flows verified — pass
+
+| Flow | Scenario | Result |
+|------|----------|--------|
+| A | Student first-time submit URL, before deadline | PASS — "Your Submission" panel with timestamp, URL as link, no late indicator |
+| B | Student resubmits before deadline | PASS — timestamp advances, URL replaces previous value (R3 upsert) |
+| C | Staff views all submissions | PASS — "All Submissions (1)" table with Student ID / Submitted / Status / Entries. See findings 2.10d |
+| D | Student first-time submit, past deadline | PASS — accepted per rule #3, red "Late" pill shown |
+| F | Student resubmit, past deadline, `allow_late_resubmit=true` | PASS — resubmit accepted, timestamp advanced, Late indicator persists |
+
+### Flows with bugs / gaps
+
+**2.10a — BUG: `can_unpublish?` placeholder never wired up (Flow G)**
+
+On Week 1 Report (which had a student submission), the instructor clicked Unpublish → succeeded. The assignment flipped from published → draft, hiding it from the student while their submission still exists in the DB. Per the Slice 1 extension rule ("Published with submissions: no unpublish, no delete, use disable"), this should have been blocked. Root cause is Slice 1 task 1.13c's note: "has_submissions? placeholder for Slice 2" — the placeholder was never replaced with a real check against the submissions repository now that Slice 2 created real submissions. The policy method `Policy::Assignment#can_unpublish?` always returns true for appropriately-roled users.
+
+Additionally: the Modify Assignment dialog for published-with-submissions correctly locks the requirements section but its info message still advises "unpublish the assignment first" — actively misleading once the unpublish path is blocked.
+
+Delete icon (trash) is also still visible on published-with-submissions cards. Not clicked (destructive); very likely has the same gap.
+
+Fix scope: (1) wire `Policy::Assignment#can_unpublish?` / `can_delete?` to check submissions count via the repository; (2) `AssignmentsCard.vue` should hide the unpublish/delete icons when `assignment.policies.can_unpublish === false` / `can_delete === false`; (3) update the Modify dialog info message to branch on whether submissions exist.
+
+**2.10b — UX GAP: Late resubmit blocked silently (Flow E)**
+
+On `Past Due (no late resubmit)` with an existing submission, the student saw an enabled Resubmit button; clicking it opened the pre-filled edit form; submitting the change produced an `AxiosError` in the console and the form silently closed back to the previous read-only state. The backend correctly enforced R6 (existing submission stayed at v1, not v2-BLOCKED), but the student received zero feedback. Two UX fixes wanted: (1) frontend should hide / disable the Resubmit button when `allow_late_resubmit=false` AND `now > due_at` AND submission exists; (2) when the API does return an error, show an Element-Plus error toast with the reason.
+
+**2.10c — GAP: Assignment detail view does not render linked event (Flow #9 regression)**
+
+Directly setting `assignments.event_id = 1` via SQL (bypassing the broken event-creation UI from main — see 2.10e) was accepted by the DB. The assignment detail dialog afterward showed title, description, requirements, submissions list, and all else — but no "Linked Event" field anywhere. Slice 1 task 1.10 promised "linked event" in the detail view. Either Slice 1 silently skipped it, or the Assignment representer (likely needs updating post-merge since main's events schema changed) stopped exposing the event data. Needs investigation: check if `AssignmentRepresenter` exposes any event info, check if `AssignmentsRepository#find_with_requirements` eagerly loads the event.
+
+**2.10d — UX GAP: Staff submissions list lacks student identity and content preview**
+
+Flow C's "All Submissions (1)" table shows `Student ID` as the raw numeric `account_id` (e.g., "2"), not a name or email. Teaching staff can't tell which student submitted without cross-referencing. Additionally, the table gives no way to drill into a submission to see the submitted URL content. Both likely deferred for Slice 2 scope but worth fixing for usability: (1) representer/service should join/return account name; (2) table rows should be clickable to open a submission-detail dialog.
+
+**2.10e — UX GAP: No "you are submitting late" warning before submit**
+
+When a student opens a past-due assignment with no existing submission (Flow D setup), the only indication that the deadline has passed is that the due-date string is in the past. There is no prominent warning. Students could submit without realizing they're late. A pre-submit banner (e.g., "This assignment is past its due date. Your submission will be marked late.") would avoid surprises.
+
+### Out-of-scope / pre-existing issues (main, not Slice 2)
+
+These were encountered during verification but trace to main's merged attendance/events feature, not Slice 2. Logging them for awareness; should not block Slice 2 merge.
+
+- **Locations UI silently failed to persist**: clicking "Save Location" appeared successful but `locations` table remained at 0 rows. Event creation (which requires a location) therefore couldn't be completed via the UI. Worked around by inserting event directly via SQL for the event_id regression test.
+- **Student view of `/course/:id/attendance`**: even though the sidebar hides the Attendance Events link for students, the URL route still renders the "Create Event" / "Download Record" UI for them (visible but not reachable from nav). Defense-in-depth issue with main's role gating.
+- **Stale names in `SingleCourse.vue`**: `showCreateAttendanceEventDialog` + `createAttendanceEvents` method names were preserved through the merge but now drive `CreateEventsDialog` (bulk). Rename opportunity flagged in merge log.
+
+### Meta-review — are Playwright/Capybara tests warranted?
+
+Hybrid testing cost for 2.9 was high: two manual account switches, four separate recording runs, and a `db:reset` to recover from a dev-DB mismatch after the merge. Two of the bugs (2.10a, 2.10b) would have been caught by a reasonably-simple Capybara test because they exercise backend enforcement where the HTTP response tells the story. A third (2.10c) would also have been catchable by checking the assignment detail JSON/HTML for the event field. The non-backend UX items (2.10d, 2.10e) are subjective and would need manual review anyway.
+
+Recommendation: before adding Playwright/Capybara, **write backend integration tests** for each of 2.10a–2.10c (the hard bugs) and ensure they fail, then fix. The tests are cheap and high-signal. Leave the Playwright/Capybara decision for after Slice 3 once we've seen how file-upload flows behave end-to-end.
+
+## Slice 2 Follow-up Tasks (created from 2.9 review — must be closed before PR to main)
+
+- [x] 2.10a Fix `Policy::Assignment#can_unpublish?` / `can_delete?` to query the submissions repository (not the Slice 1 placeholder). **red: 17F (13 errors + 4 failures) — green: 1184P / 0 failures / 0 errors / 1 skip, 98.29% cov.** Tests written first across 4 files (policy, repo, 4 service specs); implementation then: (1) `Repository::Submissions#any_for_assignment?` + `#assignment_ids_with_submissions(ids)` (one batched query for the list path, no N+1); (2) `Policy::Assignment.new(requestor, enrollment, has_submissions: false)` — `can_unpublish?` / `can_delete?` now AND with `!has_submissions`; (3) `UnpublishAssignment` / `DeleteAssignment` do a role-only pre-check (avoids leaking existence to students), load the assignment, query submissions, then re-check via policy with `has_submissions:` — failures return `:forbidden`. Placeholder `has_submissions?` private method removed from `UnpublishAssignment`; (4) `GetAssignment` and `ListAssignments` emit per-assignment submission-aware policy summaries so the frontend gates correctly. Frontend: `AssignmentsCard.vue` hides unpublish/delete icons via `canUnpublish(a)` / `canDelete(a)` helpers that treat missing `policies` as permissive but explicit `false` as denial. `ModifyAssignmentDialog.vue` accepts a `canUnpublish` prop; when `false`, the info alert switches from "unpublish first" to "requirements are locked because this assignment has submissions — create a new assignment instead". `SingleCourse.vue` threads `assignment.policies.can_unpublish` from `editAssignment` into `currentAssignmentCanUnpublish`. `npm run prod` clean.
+- [x] 2.10b Hide/disable Resubmit button when late-resubmit is disallowed and submission exists. Show Element-Plus error toast when submission API rejects. **Frontend-only, no new tests.** Changes: (1) `AssignmentDetailDialog.vue` adds `isPastDue` and `canResubmit` computeds — Resubmit button hidden when `mySubmission && !allow_late_resubmit && past_due`; a replacement info alert explains "The due date has passed and late resubmission is not allowed — your submission is final"; (2) `submitEntries` no longer closes the form optimistically — it sets `submitting=true`, emits, and relies on a `submissions` prop change (success) or a `submissionErrorNonce` prop bump (failure) to clear the in-flight state; (3) Submit/Cancel buttons show loading + disabled while `submitting`; (4) `SingleCourse.vue` `createSubmission.catch` now reads `data.details || data.error || 'Error submitting'` (previously read non-existent `.message` → always generic fallback), and bumps `submissionErrorNonce` to signal the dialog. Verified: `canResubmit` JS-replayed against the three live course-1 assignments gives the correct per-row result; error body shape confirmed `{error, details}` so the new toast wording works; admin-side detail-dialog regression clean (Description / Submission Requirements / All Submissions table still render). Student-side visual (Resubmit hidden + toast shows details) requires Google login — walkthrough steps in Slice 2 Review Log addendum below.
+- [x] 2.10c Add linked event rendering to Assignment detail dialog. **red: 11F — green: 1195P / 0 failures / 0 errors / 1 skip, 98.29% cov.** Root cause: frontend's `linkedEventName` computed cross-referenced `attendanceEvents`, which is only populated for teaching staff (`fetchAttendanceEvents` is gated by `can_update`), so students always saw nothing. Fix: embed a minimal event summary on the assignment response itself so the detail view is self-sufficient. Changes: (1) New `Domain::Assignments::Values::LinkedEvent` value object (id, name, start_at, end_at) — lives in the Assignments context to avoid cross-context entity coupling; (2) Assignment entity gains optional `linked_event` attribute (nil when not loaded OR no event); (3) `Repository::Assignments#find_full(id)` loads requirements + event in one convention-consistent method; private `rebuild_entity` now takes a `load_event:` kwarg and `rebuild_linked_event` fetches and maps; (4) `GetAssignment` uses `find_full` instead of `find_with_requirements` — `CreateSubmission` keeps the lighter `find_with_requirements` since it doesn't need event data; (5) `Representer::Assignment` serializes a nested `linked_event` via new `LinkedEventRepr` (id, name, ISO-8601 start_at/end_at); (6) Frontend `AssignmentDetailDialog.vue` renames `linkedEventName` → `linkedEventSummary`, prefers `assignment.linked_event` (authoritative) and falls back to the `attendanceEvents` lookup; now shows name + formatted local start_at. Verified via Chrome student session: Past Due (allow late resubmit) shows "Linked Event — Lecture Week 1 — 2026-04-28 18:00"; Past Due (no late resubmit) correctly omits the section.
+- [x] 2.10d Staff submissions table: replace numeric Student ID with account name/email; add click-to-view-submission detail. **red: 10F — green: 1205P / 0 failures / 0 errors / 1 skip, 98.31% cov.** Changes: (1) New `Domain::Assignments::Values::Submitter` value object (account_id, name optional, email required) — mirrors the LinkedEvent pattern; (2) `Submission` entity gains optional `submitter` attribute; (3) `Repository::Submissions#find_by_assignment_full` loads submissions + entries + submitters with ONE batched `accounts WHERE id IN (...)` query via a private `submitters_by_account_id` helper (no N+1); new `find_by_account_assignment_full` for the student's own-view path; `rebuild_entity` now takes a `submitter:` kwarg; (4) `Representer::Submission` serializes nested `submitter` via new `SubmitterRepr`; (5) `ListSubmissions` service uses the full loaders for both staff and student paths. Frontend: `AssignmentDetailDialog.vue`'s staff table now has an `el-table` expand column; `Student ID` column replaced with `Student` showing `studentDisplayName(row)` (name, falling back to email, falling back to `Account #id`) plus a small email subtitle; expand row renders the submission's `requirement_uploads` with requirement descriptions and clickable URL links. Chrome-verified on admin staff view: "All Submissions (1)" row shows "Soumya Ray / soumya.ray@iss.nthu.edu.tw" instead of a numeric ID; expand chevron reveals "Draft URL: https://…" with the link. Student regression clean. One side-effect: during the admin pass, the pre-existing 500 on `/api/course/1/events` surfaced (Event entity rejects `location_id = NULL`; locations table is empty because of main's "Locations UI save failure"). Not caused by 2.10d; already flagged in the Slice 2 Review Log as a main-originated follow-up.
+- [x] 2.10e Add "past due" warning banner to Assignment detail dialog when `now > due_at` and the student has no submission yet. **Frontend-only, no new tests.** `AssignmentDetailDialog.vue` shows an `el-alert` type=warning at the top of the Submit form section when `!mySubmission && isPastDue` — reuses the `isPastDue` and `mySubmission` computeds added earlier. Copy: *"This assignment is past its due date. Your submission will be marked late."* Chrome-verified on a freshly created past-due assignment id=6 (no existing submission): banner appears. Negative case verified on Past Due (allow late resubmit) after clicking Resubmit (existing submission): banner correctly absent. Cleanup: assignment id=6 ("2.10e verify past due") can be deleted by admin when convenient.
+
+Separate branch candidates (main-originated, not Slice 2):
+
+- [ ] (Main) Locations UI save failure — investigate why "Save Location" doesn't persist.
+- [ ] (Main) Role-gate student access to `/course/:id/attendance` URL content (not just the sidebar link).
+- [ ] (Main) Rename `showCreateAttendanceEventDialog` / `createAttendanceEvents` in `SingleCourse.vue` to reflect that they now drive bulk `CreateEventsDialog`.
+
+## Hybrid Testing Pain Points (meta-review after Slice 2)
 
 | # | Pain Point | Slice | Impact |
 |---|-----------|-------|--------|
-| — | *(none yet — populate during Slice 2 verification)* | — | — |
+| P1 | Post-merge dev DB required `rake db:reset` before server would boot (old `009_assignment_create` had already applied, so renumbered `012` collided). First migrate attempt left DB in half-applied state. | Merge / Slice 2 | One-time setup cost per developer machine after the merge. Document in `CLAUDE.feature-assignments-1-2.md` merge log so future machines know to reset dev DB. |
+| P2 | Two-account login switching (admin ↔ student) was the main throughput bottleneck. Each switch: logout, re-enter Google OAuth, navigate back. Roughly 4 switches per full pass. | Slice 2 | Argues for seed fixtures that set up staff + student directly so verification can skip OAuth. Or: allow one admin account to enroll as both owner and student in one course (the "View" dropdown shown earlier might support this if admin can impersonate). |
+| P3 | Element Plus `el-select` and `el-date-picker` do not accept `form_input` value assignment — required multi-step click sequences (open dropdown, click option, click OK). Increased Chrome-tool call count noticeably. | Slice 1/2 | Not fixable in our codebase, but worth noting: automated UI tests over this stack will need custom helpers for these components. |
+| P4 | Frontend "cache on page load" behavior hid newly-created DB rows in related dropdowns (Location dropdown in Event create dialog, Event dropdown in Assignment edit dialog). Forced reloads revealed the real data. | Slice 2 + main | Either always refetch on dialog open, or use a reactive store. Not a Slice 2 regression — same pattern elsewhere. |
+| P5 | Two real bugs (2.10a unpublish, 2.10b silent late-resubmit rejection) were ONLY caught by hybrid testing, not by the 1121-test backend suite. That's because both bugs are in the interaction between policy evaluation and the frontend's willingness to call the API. | Slice 2 | This is a real case for either (a) backend tests asserting the policies check submissions, or (b) an integration test that walks through the HTTP flow a real browser would take. See meta-review above. |
+| P6 | No visible confirmation toast after any successful submit/resubmit. Easy for a user (and for the tester) to miss whether the action succeeded without inspecting state changes. | Slice 2 UX | Lumpable under 2.10b (add toasts), or spin out into its own task. |
 
 ## Merge Log
 
@@ -306,4 +390,4 @@ Branch had been idle while main shipped: policy namespace refactor (`c277f9b`), 
 
 ---
 
-Last updated: 2026-04-24 (Merged `origin/main` and adapted: policy namespace, migration renumbering. 1166 tests / 0 failures / 98.27% cov. Slice 2 backend + frontend committed. Next: 2.9 hybrid verification of submission flows.)
+Last updated: 2026-04-24 evening (Task 2.9 hybrid verification done via Claude-in-Chrome with two real Google accounts. Flows A/B/C/D/F and backend half of E all PASS. Flows E (frontend), G, and event-linkage regression uncovered bugs / UX gaps — logged as Slice 2 Review Log with tasks 2.10a–2.10e created. Pain-points table populated. 2026-03-02: Tasks 2.10a–2.10e ALL CLOSED: 2.10a (submission-aware policy, red 17F → green 1184P), 2.10b (resubmit gating + error toast), 2.10c (LinkedEvent + find_full, red 11F → green 1195P), 2.10d (Submitter + staff table name/email + expand, red 10F → green 1205P), 2.10e (past-due banner). All verified via Chrome. Ready for PR to main. Pre-existing issue to flag to maintainers: `/api/course/1/events` 500s on `location_id = NULL` — main-originated, documented as separate-branch follow-up.)

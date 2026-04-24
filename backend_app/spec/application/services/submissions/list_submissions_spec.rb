@@ -103,5 +103,37 @@ describe Tyto::Service::Submissions::ListSubmissions do
       _(submission.uploads_loaded?).must_equal true
       _(submission.requirement_uploads.count).must_equal 1
     end
+
+    it 'attaches a Submitter (name + email) to each submission when teaching staff views' do
+      Tyto::Submission.create(assignment_id: assignment.id, account_id: student_account.id, submitted_at: Time.now)
+      Tyto::Submission.create(assignment_id: assignment.id, account_id: another_student.id, submitted_at: Time.now + 60)
+
+      result = Tyto::Service::Submissions::ListSubmissions.new.call(
+        requestor: owner_requestor, course_id: course.id, assignment_id: assignment.id
+      )
+
+      submissions = result.value!.message
+      first = submissions.find { |s| s.account_id == student_account.id }
+      second = submissions.find { |s| s.account_id == another_student.id }
+
+      _(first.submitter).must_be_kind_of Tyto::Domain::Assignments::Values::Submitter
+      _(first.submitter.name).must_equal 'Student'
+      _(first.submitter.email).must_equal 'student@example.com'
+      _(second.submitter.name).must_equal 'Student 2'
+      _(second.submitter.email).must_equal 'student2@example.com'
+    end
+
+    it 'attaches a Submitter when a student views their own submission' do
+      Tyto::Submission.create(assignment_id: assignment.id, account_id: student_account.id, submitted_at: Time.now)
+
+      result = Tyto::Service::Submissions::ListSubmissions.new.call(
+        requestor: student_requestor, course_id: course.id, assignment_id: assignment.id
+      )
+
+      sub = result.value!.message.first
+      _(sub.submitter).must_be_kind_of Tyto::Domain::Assignments::Values::Submitter
+      _(sub.submitter.name).must_equal 'Student'
+      _(sub.submitter.email).must_equal 'student@example.com'
+    end
   end
 end
