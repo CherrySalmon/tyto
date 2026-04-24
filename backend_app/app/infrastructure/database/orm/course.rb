@@ -7,7 +7,7 @@ require 'sequel'
 module Tyto
   class Course < Sequel::Model
     plugin :validation_helpers
-    many_to_many :events
+    one_to_many :events
     one_to_many :locations
 
     many_to_many :attendances, join_table: :account_course_roles
@@ -19,6 +19,11 @@ module Tyto
     def validate
       super
       validates_presence %i[name]
+    end
+
+    def owner
+      membership = AccountCourse.first(course_id: id, role_id: Role.find(name: 'owner')&.id)
+      membership&.account
     end
   end
 end
