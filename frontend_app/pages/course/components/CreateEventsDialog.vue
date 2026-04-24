@@ -294,8 +294,8 @@ export default {
       const events = this.rows.map(r => ({
         name: r.name,
         location_id: parseInt(r.locationId, 10),
-        start_at: `${r.date}T${r.startTime}:00`,
-        end_at: `${r.date}T${r.endTime}:00`
+        start_at: new Date(`${r.date}T${r.startTime}`).toISOString(),
+        end_at: new Date(`${r.date}T${r.endTime}`).toISOString()
       }))
       this.$emit('create-events', {
         events,
