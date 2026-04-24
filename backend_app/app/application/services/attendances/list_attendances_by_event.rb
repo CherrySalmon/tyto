@@ -50,8 +50,8 @@ module Tyto
         end
 
         def authorize(requestor, course_id)
-          enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
-          policy = AttendanceAuthorization.new(requestor, enrollment)
+          course = @courses_repo.find_with_enrollments(course_id)
+          policy = Policy::AttendanceManagement.new(requestor, course)
 
           return Failure(forbidden('You have no access to view attendances')) unless policy.can_view_all?
 

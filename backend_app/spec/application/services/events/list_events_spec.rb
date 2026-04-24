@@ -23,8 +23,10 @@ describe Tyto::Service::Events::ListEvents do
 
     it 'returns Success with events when they exist' do
       location = Tyto::Location.create(name: 'Room 101', course_id: course.id)
-      Tyto::Event.create(name: 'Event 1', course_id: course.id, location_id: location.id)
-      Tyto::Event.create(name: 'Event 2', course_id: course.id, location_id: location.id)
+      Tyto::Event.create(name: 'Event 1', course_id: course.id, location_id: location.id,
+                         start_at: Time.now, end_at: Time.now + 3600)
+      Tyto::Event.create(name: 'Event 2', course_id: course.id, location_id: location.id,
+                         start_at: Time.now + 3600, end_at: Time.now + 7200)
 
       result = Tyto::Service::Events::ListEvents.new.call(requestor:, course_id: course.id)
 
@@ -34,7 +36,8 @@ describe Tyto::Service::Events::ListEvents do
 
     it 'includes course_name and location_name in events' do
       location = Tyto::Location.create(name: 'Lab 3', course_id: course.id)
-      Tyto::Event.create(name: 'Event 1', course_id: course.id, location_id: location.id)
+      Tyto::Event.create(name: 'Event 1', course_id: course.id, location_id: location.id,
+                         start_at: Time.now, end_at: Time.now + 3600)
 
       result = Tyto::Service::Events::ListEvents.new.call(requestor:, course_id: course.id)
 
@@ -46,7 +49,8 @@ describe Tyto::Service::Events::ListEvents do
 
     it 'does not include user_attendance_status' do
       location = Tyto::Location.create(name: 'Room 101', course_id: course.id)
-      Tyto::Event.create(name: 'Event 1', course_id: course.id, location_id: location.id)
+      Tyto::Event.create(name: 'Event 1', course_id: course.id, location_id: location.id,
+                         start_at: Time.now, end_at: Time.now + 3600)
 
       result = Tyto::Service::Events::ListEvents.new.call(requestor:, course_id: course.id)
 

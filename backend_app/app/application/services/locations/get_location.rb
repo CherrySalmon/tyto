@@ -42,7 +42,7 @@ module Tyto
 
         def authorize(requestor, course_id)
           enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
-          policy = LocationPolicy.new(requestor, enrollment)
+          policy = Policy::Location.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to view this location')) unless policy.can_view?
 

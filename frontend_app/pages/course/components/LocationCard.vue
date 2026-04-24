@@ -113,7 +113,7 @@ export default {
                     `<div style="text-align: center;">
                         <p style="margin: 10px 15px 5px;">Latitude: ${latLng.lat}</p>
                         <p style="margin-bottom: 10px;">Longitude: ${latLng.lng}</p>
-                        <button id="saveLocationBtn" class="info-button">Save Location</button>
+                        <button type="button" id="saveLocationBtn" class="info-button">Save Location</button>
                     </div>`;
 
                 // Create a new InfoWindow.

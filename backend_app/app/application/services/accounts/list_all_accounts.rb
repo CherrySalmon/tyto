@@ -24,7 +24,7 @@ module Tyto
         private
 
         def authorize(requestor)
-          policy = AccountPolicy.new(requestor, nil)
+          policy = Policy::Account.new(requestor, nil)
 
           return Failure(forbidden('You have no access to list accounts')) unless policy.can_view_all?
 

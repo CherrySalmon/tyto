@@ -43,7 +43,7 @@ describe 'Event Routes' do
     )
   end
 
-  describe 'POST /api/course/:id/event' do
+  describe 'POST /api/course/:id/events' do
     it 'creates event as instructor' do
       owner_account = create_test_account(roles: ['creator'])
       course = create_test_course(owner_account)
@@ -58,25 +58,68 @@ describe 'Event Routes' do
       )
 
       location = create_test_location(course)
-      payload = {
+      event_row = {
         name: 'New Event',
         location_id: location.id,
         start_at: (Time.now + 3600).to_s,
         end_at: (Time.now + 7200).to_s
       }
 
-      post "/api/course/#{course.id}/event", payload.to_json, json_headers(instructor_auth)
+      post "/api/course/#{course.id}/events", { events: [event_row] }.to_json, json_headers(instructor_auth)
 
       _(last_response.status).must_equal 201
       _(json_response['success']).must_equal true
-      _(json_response['message']).must_equal 'Event created'
-      _(json_response['event_info']).wont_be_nil
-      _(json_response['event_info']['id']).must_be_kind_of Integer
-      _(json_response['event_info']['course_id']).must_be_kind_of Integer
-      _(json_response['event_info']['location_id']).must_be_kind_of Integer
-      _(json_response['event_info']['name']).must_equal 'New Event'
-      _(json_response['event_info']).must_include 'start_at'
-      _(json_response['event_info']).must_include 'end_at'
+      _(json_response['events_info']).must_be_kind_of Array
+      _(json_response['events_info'].length).must_equal 1
+
+      created = json_response['events_info'].first
+      _(created['id']).must_be_kind_of Integer
+      _(created['course_id']).must_be_kind_of Integer
+      _(created['location_id']).must_be_kind_of Integer
+      _(created['name']).must_equal 'New Event'
+      _(created).must_include 'start_at'
+      _(created).must_include 'end_at'
+    end
+
+    it 'creates multiple events in a single bulk request' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+
+      rows = (0..2).map do |i|
+        base = Time.now + ((i + 1) * 3600)
+        {
+          name: "Bulk Event #{i + 1}",
+          location_id: location.id,
+          start_at: base.to_s,
+          end_at: (base + 3600).to_s
+        }
+      end
+
+      post "/api/course/#{course.id}/events", { events: rows }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 201
+      _(json_response['success']).must_equal true
+      _(json_response['events_info'].length).must_equal 3
+      _(json_response['events_info'].map { |e| e['name'] }).must_equal ['Bulk Event 1', 'Bulk Event 2', 'Bulk Event 3']
+    end
+
+    it 'rolls back the whole bulk batch when any row is invalid' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+
+      good = {
+        name: 'Good',
+        location_id: location.id,
+        start_at: (Time.now + 3600).to_s,
+        end_at: (Time.now + 7200).to_s
+      }
+      bad = good.merge(name: '')
+      post "/api/course/#{course.id}/events", { events: [good, bad] }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 400
+      _(Tyto::Event.where(course_id: course.id).count).must_equal 0
     end
 
     it 'creates event as owner' do
@@ -84,20 +127,21 @@ describe 'Event Routes' do
       course = create_test_course(account)
       location = create_test_location(course)
 
-      payload = {
+      event_row = {
         name: 'Owner Event',
         location_id: location.id,
         start_at: (Time.now + 3600).to_s,
         end_at: (Time.now + 7200).to_s
       }
 
-      post "/api/course/#{course.id}/event", payload.to_json, json_headers(auth)
+      post "/api/course/#{course.id}/events", { events: [event_row] }.to_json, json_headers(auth)
 
       _(last_response.status).must_equal 201
       _(json_response['success']).must_equal true
-      _(json_response['event_info']).wont_be_nil
-      _(json_response['event_info']['id']).must_be_kind_of Integer
-      _(json_response['event_info']['name']).must_equal 'Owner Event'
+      _(json_response['events_info']).must_be_kind_of Array
+      _(json_response['events_info'].length).must_equal 1
+      _(json_response['events_info'].first['id']).must_be_kind_of Integer
+      _(json_response['events_info'].first['name']).must_equal 'Owner Event'
     end
 
     it 'returns forbidden as student' do
@@ -114,38 +158,95 @@ describe 'Event Routes' do
       )
 
       location = create_test_location(course)
-      payload = {
+      event_row = {
         name: 'Forbidden Event',
         location_id: location.id,
         start_at: (Time.now + 3600).to_s,
         end_at: (Time.now + 7200).to_s
       }
 
-      post "/api/course/#{course.id}/event", payload.to_json, json_headers(student_auth)
+      post "/api/course/#{course.id}/events", { events: [event_row] }.to_json, json_headers(student_auth)
 
       _(last_response.status).must_equal 403
+    end
+
+    it 'stores offset-aware timestamps as correct UTC and round-trips them as UTC ISO8601' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+
+      # Simulate what the browser sends after `new Date(...).toISOString()` fix:
+      # 9:00 AM Taipei (UTC+8) = 01:00 UTC
+      event_row = {
+        name: 'Taipei Morning Class',
+        location_id: location.id,
+        start_at: '2026-04-24T09:00:00+08:00',
+        end_at: '2026-04-24T10:30:00+08:00'
+      }
+
+      post "/api/course/#{course.id}/events", { events: [event_row] }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 201
+      created = json_response['events_info'].first
+      _(created['start_at']).must_equal '2026-04-24T01:00:00Z'
+      _(created['end_at']).must_equal '2026-04-24T02:30:00Z'
     end
 
     it 'returns bad request with invalid JSON' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
 
-      post "/api/course/#{course.id}/event", 'invalid json', json_headers(auth)
+      post "/api/course/#{course.id}/events", 'invalid json', json_headers(auth)
 
       _(last_response.status).must_equal 400
       _(json_response['error']).must_equal 'Invalid JSON'
     end
+
+    it 'returns bad request when body is a bare object (no events array)' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+
+      bare_payload = {
+        name: 'Bare Event',
+        location_id: location.id,
+        start_at: (Time.now + 3600).to_s,
+        end_at: (Time.now + 7200).to_s
+      }
+
+      post "/api/course/#{course.id}/events", bare_payload.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 400
+    end
+
+    it 'returns bad request when events is not an array' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+
+      post "/api/course/#{course.id}/events", { events: 'not-an-array' }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 400
+    end
+
+    it 'returns bad request when events array is empty' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+
+      post "/api/course/#{course.id}/events", { events: [] }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 400
+    end
   end
 
-  describe 'GET /api/course/:id/event' do
+  describe 'GET /api/course/:id/events' do
     it 'lists events for enrolled course' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
       location = create_test_location(course)
       create_test_event(course, location, name: 'Event 1')
-      create_test_event(course, location, name: 'Event 2')
+      create_test_event(course, location, name: 'Event 2', start_at: Time.now + 3600, end_at: Time.now + 7200)
 
-      get "/api/course/#{course.id}/event", nil, auth
+      get "/api/course/#{course.id}/events", nil, auth
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
@@ -170,7 +271,7 @@ describe 'Event Routes' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
 
-      get "/api/course/#{course.id}/event", nil, auth
+      get "/api/course/#{course.id}/events", nil, auth
 
       _(last_response.status).must_equal 200
       _(json_response['data']).must_be_kind_of Array
@@ -182,13 +283,13 @@ describe 'Event Routes' do
       course = create_test_course(owner_account)
       _, other_auth = authenticated_header(roles: ['creator'])
 
-      get "/api/course/#{course.id}/event", nil, other_auth
+      get "/api/course/#{course.id}/events", nil, other_auth
 
       _(last_response.status).must_equal 403
     end
   end
 
-  describe 'PUT /api/course/:id/event/:event_id' do
+  describe 'PUT /api/course/:id/events/:event_id' do
     it 'updates event as owner' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
@@ -197,7 +298,7 @@ describe 'Event Routes' do
 
       payload = { name: 'Updated Event Name' }
 
-      put "/api/course/#{course.id}/event/#{event.id}", payload.to_json, json_headers(auth)
+      put "/api/course/#{course.id}/events/#{event.id}", payload.to_json, json_headers(auth)
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
@@ -228,7 +329,7 @@ describe 'Event Routes' do
 
       payload = { name: 'Instructor Updated Event' }
 
-      put "/api/course/#{course.id}/event/#{event.id}", payload.to_json, json_headers(instructor_auth)
+      put "/api/course/#{course.id}/events/#{event.id}", payload.to_json, json_headers(instructor_auth)
 
       _(last_response.status).must_equal 200
     end
@@ -251,7 +352,7 @@ describe 'Event Routes' do
 
       payload = { name: 'Hacked Event' }
 
-      put "/api/course/#{course.id}/event/#{event.id}", payload.to_json, json_headers(student_auth)
+      put "/api/course/#{course.id}/events/#{event.id}", payload.to_json, json_headers(student_auth)
 
       _(last_response.status).must_equal 403
     end
@@ -262,20 +363,20 @@ describe 'Event Routes' do
 
       payload = { name: 'Nonexistent Event' }
 
-      put "/api/course/#{course.id}/event/99999", payload.to_json, json_headers(auth)
+      put "/api/course/#{course.id}/events/99999", payload.to_json, json_headers(auth)
 
       _(last_response.status).must_equal 404
     end
   end
 
-  describe 'DELETE /api/course/:id/event/:event_id' do
+  describe 'DELETE /api/course/:id/events/:event_id' do
     it 'deletes event as owner' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
       location = create_test_location(course)
       event = create_test_event(course, location)
 
-      delete "/api/course/#{course.id}/event/#{event.id}", nil, auth
+      delete "/api/course/#{course.id}/events/#{event.id}", nil, auth
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
@@ -298,7 +399,7 @@ describe 'Event Routes' do
       location = create_test_location(course)
       event = create_test_event(course, location)
 
-      delete "/api/course/#{course.id}/event/#{event.id}", nil, instructor_auth
+      delete "/api/course/#{course.id}/events/#{event.id}", nil, instructor_auth
 
       _(last_response.status).must_equal 200
     end
@@ -319,7 +420,7 @@ describe 'Event Routes' do
       location = create_test_location(course)
       event = create_test_event(course, location)
 
-      delete "/api/course/#{course.id}/event/#{event.id}", nil, student_auth
+      delete "/api/course/#{course.id}/events/#{event.id}", nil, student_auth
 
       _(last_response.status).must_equal 403
     end

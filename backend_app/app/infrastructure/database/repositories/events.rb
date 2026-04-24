@@ -62,6 +62,16 @@ module Tyto
         rebuild_entity(orm_record)
       end
 
+      # Create many events in a single transaction. All-or-nothing: if any insert
+      # fails, the whole batch rolls back and the exception propagates.
+      # @param entities [Array<Domain::Courses::Entities::Event>] the entities to persist
+      # @return [Array<Domain::Courses::Entities::Event>] persisted entities with IDs
+      def create_many(entities)
+        Tyto::Api.db.transaction do
+          entities.map { |entity| create(entity) }
+        end
+      end
+
       # Update an existing event from a domain entity
       # @param entity [Domain::Courses::Entities::Event] the domain entity with updates
       # @return [Domain::Courses::Entities::Event] the updated entity

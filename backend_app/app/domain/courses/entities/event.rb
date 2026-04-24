@@ -22,12 +22,20 @@ module Tyto
           attribute :created_at, Types::Time.optional
           attribute :updated_at, Types::Time.optional
 
+          # Construct and validate the time_range up front, delegating the
+          # cross-field invariant to Value::TimeRange (single source of truth).
+          # Raises ArgumentError with TimeRange's user-facing message on bad input.
+          def self.new(attributes)
+            instance = super
+            instance.time_range # triggers TimeRange.new invariant when both times present
+            instance
+          end
+
           # Returns a TimeRange value object, or NullTimeRange if dates are missing.
           # Uses Null Object pattern to eliminate nil checks in delegating methods.
+          # Memoized — TimeRange is immutable and entity state is frozen at construction.
           def time_range
-            return Value::NullTimeRange.new unless start_at && end_at
-
-            Value::TimeRange.new(start_at:, end_at:)
+            @time_range ||= start_at && end_at ? Value::TimeRange.new(start_at:, end_at:) : Value::NullTimeRange.new
           end
 
           # Delegates to time_range (no guards needed - Null Object handles it)

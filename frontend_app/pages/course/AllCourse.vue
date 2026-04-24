@@ -118,7 +118,7 @@ export default {
     describeRoles,
     async fetchEventData() {
         try {
-            const response = await api.get('/current_event/');
+            const response = await api.get('/current_events/');
 
             this.events = response.data.data.map(event => ({
                 ...event,

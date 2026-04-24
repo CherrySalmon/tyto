@@ -61,7 +61,7 @@ module Tyto
 
         def authorize(requestor, course_id)
           enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
-          policy = Tyto::CoursePolicy.new(requestor, enrollment)
+          policy = Tyto::Policy::Course.new(requestor, enrollment)
 
           return Failure(forbidden('You have no access to update enrollments')) unless policy.can_update?
 

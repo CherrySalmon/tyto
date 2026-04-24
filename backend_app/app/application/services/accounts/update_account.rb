@@ -40,7 +40,7 @@ module Tyto
         end
 
         def authorize(requestor, account_id)
-          policy = AccountPolicy.new(requestor, account_id)
+          policy = Policy::Account.new(requestor, account_id)
 
           return Failure(forbidden('You have no access to update this account')) unless policy.can_update?
 

@@ -82,7 +82,7 @@ export default {
     methods: {
         async fetchEventData() {
             try {
-                const response = await api.get(`/current_event/`);
+                const response = await api.get(`/current_events/`);
                 console.log('Event Data Fetched Successfully:', response.data.data);
                 this.isEventDataFetched = true;
 

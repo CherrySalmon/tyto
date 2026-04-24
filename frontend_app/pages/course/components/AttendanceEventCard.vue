@@ -16,6 +16,7 @@
         <!-- <p>Start Time: {{ event.start_at }}</p>
         <p>End Time: {{ event.end_at }}</p> -->
         <el-icon :size="18" @click="showAttendanceMap(event)"><MapLocation /></el-icon>
+        <el-icon :size="18" @click="showManageAttendance(event)" style="margin-left: 10px;"><User /></el-icon>
         <el-icon :size="18" @click="$emit('edit-event', event.id)" style="margin-left: 10px;">
           <Edit />
         </el-icon>
@@ -28,6 +29,13 @@
     <el-dialog v-model="attendanceMapVisible" :title="selectedEvent.name"  :width="dialogWidth">
       <AttendanceMap v-if="attendanceMapVisible" :eventAttendances="eventAttendances" :event="selectedEvent"></AttendanceMap>
     </el-dialog>
+    <el-dialog v-model="manageAttendanceVisible" :title="'Manage Attendance: ' + selectedEvent.name" :width="dialogWidth">
+      <ManageEventAttendance
+        v-if="manageAttendanceVisible"
+        :courseId="course.id"
+        :eventId="selectedEvent.id"
+      />
+    </el-dialog>
   </div>
 </template>
   
@@ -36,6 +44,7 @@ import api from '@/lib/tytoApi';
 import session from '../../../lib/session';
 import downloadFile from '../../../lib/downloadFile';
 import AttendanceMap from './AttendanceMap.vue';
+import ManageEventAttendance from './ManageEventAttendance.vue';
   export default {
     emits: ['create-event', 'edit-event', 'delete-event', 'create-location', 'update-location', 'delete-location', 'new-enrolls', 'update-enrollment', 'delete-enrollment'],
     props: {
@@ -45,7 +54,7 @@ import AttendanceMap from './AttendanceMap.vue';
       enrollments: Object, 
       currentRole: String
     },
-    components: {AttendanceMap},
+    components: {AttendanceMap, ManageEventAttendance},
     data() {
         return {
           account: {
@@ -55,6 +64,7 @@ import AttendanceMap from './AttendanceMap.vue';
           selectedEvent: {},
           eventAttendances: '',
           attendanceMapVisible: false,
+          manageAttendanceVisible: false,
           dialogWidth: "960px",
         }
     },
@@ -89,6 +99,10 @@ import AttendanceMap from './AttendanceMap.vue';
       showAttendanceMap(event) {
         this.selectedEvent = event
         this.fetchEventAttendances(this.selectedEvent.id)
+      },
+      showManageAttendance(event) {
+        this.selectedEvent = event
+        this.manageAttendanceVisible = true
       },
       downloadReport() {
         api.get(`/course/${this.course.id}/attendance/report?format=csv`, {

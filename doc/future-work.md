@@ -8,19 +8,25 @@ Planned improvements and features to be addressed in future tasks.
 
 ## Infrastructure & DevOps
 
-- [ ] **Automated migrations on deploy** - Add `release: bundle exec rake db:migrate` to Procfile to run migrations automatically before each deploy
+- [x] **Automated migrations on deploy** — shipped 2026-04-21 (Slice 1 of `feature-multi-event`). `Procfile` declares `release: bundle exec rake db:migrate`; every Heroku deploy runs migrations in the release phase and fails atomically if any migration raises.
 - [ ] **CI/CD pipeline** - Set up continuous integration for automated testing on PRs
 - [ ] **Heroku Review Apps** - Configure `app.json` to enable auto-provisioned review environments for PRs
 
 ## Application Layer
 
 - [ ] **Input validation contracts** - Replace raw hash parameters (`attendance_data`, `location_data`, etc.) with dry-validation contracts. This would move validation out of services, provide consistent error formatting, and allow services to trust their input. See `CLAUDE.md` architecture notes on contracts.
+- [ ] **Per-row error map in bulk-event responses** — `Service::Events::CreateEvents` currently short-circuits at the first failing row with a single `Failure(bad_request(message))`. The frontend review grid (`BulkEventsStep2Review.vue`) already accepts a `rowErrors` map keyed by row id so it can highlight multiple offending rows at once. Finishing the loop means collecting all row failures (not short-circuiting), returning a structured `{ errors_by_row: { 0: 'Name is required', 3: 'End must be after start' } }` shape from the route, and keeping the transaction rollback semantics intact. Low-medium effort: refactor `validate_rows` to collect failures, extend `ApiResult` to carry structured details, map indices to row ids in the handler. Decision taken during Slice 2 frontend port (2026-04-22): frontend is ready, backend gap deferred to avoid widening Slice 2 scope.
+
+## Timezone Support
+
+- [ ] **Timezone-aware event scheduling** (deferred from Slice 2 per Q9 in `PLAN.feature-multi-event-2.md`, 2026-04-22). Current state: `events.start_at` / `end_at` are stored as naive timestamps and rendered as whatever local time the server and client happen to agree on. This works only because instructors and students share the same timezone today. **Problem**: as soon as a course has participants or an instructor in a different zone — online courses, students travelling during exams, guest instructors — attendance windows and event times ambiguate. **Hard parts**: (a) existing-data ambiguity — we don't know what tz the legacy rows were *entered in*, so any migration has to pick a default (likely the course owner's browser tz at migration time) and accept that some rows will be off by hours until re-saved; (b) multi-viewer UX — a 9am event in the instructor's tz should render as 9am for the instructor and as the equivalent local time for a student abroad, without the student being confused that it "moved"; (c) attendance-window business rules — the geo-fence + time-window check must use the event's tz, not the requestor's, or students can't check in when physically present. **Rough shape of a proper fix**: (1) store `start_at` / `end_at` as `TIMESTAMPTZ` (Postgres) / UTC + tz string pair; (2) add `courses.timezone` as the course-level default; (3) event creation inherits the course tz by default but allows per-event override; (4) all pickers (single-event form, bulk review grid) disambiguate "9:00 in course tz" vs. "9:00 in my browser tz" with an explicit toggle or label; (5) attendance recording uses the event's tz for window checks. Out of scope for `feature-multi-event` because timezone has no clean "lite version" — schema, data migration, every service, every representer, every picker, and the UX all shift together.
 
 ## Security (Priority)
 
 - [ ] **Input whitelisting on PUT routes** - Prevent mass assignment vulnerabilities. PUT routes currently accept arbitrary JSON fields that get written to DB (e.g., users could potentially update their own roles). Implement Sequel's `set_allowed_columns` or manual input filtering in services. *Note: Input validation contracts (above) would also address this.*
-- [ ] **Review RolePolicy** - Exists but unused. Either wire it into AccountService for role assignment authorization, or remove if not needed.
+- [ ] **Review Policy::Role** - Exists but unused. Either wire it into AccountService for role assignment authorization, or remove if not needed.
 - [ ] **Security tests** - Add tests verifying that sensitive fields (roles, etc.) cannot be modified via API without proper authorization.
+- [ ] **CVE sweep of Ruby gem lockfile** — `bundle exec rake audit` (wired in Slice 1 of `feature-multi-event`) currently reports 17 pre-existing advisories as of 2026-04-21: 1 on `puma` (medium, CVE-2024-45614 header clobbering — Heroku also flags this on every deploy, recommends Puma 7.0.3+), 11 on `rack 3.0.9.1` (mix of medium and high — log injection, escape-sequence injection, path traversal), and 6 on `rexml 3.2.6` (medium/high — DoS via crafted XML). Each gem needs a minor-version bump plus regression testing; deferred from Slice 1 to avoid scope creep during a refactor-only deploy. Follow-up task: open a dedicated `security/cve-sweep` branch, bump puma → 7.x, rack → 3.1.x (or 2.2.x line depending on public API compat), rexml → 3.3+, run full spec suite + manual route smoke, deploy to prod.
 
 ## Testing
 

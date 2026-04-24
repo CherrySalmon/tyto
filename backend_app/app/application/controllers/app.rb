@@ -51,8 +51,8 @@ module Tyto
           r.run Routes::Courses
         end
 
-        # All curren-event-related routes are under 'api/course'
-        r.on 'current_event' do
+        # All current-event-related routes are under 'api/current_events'
+        r.on 'current_events' do
           r.run Routes::CurrentEvents
         end
 
@@ -63,10 +63,12 @@ module Tyto
       end
 
       r.root do
+        response['Cache-Control'] = 'no-cache'
         File.read(File.join('dist', 'index.html'))
       end
 
       r.get [String, true], [String, true], [String, true], [true] do |_parsed_request|
+        response['Cache-Control'] = 'no-cache'
         File.read(File.join('dist', 'index.html'))
       end
     end

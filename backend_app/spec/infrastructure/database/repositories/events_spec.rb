@@ -36,24 +36,55 @@ describe 'Tyto::Repository::Events' do
       _(result.updated_at).wont_be_nil
     end
 
-    it 'persists event with minimal attributes (no times)' do
-      entity = Tyto::Domain::Courses::Entities::Event.new(
-        id: nil,
-        course_id: course.id,
-        location_id: event_location.id,
-        name: 'Minimal Event',
-        start_at: nil,
-        end_at: nil,
-        created_at: nil,
-        updated_at: nil
+    it 'allows two events to share the same (start_at, end_at) in the same course' do
+      # Regression guard: migration 009 dropped the old DB-wide unique (start_at, end_at)
+      # constraint. Parallel workshop sessions at the same time must be supported.
+      shared_start = now
+      shared_end = now + one_hour
+
+      first = repository.create(
+        Tyto::Domain::Courses::Entities::Event.new(
+          id: nil, course_id: course.id, location_id: event_location.id,
+          name: 'Session A', start_at: shared_start, end_at: shared_end,
+          created_at: nil, updated_at: nil
+        )
+      )
+      second = repository.create(
+        Tyto::Domain::Courses::Entities::Event.new(
+          id: nil, course_id: course.id, location_id: event_location.id,
+          name: 'Session B', start_at: shared_start, end_at: shared_end,
+          created_at: nil, updated_at: nil
+        )
       )
 
-      result = repository.create(entity)
+      _(first.id).wont_be_nil
+      _(second.id).wont_be_nil
+      _(second.id).wont_equal first.id
+    end
 
-      _(result.id).wont_be_nil
-      _(result.name).must_equal 'Minimal Event'
-      _(result.start_at).must_be_nil
-      _(result.end_at).must_be_nil
+    it 'rejects events with nil start_at or end_at' do
+      # Migration 010 tightened both time columns to NOT NULL — the DB must
+      # refuse events with no start or end time.
+      entity = Tyto::Domain::Courses::Entities::Event.new(
+        id: nil, course_id: course.id, location_id: event_location.id,
+        name: 'No Times', start_at: nil, end_at: nil,
+        created_at: nil, updated_at: nil
+      )
+
+      _ { repository.create(entity) }.must_raise Sequel::NotNullConstraintViolation
+    end
+
+    it 'rejects events where start_at is after end_at (DB CHECK, migration 011)' do
+      # Belt-and-suspenders: the Event domain entity also enforces this via its
+      # self.new / time_range invariant (which raises ArgumentError before the
+      # repo ever sees the entity). Bypass the entity to verify the DB layer
+      # still guards against any raw insert that skips the domain.
+      _ do
+        Tyto::Event.create(
+          course_id: course.id, location_id: event_location.id,
+          name: 'Backwards', start_at: now + one_hour, end_at: now
+        )
+      end.must_raise Sequel::ConstraintViolation
     end
   end
 
@@ -192,8 +223,10 @@ describe 'Tyto::Repository::Events' do
     end
 
     it 'returns all events as domain entities' do
-      Tyto::Event.create(course_id: course.id, location_id: event_location.id, name: 'Event 1')
-      Tyto::Event.create(course_id: course.id, location_id: event_location.id, name: 'Event 2')
+      Tyto::Event.create(course_id: course.id, location_id: event_location.id,
+                         name: 'Event 1', start_at: now, end_at: now + one_hour)
+      Tyto::Event.create(course_id: course.id, location_id: event_location.id,
+                         name: 'Event 2', start_at: now + one_hour, end_at: now + 2 * one_hour)
 
       result = repository.find_all
 
@@ -246,7 +279,9 @@ describe 'Tyto::Repository::Events' do
       orm_event = Tyto::Event.create(
         course_id: course.id,
         location_id: event_location.id,
-        name: 'To Delete'
+        name: 'To Delete',
+        start_at: now,
+        end_at: now + one_hour
       )
 
       result = repository.delete(orm_event.id)

@@ -2,7 +2,7 @@
 
 require_relative '../spec_helper'
 
-describe 'Current Event Routes' do
+describe 'Current Events Routes' do
   include Rack::Test::Methods
   include TestHelpers
 
@@ -43,7 +43,7 @@ describe 'Current Event Routes' do
     )
   end
 
-  describe 'GET /api/current_event' do
+  describe 'GET /api/current_events' do
     it 'returns ongoing events' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
@@ -58,7 +58,7 @@ describe 'Current Event Routes' do
         end_at: Time.now + 3000
       )
 
-      get '/api/current_event', nil, auth
+      get '/api/current_events', nil, auth
 
       _(last_response.status).must_equal 200
       _(json_response['success']).must_equal true
@@ -96,7 +96,7 @@ describe 'Current Event Routes' do
         end_at: Time.now - 3600
       )
 
-      get '/api/current_event', nil, auth
+      get '/api/current_events', nil, auth
 
       _(last_response.status).must_equal 200
       _(json_response['data']).must_be_kind_of Array
@@ -119,7 +119,7 @@ describe 'Current Event Routes' do
         end_at: Time.now + 7200
       )
 
-      get '/api/current_event', nil, auth
+      get '/api/current_events', nil, auth
 
       _(last_response.status).must_equal 200
       _(json_response['data']).must_be_kind_of Array
@@ -154,7 +154,7 @@ describe 'Current Event Routes' do
       )
 
       # Account1 should only see their own course's event
-      get '/api/current_event', nil, auth1
+      get '/api/current_events', nil, auth1
 
       _(last_response.status).must_equal 200
       _(json_response['data']).must_be_kind_of Array
@@ -168,7 +168,7 @@ describe 'Current Event Routes' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
 
-      get '/api/current_event', nil, auth
+      get '/api/current_events', nil, auth
 
       _(last_response.status).must_equal 200
       _(json_response['data']).must_be_kind_of Array
@@ -200,7 +200,7 @@ describe 'Current Event Routes' do
         end_at: Time.now + 3000
       )
 
-      get '/api/current_event', nil, auth
+      get '/api/current_events', nil, auth
 
       _(last_response.status).must_equal 200
       _(json_response['data']).must_be_kind_of Array
@@ -228,7 +228,7 @@ describe 'Current Event Routes' do
         end_at: Time.now + 3600
       )
 
-      get '/api/current_event', nil, auth
+      get '/api/current_events', nil, auth
 
       _(last_response.status).must_equal 200
       _(json_response['data']).must_be_kind_of Array
@@ -250,7 +250,7 @@ describe 'Current Event Routes' do
         event_id: event.id, name: 'Attended'
       )
 
-      get '/api/current_event', nil, auth
+      get '/api/current_events', nil, auth
 
       _(last_response.status).must_equal 200
       event_data = json_response['data'].first
@@ -258,7 +258,7 @@ describe 'Current Event Routes' do
     end
 
     it 'returns token error without authentication' do
-      get '/api/current_event', nil, {}
+      get '/api/current_events', nil, {}
 
       _(last_response.status).must_equal 400
       _(json_response['error']).must_equal 'Token error'

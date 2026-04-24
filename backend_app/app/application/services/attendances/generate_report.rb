@@ -2,7 +2,7 @@
 
 require_relative '../../../infrastructure/database/repositories/attendances'
 require_relative '../../../infrastructure/database/repositories/courses'
-require_relative '../../../domain/attendance/entities/attendance_report'
+require_relative '../../../domain/attendance/entities/course_attendance_report'
 require_relative '../application_operation'
 
 module Tyto
@@ -22,7 +22,7 @@ module Tyto
           course = step fetch_course(course_id)
           step authorize(requestor, course_id)
           attendances = step fetch_attendances(course_id)
-          report = Domain::Attendance::Entities::AttendanceReport.new(course:, attendances:)
+          report = Domain::Attendance::Entities::CourseAttendanceReport.new(course:, attendances:)
 
           ok(report)
         end
@@ -44,8 +44,8 @@ module Tyto
         end
 
         def authorize(requestor, course_id)
-          enrollment = @courses_repo.find_enrollment(account_id: requestor.account_id, course_id:)
-          policy = AttendanceAuthorization.new(requestor, enrollment)
+          course = @courses_repo.find_with_enrollments(course_id)
+          policy = Policy::AttendanceManagement.new(requestor, course)
 
           return Failure(forbidden('You have no access to generate report')) unless policy.can_view_all?
 
