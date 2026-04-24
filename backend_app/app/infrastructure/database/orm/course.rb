@@ -22,8 +22,10 @@ module Tyto
     end
 
     def owner
-      membership = AccountCourse.first(course_id: id, role_id: Role.find(name: 'owner')&.id)
-      membership&.account
+      accounts_dataset
+        .join(:roles, id: Sequel[:account_course_roles][:role_id])
+        .where(Sequel[:roles][:name] => 'owner')
+        .first
     end
   end
 end
