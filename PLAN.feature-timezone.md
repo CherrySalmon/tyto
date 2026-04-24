@@ -21,9 +21,10 @@ Two slices. Slice 1 fixes the immediate production bug with a pure frontend chan
 
 ## Current State
 
-- [ ] Plan created
-- [ ] Q1 resolved (production repair scope)
-- [ ] Q2 resolved (Slice 2 scope decision)
+- [x] Plan created
+- [x] Q1 resolved (production repair scope)
+- [x] Q2 resolved (Slice 2 scope decision)
+- [x] Slice 1 complete
 
 ## Key Findings
 
@@ -68,8 +69,8 @@ end_at: new Date(`${r.date}T${r.endTime}`).toISOString()
 > Questions must be numbered (Q1, Q2, ...) and crossed off when resolved.
 
 - [x] Q1. **Production repair scope.** ~~What is your browser timezone?~~ **Asia/Taipei (UTC+8).** User will supply the exact event IDs to fix after Slice 1 ships — targeted `UPDATE` with explicit `WHERE id IN (...)`, shift = `- INTERVAL '8 hours'`.
-- [ ] Q2. **Slice 2 in this branch or defer?** Slice 1 (frontend fix) ships a working system. Slice 2 (course-level timezone column, per-event timezone label, UI toggle) is a separate schema migration with a larger blast radius. Should Slice 2 live in this branch, or should this branch land Slice 1 only and Slice 2 be a follow-on ticket?
-- [ ] Q3. **Plan lifecycle.** Previous branches archived plan files before merging to main (e.g. `feature-multi-event` plans moved to `doc/`). Follow the same convention for this branch?
+- [x] Q2. **Slice 2 in this branch or defer?** ~~Deferred~~ — Slice 1 is sufficient. Browser-timezone approach handles all current use cases including cross-timezone attendance windows.
+- [x] Q3. **Plan lifecycle.** Archive before merge — same convention as `feature-multi-event`.
 
 ## Scope
 
@@ -109,8 +110,8 @@ end_at: new Date(`${r.date}T${r.endTime}`).toISOString()
 - [x] 1a. Write failing backend test: POST `/api/course/:id/events` with offset-aware timestamps (e.g. `2026-04-24T09:00:00+08:00`) returns `start_at` as `2026-04-24T01:00:00Z` — verifying the round-trip is correct. Add to `spec/routes/event_route_spec.rb`.
 - [x] 1b. Confirm test passes (backend already handles this — test should go green immediately, but we write it to lock in the contract). ✓ 20/20 route tests pass.
 - [x] 2. Fix `CreateEventsDialog.vue:297-298` — change naive string construction to `new Date(...).toISOString()`.
-- [ ] 3. Resolve Q1 and run targeted SQL repair on production events with wrong timestamps.
-- [ ] 4. Manual verification: create a bulk event from browser (confirm browser TZ offset in console first), verify displayed time matches what was entered.
+- [x] 3. Resolve Q1 and run targeted SQL repair on production events with wrong timestamps. ✓ Events 591–597 shifted back 8 hours via `Tyto::Api.db.run(...)`.
+- [x] 4. Manual verification: confirmed correct in production — events 591–597 repaired and new events created correctly.
 
 ### Slice 2 (pending Q2 decision)
 
