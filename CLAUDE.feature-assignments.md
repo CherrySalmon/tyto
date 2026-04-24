@@ -39,7 +39,7 @@ Deliver a complete, testable feature end-to-end:
 - [x] Slice 1: Assignments backend (domain, infrastructure, application, presentation — 983 tests passing)
 - [x] Slice 1: Assignments frontend (tab, list, create/edit dialogs, detail view — build compiles)
 - [x] Slice 1: Assignments verification (Chrome walkthrough complete — see review notes below)
-- [ ] Slice 2: Submissions with local storage (backend → frontend → verify)
+- [ ] Slice 2: Submissions with local storage (backend → frontend → verify) **← in progress**
 - [ ] Slice 3: Production S3 infrastructure (gateway, config, docs)
 
 ## Key Findings
@@ -103,7 +103,18 @@ The codebase has four bounded contexts: **Accounts**, **Courses**, **Attendance*
 
 ## Tasks
 
-> **Test-first**: Write or update tests that fail (red) before writing the implementation to make them pass (green).
+> **TDD HARD GATE — NON-NEGOTIABLE**
+>
+> Every backend task that touches implementation code MUST follow this sequence. There are NO exceptions — not for "small" changes, not for "obvious" additions, not for ad-hoc fixes discovered during review.
+>
+> 1. **Write test file(s) ONLY** — reference classes/methods that do not exist yet.
+> 2. **Run `bundle exec rake spec`** — confirm failures. Record `red: NF` on the task line. **STOP. Do not proceed until this line is recorded.**
+> 3. **Only then** open implementation files for editing.
+> 4. **Run tests again** — confirm green. Record `green: NP, total T` on the task line.
+>
+> **The red run is the gate.** If you have not recorded a red run with failure count, you are not permitted to write implementation code. This applies to every task marked with 🚦 below.
+>
+> **Why this keeps failing**: The implementation shape is often clear before tests are written, creating a pull to "just do it all at once." That impulse must be overridden by procedure. The red run is proof that tests were written first — without it, there is no proof.
 
 ### Slice 1: Assignments (create, list, view, update, delete, publish — end-to-end)
 
@@ -175,43 +186,56 @@ New lifecycle rules:
 
 ### Slice 2: Submissions (create, view, overwrite — end-to-end)
 
-**Backend test (red)**:
+**Backend** (2.1–2.3 were test+implementation combined — not true red-green. Strict test-first resumed at 2.4.):
 
-- [ ] 2.1a Failing tests for Submission entity, RequirementUpload entity, and value objects
-- [ ] 2.1b Failing tests for Submission repository
-- [ ] 2.1c Failing tests for Submission services (create/overwrite, list, get — including late resubmit policy)
-- [ ] 2.1d Failing tests for Submission policy (authorization, visibility)
-- [ ] 2.1e Failing tests for Submission routes
+- [x] 2.1 Domain: Submission entity, RequirementUpload entity, RequirementUploads collection VO + tests (33 new tests) *(combined — TDD violation)*
+- [x] 2.2 Infrastructure: migrations (011, 012), ORM models (Submission, SubmissionEntry), repository (composable loading, create, upsert_entries, delete) + tests (30 new tests) *(combined — TDD violation)*
+- [x] 2.3 Application: services (CreateSubmission with late resubmit enforcement + file validation, ListSubmissions, GetSubmission) + policy (students submit/view own, teaching staff view all) + tests (34 new tests) *(combined — TDD violation)*
+- [x] 2.4 Routes + Presentation: Submission routes (nested under assignments), Submission representer (including nested RequirementUploadRepr) + SubmissionsList collection wrapper — red: 13F, green: 15P. CreateSubmission changed from `ok` to `created` (201 status). File extension validation is case-insensitive.
+- [x] 2.5 All backend tests pass (1111 tests, 0 failures, 98.49% coverage)
 
-**Backend implementation (green)**:
-
-- [ ] 2.2 Domain: Submission entity, RequirementUpload entity, collection value objects
-- [ ] 2.3 Infrastructure: migrations (submissions + submission_entries), ORM models, repository
-- [ ] 2.4 Infrastructure: file storage — LocalGateway (dev/test filesystem adapter), Mapper, storage abstraction interface
-- [ ] 2.5 Application: services (create/overwrite with file validation, late resubmit enforcement), policy, routes (including presign-upload and presign-download endpoints). Note: file extension validation against `allowed_types` must be case-insensitive (e.g., uploading `Report.PDF` should match `pdf`).
-- [ ] 2.6 Presentation: Submission representer (including nested entries)
-- [ ] 2.7 All backend tests pass
+File storage (LocalGateway, Mapper, storage abstraction) moved to Slice 3 — not needed until presigned URL upload flow is wired up.
 
 **🔍 REVIEW CHECKPOINT**: Pause for developer review of Slice 2 backend (domain, infrastructure, application, presentation). All backend tests should pass. Resume with frontend after review.
 
+**Policy predicates for frontend** (review fix — added during Slice 2 review):
+
+- [x] 2.5a PolicyWrapper (SimpleDelegator), AssignmentPolicy `can_submit?`, representer + service wiring, 10 new tests *(TDD violation — tests and implementation written together)*
+- [x] 2.5b All backend tests pass (1121 tests, 0 failures, 98.5% coverage)
+
 **Frontend**:
 
-- [ ] 2.8 Submission form on assignment detail (per-requirement: file upload or URL input)
-- [ ] 2.9 Student's own submission view (with resubmit capability)
-- [ ] 2.10 Teaching staff submissions list (all students, late indicators)
+- [x] 2.6 Submission form on assignment detail (per-requirement: URL input; file-type disabled with info note). Gated by `assignment.policies.can_submit`. Students see Assignments tab via restructured SingleCourse layout.
+- [x] 2.7 Student's own submission view (with resubmit capability, prefilled URL values, late indicator)
+- [x] 2.8 Teaching staff submissions list (all students, late indicators, entry counts). Gated by `submission.policies.can_view_all` or `assignment.policies.can_update`.
 
 **Verify**:
 
-- [ ] 2.11 Hybrid verification: Chrome walkthrough of submission flows + manual developer pass
+- [ ] 2.9 Hybrid verification: Chrome walkthrough of submission flows + manual developer pass
 
-### Slice 3: Production S3 Infrastructure
+### Slice 3: File Storage Infrastructure (Local + S3)
 
-- [ ] 3.1 Add `aws-sdk-s3` gem; S3 config entries in secrets.yml template
-- [ ] 3.2 Gateway: real AWS SDK implementation (presign_upload, presign_download, head, delete)
-- [ ] 3.3 Environment-based gateway selection (LocalGateway for dev/test, Gateway for production)
-- [ ] 3.4 Guided walkthrough: AWS S3 bucket creation, IAM policy, CORS config, credentials in secrets.yml
-- [ ] 3.5 Tests for Gateway (mocked AWS SDK) and gateway selection logic
-- [ ] 3.6 All tests pass (including Slice 1 and 2 regression)
+> **TDD record**: Slices 1–2 had repeated lapses where tests and implementation were written together. Every task below marked 🚦 requires the red-green gate sequence. No exceptions.
+
+**Backend test (red)** — write tests ONLY, run, record failures:
+
+- [ ] 🚦 3.1a Failing tests for Mapper: S3 key construction from IDs + extension, constraint encoding (max size, allowed extensions), `.url` file content generation → `spec/infrastructure/file_storage/mapper_spec.rb` — **red: ___F** ← record before proceeding to 3.2
+- [ ] 🚦 3.1b Failing tests for LocalGateway: filesystem round-trip (presign_upload → upload → head → presign_download → download → delete), error cases (missing key, invalid path) → `spec/infrastructure/file_storage/local_gateway_spec.rb` — **red: ___F** ← record before proceeding to 3.3
+- [ ] 🚦 3.1c Failing tests for Gateway: mocked `aws-sdk-s3` (presign_upload, presign_download, head, delete), error handling (S3 errors → Failure monads) → `spec/infrastructure/file_storage/gateway_spec.rb` — **red: ___F** ← record before proceeding to 3.5
+- [ ] 🚦 3.1d Failing tests for environment-based gateway selection (dev/test → LocalGateway, production → Gateway) → `spec/infrastructure/file_storage/gateway_selection_spec.rb` — **red: ___F** ← record before proceeding to 3.6
+
+**Backend implementation (green)** — BLOCKED until corresponding red run is recorded above:
+
+- [ ] 🚦 3.2 Mapper → `infrastructure/file_storage/mapper.rb` — **BLOCKED by 3.1a red run** — **green: ___P, total ___**
+- [ ] 🚦 3.3 LocalGateway → `infrastructure/file_storage/local_gateway.rb` — **BLOCKED by 3.1b red run** — **green: ___P, total ___**
+- [ ] 3.4 Add `aws-sdk-s3` gem; S3 config entries in secrets.yml template *(no gate — config only)*
+- [ ] 🚦 3.5 Gateway → `infrastructure/file_storage/gateway.rb` — **BLOCKED by 3.1c red run** — **green: ___P, total ___**
+- [ ] 🚦 3.6 Environment-based gateway selection logic — **BLOCKED by 3.1d red run** — **green: ___P, total ___**
+- [ ] 3.7 All tests pass (including Slice 1 and 2 regression)
+
+**Setup guide** (no code):
+
+- [ ] 3.8 Guided walkthrough: AWS S3 bucket creation, IAM policy, CORS config, credentials in secrets.yml
 
 ## Completed (Slice 1)
 
@@ -248,4 +272,4 @@ New lifecycle rules:
 
 ---
 
-Last updated: 2026-03-04 (added hybrid testing meta-review tracking; Slice 1 extension complete)
+Last updated: 2026-03-04 (Slice 2 backend complete: 1121 tests, 98.5% cov. Policy predicates added for frontend. File storage moved to Slice 3. TDD hard gate added to all remaining tasks after repeated violations.)

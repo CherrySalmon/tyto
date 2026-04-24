@@ -140,6 +140,12 @@ rake run:api
 - Module namespacing: `Tyto::Api`, `Tyto::Routes::*`
 - RuboCop for linting
 - **Testing**: Minitest with spec-style syntax (`describe`/`it`), NOT RSpec.
+- **TDD Protocol** (MANDATORY for backend tasks marked "test" or "red" in planning docs):
+  1. Write test file(s) only — reference classes/methods that do not exist yet
+  2. Run `bundle exec rake spec` — confirm failures. Record count in the plan task line (e.g., `red: 5F`)
+  3. Only then write the implementation to make them pass
+  4. Run tests again — confirm green. Record count in the plan task line (e.g., `green: 5P, total 1096`)
+  5. Never combine steps 1+3 in a single pass. The red run is non-negotiable proof of test-first.
 - **Avoid `nil` as state**: Use Null Object pattern instead of returning `nil` for missing/empty states. This eliminates guard clauses and follows "Tell, Don't Ask" principle. Example: `NullTimeRange` instead of `nil` for courses without dates.
 
 ### Vue/JavaScript
