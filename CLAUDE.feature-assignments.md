@@ -39,7 +39,10 @@ Deliver a complete, testable feature end-to-end:
 - [x] Slice 1: Assignments backend (domain, infrastructure, application, presentation — 983 tests passing)
 - [x] Slice 1: Assignments frontend (tab, list, create/edit dialogs, detail view — build compiles)
 - [x] Slice 1: Assignments verification (Chrome walkthrough complete — see review notes below)
-- [ ] Slice 2: Submissions with local storage (backend → frontend → verify) **← in progress**
+- [x] Slice 2: Submissions backend (domain, infrastructure, application, presentation, routes, policy predicates)
+- [x] Slice 2: Submissions frontend (submission form, own-view, teaching staff list — build compiles)
+- [x] **Merge of `origin/main`** (47 commits absorbed: policy namespace refactor, multi-event + attendance management features, events schema invariants, timezone fixes, content-hashed prod bundles). Post-merge adaptation: policies renamed to `Policy::Assignment`/`Policy::Submission`, migrations renumbered 012–015, 1166 tests / 0 failures / 98.27% cov. See Merge Log below.
+- [ ] Slice 2: Submissions verification (task 2.9) **← next**
 - [ ] Slice 3: Production S3 infrastructure (gateway, config, docs)
 
 ## Key Findings
@@ -77,7 +80,7 @@ The codebase has four bounded contexts: **Accounts**, **Courses**, **Attendance*
 - Database migrations for 4 tables: assignments, submission_requirements, submissions, submission_entries
 - ORM models and repositories with composable loading
 - Services: CreateAssignment, UpdateAssignment, DeleteAssignment, PublishAssignment, ListAssignments, GetAssignment, CreateSubmission, ListSubmissions, GetSubmission
-- Policies: AssignmentPolicy (teaching staff CRUD; students view published only), SubmissionPolicy (students create/view own; teaching staff view all)
+- Policies: `Policy::Assignment` (teaching staff CRUD; students view published only), `Policy::Submission` (students create/view own; teaching staff view all)
 - Routes nested under `/api/course/:course_id/assignments/` (singular `course` matches current codebase; issue #46 will rename to plural later)
 - Representers for Assignment and Submission JSON
 - S3 file upload with storage abstraction (local adapter for dev/test)
@@ -189,7 +192,7 @@ New lifecycle rules:
 **Backend** (2.1–2.3 were test+implementation combined — not true red-green. Strict test-first resumed at 2.4.):
 
 - [x] 2.1 Domain: Submission entity, RequirementUpload entity, RequirementUploads collection VO + tests (33 new tests) *(combined — TDD violation)*
-- [x] 2.2 Infrastructure: migrations (011, 012), ORM models (Submission, SubmissionEntry), repository (composable loading, create, upsert_entries, delete) + tests (30 new tests) *(combined — TDD violation)*
+- [x] 2.2 Infrastructure: migrations (011, 012 — renumbered to 014, 015 after merge), ORM models (Submission, SubmissionEntry), repository (composable loading, create, upsert_entries, delete) + tests (30 new tests) *(combined — TDD violation)*
 - [x] 2.3 Application: services (CreateSubmission with late resubmit enforcement + file validation, ListSubmissions, GetSubmission) + policy (students submit/view own, teaching staff view all) + tests (34 new tests) *(combined — TDD violation)*
 - [x] 2.4 Routes + Presentation: Submission routes (nested under assignments), Submission representer (including nested RequirementUploadRepr) + SubmissionsList collection wrapper — red: 13F, green: 15P. CreateSubmission changed from `ok` to `created` (201 status). File extension validation is case-insensitive.
 - [x] 2.5 All backend tests pass (1111 tests, 0 failures, 98.49% coverage)
@@ -200,7 +203,7 @@ File storage (LocalGateway, Mapper, storage abstraction) moved to Slice 3 — no
 
 **Policy predicates for frontend** (review fix — added during Slice 2 review):
 
-- [x] 2.5a PolicyWrapper (SimpleDelegator), AssignmentPolicy `can_submit?`, representer + service wiring, 10 new tests *(TDD violation — tests and implementation written together)*
+- [x] 2.5a PolicyWrapper (SimpleDelegator), `Policy::Assignment#can_submit?`, representer + service wiring, 10 new tests *(TDD violation — tests and implementation written together)*
 - [x] 2.5b All backend tests pass (1121 tests, 0 failures, 98.5% coverage)
 
 **Frontend**:
@@ -259,7 +262,7 @@ File storage (LocalGateway, Mapper, storage abstraction) moved to Slice 3 — no
 **Resolved**: publish dialog wording (1.12a), `require 'ostruct'` Ruby 3.4 fix, card sizing matched to events, "Late Resubmit" → "Allow Late Resubmits?", "+ Add Requirement" disabled when empty row exists, publish confirmation mentions unpublish option.
 
 **Deferred**:
-- **Timezone display**: GitHub issue #47 (cross-cutting UX improvement)
+- **Timezone display**: GitHub issue #47 (cross-cutting UX improvement). Main has since merged a `feature-timezone` PR (`bb9dd9d`, `9cf05b1`) that fixes browser-timezone handling for **bulk events**. Verify whether assignment due-date pickers benefit from that fix or still need work before closing #47.
 - **Markdown sanitization** (1.12e): `v-html` + `marked` in AssignmentDetailDialog — add DOMPurify after Slice 2 (may apply to submissions too)
 
 ## Hybrid Testing Pain Points (meta-review after Slice 2)
@@ -270,6 +273,37 @@ File storage (LocalGateway, Mapper, storage abstraction) moved to Slice 3 — no
 |---|-----------|-------|--------|
 | — | *(none yet — populate during Slice 2 verification)* | — | — |
 
+## Merge Log
+
+### 2026-04-24 — Merged `origin/main` (47 commits absorbed)
+
+Branch had been idle while main shipped: policy namespace refactor (`c277f9b`), multi-event creation feature (Slices 1+2), attendance management feature, events schema invariants (`start <= end`, NOT NULL), timezone handling for bulk events, content-hashed prod bundles, repo-level skill removal (`5b0e961` and follow-ups), and `CLAUDE.md` → `.claude/CLAUDE.md` move.
+
+**Merge commit**: `07ed17c`. Five conflicts resolved manually:
+
+1. `.claude/CLAUDE.md` — kept the branch's stricter TDD Protocol bullet over main's shorter test-first bullet.
+2. `.claude/skills/branch-plan/SKILL.md`, `.claude/skills/pr-create/SKILL.md`, and the branch-only `.claude/skills/test-hybrid/` — accepted main's deletion. Repo-level skills are gone; live versions (with potentially newer behavior than what was on the branch) live in `~/.claude/skills/`. Branch's improvements survive in git history (`git show 187a9e1`, `36f378a`) if they need to be ported to the global skills.
+3. `backend_app/app/application/policies/attendance_authorization.rb` and `course_policy.rb` — accepted main's deletion (renamed under `Policy::` namespace). The branch's `4288629` rename of `self_enrolled?` → `enrolled?` was discarded; the merged tree uses `self_enrolled?` consistently across all policies.
+4. `backend_app/app/application/controllers/routes/course.rb` — auto-merged.
+5. `frontend_app/pages/course/SingleCourse.vue` — merged component registration; kept main's `CreateEventsDialog` swap and added the three assignment dialogs.
+
+**Adaptation commit**: `bc4ec32`.
+
+- Policy namespace: `AssignmentPolicy` → `Policy::Assignment` (file `assignment.rb`), `SubmissionPolicy` → `Policy::Submission` (file `submission.rb`). Spec files renamed to match. All 10 service callers updated.
+- Migration renumbering to avoid collision with main's events migrations:
+  - `009_assignment_create.rb` → `012_assignment_create.rb`
+  - `010_submission_requirement_create.rb` → `013_submission_requirement_create.rb`
+  - `011_submission_create.rb` → `014_submission_create.rb`
+  - `012_submission_entry_create.rb` → `015_submission_entry_create.rb`
+
+**Verification**: `bundle exec rake spec` → 1166 runs / 0 failures / 0 errors / 1 skip / 98.27% line coverage. `npm run prod` → compiles clean (size warnings only).
+
+**Things to watch on next session**:
+
+- `frontend_app/pages/course/SingleCourse.vue`: data key `showCreateAttendanceEventDialog` and method `createAttendanceEvents` were preserved during the merge but now drive `CreateEventsDialog` (plural, bulk). Names are stale relative to the new dialog — consider renaming during Slice 2.9 verification cleanup.
+- The `event_id` linkage on assignments references events that, post-merge, must satisfy the new `start_at`/`end_at` NOT NULL + ordering constraints from migrations 010–011. Verify assignment-creation flows that pre-fill `event_id` still work.
+- Issue #47 (timezone) may be partially closed by main's `feature-timezone` merge — verify and update or close.
+
 ---
 
-Last updated: 2026-03-04 (Slice 2 backend complete: 1121 tests, 98.5% cov. Policy predicates added for frontend. File storage moved to Slice 3. TDD hard gate added to all remaining tasks after repeated violations.)
+Last updated: 2026-04-24 (Merged `origin/main` and adapted: policy namespace, migration renumbering. 1166 tests / 0 failures / 98.27% cov. Slice 2 backend + frontend committed. Next: 2.9 hybrid verification of submission flows.)
