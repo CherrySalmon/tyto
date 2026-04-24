@@ -40,7 +40,7 @@ module Tyto
 
           @requestor = requestor
           @enrollment = find_enrollment
-          @policy = SubmissionPolicy.new(@requestor, @enrollment)
+          @policy = Policy::Submission.new(@requestor, @enrollment)
           return Failure(forbidden('You are not authorized to submit')) unless @policy.can_submit?
 
           load_assignment(assignment_id)

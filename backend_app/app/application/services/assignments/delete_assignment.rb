@@ -31,7 +31,7 @@ module Tyto
 
           @requestor = requestor
           @enrollment = find_enrollment
-          @policy = AssignmentPolicy.new(@requestor, @enrollment)
+          @policy = Policy::Assignment.new(@requestor, @enrollment)
           return Failure(forbidden('You are not authorized to delete assignments')) unless @policy.can_delete?
 
           load_assignment(assignment_id)

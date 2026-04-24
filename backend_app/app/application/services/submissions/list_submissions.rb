@@ -36,7 +36,7 @@ module Tyto
 
           @requestor = requestor
           @enrollment = find_enrollment
-          @policy = SubmissionPolicy.new(@requestor, @enrollment)
+          @policy = Policy::Submission.new(@requestor, @enrollment)
           return Failure(forbidden('You are not authorized to view submissions')) unless @policy.can_view_own?
 
           load_assignment(assignment_id)

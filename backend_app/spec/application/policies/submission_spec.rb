@@ -2,7 +2,7 @@
 
 require_relative '../../spec_helper'
 
-describe Tyto::SubmissionPolicy do
+describe Tyto::Policy::Submission do
   let(:account) { Tyto::Account.create(email: 'test@example.com', name: 'Test User') }
   let(:course) { Tyto::Course.create(name: 'Test Course') }
 
@@ -23,7 +23,7 @@ describe Tyto::SubmissionPolicy do
   describe 'student permissions' do
     let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
     let(:enrollment) { create_enrollment(roles: ['student']) }
-    let(:policy) { Tyto::SubmissionPolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::Policy::Submission.new(requestor, enrollment) }
 
     it 'allows submitting' do
       _(policy.can_submit?).must_equal true
@@ -43,7 +43,7 @@ describe Tyto::SubmissionPolicy do
 
     describe 'with owner enrollment' do
       let(:enrollment) { create_enrollment(roles: ['owner']) }
-      let(:policy) { Tyto::SubmissionPolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Submission.new(requestor, enrollment) }
 
       it 'allows viewing all submissions' do
         _(policy.can_view_all?).must_equal true
@@ -60,7 +60,7 @@ describe Tyto::SubmissionPolicy do
 
     describe 'with instructor enrollment' do
       let(:enrollment) { create_enrollment(roles: ['instructor']) }
-      let(:policy) { Tyto::SubmissionPolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Submission.new(requestor, enrollment) }
 
       it 'allows viewing all submissions' do
         _(policy.can_view_all?).must_equal true
@@ -73,7 +73,7 @@ describe Tyto::SubmissionPolicy do
 
     describe 'with staff enrollment' do
       let(:enrollment) { create_enrollment(roles: ['staff']) }
-      let(:policy) { Tyto::SubmissionPolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Submission.new(requestor, enrollment) }
 
       it 'allows viewing all submissions' do
         _(policy.can_view_all?).must_equal true
@@ -87,7 +87,7 @@ describe Tyto::SubmissionPolicy do
 
   describe 'not enrolled' do
     let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
-    let(:policy) { Tyto::SubmissionPolicy.new(requestor, nil) }
+    let(:policy) { Tyto::Policy::Submission.new(requestor, nil) }
 
     it 'denies all submission operations' do
       _(policy.can_submit?).must_equal false
@@ -98,7 +98,7 @@ describe Tyto::SubmissionPolicy do
 
   describe 'admin without enrollment' do
     let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['admin']) }
-    let(:policy) { Tyto::SubmissionPolicy.new(requestor, nil) }
+    let(:policy) { Tyto::Policy::Submission.new(requestor, nil) }
 
     it 'denies submission operations (admin needs enrollment for course-scoped resources)' do
       _(policy.can_submit?).must_equal false
@@ -110,7 +110,7 @@ describe Tyto::SubmissionPolicy do
   describe '#summary' do
     let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
     let(:enrollment) { create_enrollment(roles: ['student']) }
-    let(:policy) { Tyto::SubmissionPolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::Policy::Submission.new(requestor, enrollment) }
 
     it 'returns hash of all permissions' do
       summary = policy.summary

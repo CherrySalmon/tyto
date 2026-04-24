@@ -33,7 +33,7 @@ module Tyto
 
           @requestor = requestor
           @enrollment = find_enrollment
-          @policy = AssignmentPolicy.new(@requestor, @enrollment)
+          @policy = Policy::Assignment.new(@requestor, @enrollment)
           return Failure(forbidden('You are not authorized to create assignments')) unless @policy.can_create?
 
           Success(true)

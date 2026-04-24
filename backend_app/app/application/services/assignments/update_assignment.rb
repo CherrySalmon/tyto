@@ -31,7 +31,7 @@ module Tyto
 
           @requestor = requestor
           @enrollment = find_enrollment
-          @policy = AssignmentPolicy.new(@requestor, @enrollment)
+          @policy = Policy::Assignment.new(@requestor, @enrollment)
           return Failure(forbidden('You are not authorized to update assignments')) unless @policy.can_update?
 
           load_assignment(assignment_id)

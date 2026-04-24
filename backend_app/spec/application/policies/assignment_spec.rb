@@ -2,7 +2,7 @@
 
 require_relative '../../spec_helper'
 
-describe Tyto::AssignmentPolicy do
+describe Tyto::Policy::Assignment do
   let(:account) { Tyto::Account.create(email: 'test@example.com', name: 'Test User') }
   let(:course) { Tyto::Course.create(name: 'Test Course') }
 
@@ -25,7 +25,7 @@ describe Tyto::AssignmentPolicy do
 
     describe 'with owner enrollment' do
       let(:enrollment) { create_enrollment(roles: ['owner']) }
-      let(:policy) { Tyto::AssignmentPolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Assignment.new(requestor, enrollment) }
 
       it 'allows full CRUD, publish, and unpublish' do
         _(policy.can_create?).must_equal true
@@ -47,7 +47,7 @@ describe Tyto::AssignmentPolicy do
 
     describe 'with instructor enrollment' do
       let(:enrollment) { create_enrollment(roles: ['instructor']) }
-      let(:policy) { Tyto::AssignmentPolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Assignment.new(requestor, enrollment) }
 
       it 'allows full CRUD, publish, and unpublish' do
         _(policy.can_create?).must_equal true
@@ -69,7 +69,7 @@ describe Tyto::AssignmentPolicy do
 
     describe 'with staff enrollment' do
       let(:enrollment) { create_enrollment(roles: ['staff']) }
-      let(:policy) { Tyto::AssignmentPolicy.new(requestor, enrollment) }
+      let(:policy) { Tyto::Policy::Assignment.new(requestor, enrollment) }
 
       it 'allows full CRUD, publish, and unpublish' do
         _(policy.can_create?).must_equal true
@@ -93,7 +93,7 @@ describe Tyto::AssignmentPolicy do
   describe 'student permissions' do
     let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
     let(:enrollment) { create_enrollment(roles: ['student']) }
-    let(:policy) { Tyto::AssignmentPolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::Policy::Assignment.new(requestor, enrollment) }
 
     it 'allows viewing published assignments only' do
       _(policy.can_view?).must_equal true
@@ -118,7 +118,7 @@ describe Tyto::AssignmentPolicy do
 
   describe 'not enrolled' do
     let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
-    let(:policy) { Tyto::AssignmentPolicy.new(requestor, nil) }
+    let(:policy) { Tyto::Policy::Assignment.new(requestor, nil) }
 
     it 'denies all assignment operations' do
       _(policy.can_create?).must_equal false
@@ -134,7 +134,7 @@ describe Tyto::AssignmentPolicy do
 
   describe 'admin without enrollment' do
     let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['admin']) }
-    let(:policy) { Tyto::AssignmentPolicy.new(requestor, nil) }
+    let(:policy) { Tyto::Policy::Assignment.new(requestor, nil) }
 
     it 'denies assignment operations (admin needs enrollment for course-scoped resources)' do
       _(policy.can_create?).must_equal false
@@ -150,7 +150,7 @@ describe Tyto::AssignmentPolicy do
   describe '#summary' do
     let(:requestor) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['member']) }
     let(:enrollment) { create_enrollment(roles: ['instructor']) }
-    let(:policy) { Tyto::AssignmentPolicy.new(requestor, enrollment) }
+    let(:policy) { Tyto::Policy::Assignment.new(requestor, enrollment) }
 
     it 'returns hash of all permissions' do
       summary = policy.summary
