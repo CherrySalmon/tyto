@@ -39,7 +39,10 @@ gem 'rake', '~>13.0'
 
 # DATABASE
 gem 'sequel', '~>5.0'
-gem 'table_print', '~>1.0' # Console / REPL formatting (loaded by .pryrc)
+
+# CONSOLE (available in all environments so `rake console` works on production)
+gem 'pry'
+gem 'table_print', '~>1.0' # loaded by .pryrc for pretty table output
 
 group :production do
   gem 'pg', '~>1.0'
@@ -55,11 +58,6 @@ group :development, :test do
   gem 'minitest-mock', '~>5.27' # extracted from minitest 6.0
   gem 'rack-test'
   gem 'simplecov', require: false
-end
-
-# DEBUGGING
-group :development, :test do
-  gem 'pry'
 end
 
 # CODE QUALITY

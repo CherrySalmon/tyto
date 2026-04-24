@@ -170,6 +170,28 @@ describe 'Event Routes' do
       _(last_response.status).must_equal 403
     end
 
+    it 'stores offset-aware timestamps as correct UTC and round-trips them as UTC ISO8601' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      location = create_test_location(course)
+
+      # Simulate what the browser sends after `new Date(...).toISOString()` fix:
+      # 9:00 AM Taipei (UTC+8) = 01:00 UTC
+      event_row = {
+        name: 'Taipei Morning Class',
+        location_id: location.id,
+        start_at: '2026-04-24T09:00:00+08:00',
+        end_at: '2026-04-24T10:30:00+08:00'
+      }
+
+      post "/api/course/#{course.id}/events", { events: [event_row] }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 201
+      created = json_response['events_info'].first
+      _(created['start_at']).must_equal '2026-04-24T01:00:00Z'
+      _(created['end_at']).must_equal '2026-04-24T02:30:00Z'
+    end
+
     it 'returns bad request with invalid JSON' do
       account, auth = authenticated_header(roles: ['creator'])
       course = create_test_course(account)
