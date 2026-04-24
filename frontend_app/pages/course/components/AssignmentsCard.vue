@@ -2,7 +2,7 @@
   <div class="assignments-card-container course-card-container">
     <div class="course-content-title">Assignments</div>
 
-    <el-card class="assignment-item" shadow="hover" @click.stop="$emit('create-assignment')">
+    <el-card v-if="canManage" class="assignment-item" shadow="hover" @click.stop="$emit('create-assignment')">
       <h3>Create Assignment</h3>
       <el-icon :size="24" style="margin-top: 10px;"><DocumentAdd /></el-icon>
     </el-card>
@@ -17,14 +17,14 @@
     >
       <div>
         <h3>{{ assignment.title }}</h3>
-        <el-tag :type="statusTagType(assignment.status)" size="small">
+        <el-tag v-if="canManage" :type="statusTagType(assignment.status)" size="small">
           {{ assignment.status }}
         </el-tag>
         <p v-if="assignment.due_at" class="assignment-due">
           Due: {{ formatDateTime(assignment.due_at) }}
         </p>
         <p v-else class="assignment-due">No due date</p>
-        <div class="assignment-actions" @click.stop>
+        <div v-if="canManage" class="assignment-actions" @click.stop>
           <el-icon :size="18" @click="$emit('edit-assignment', assignment.id)">
             <Edit />
           </el-icon>
@@ -62,7 +62,11 @@ export default {
   emits: ['create-assignment', 'edit-assignment', 'delete-assignment', 'publish-assignment', 'unpublish-assignment', 'view-assignment'],
   props: {
     course: Object,
-    assignments: Array
+    assignments: Array,
+    canManage: {
+      type: Boolean,
+      default: true
+    }
   },
   methods: {
     formatDateTime(utcStr) {

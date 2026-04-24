@@ -20,7 +20,7 @@
                   :attendance-events="attendanceEvents" :locations="locations" @create-event="showAttendanceEvent" @edit-event="editAttendanceEvent" @delete-event="deleteAttendanceEvent"
                   @create-location="createNewLocation" @update-location="updateLocation" @delete-location="deleteLocation"
                   :enrollments="enrollments" :assignableRoles="assignableRoles" @new-enrolls="addEnrollments" @update-enrollment="updateEnrollment" @delete-enrollment="deleteEnrollments" :currentRole="currentRole"
-                  :assignments="assignments" @create-assignment="showCreateAssignment" @edit-assignment="editAssignment" @delete-assignment="deleteAssignment" @publish-assignment="publishAssignment" @unpublish-assignment="unpublishAssignment" @view-assignment="viewAssignment"
+                  :assignments="assignments" :canManage="true" @create-assignment="showCreateAssignment" @edit-assignment="editAssignment" @delete-assignment="deleteAssignment" @publish-assignment="publishAssignment" @unpublish-assignment="unpublishAssignment" @view-assignment="viewAssignment"
                 >
                 </RouterView>
               </div>
@@ -55,27 +55,48 @@
       </el-col>
     </el-row>
     <div v-if="currentRole">
-      <div class="center-content" v-if="course.policies && !course.policies.can_update">
-        <!-- <el-button type="primary" @click="changeRoute($route.params.id + '/attendance')">Mark Attendance</el-button> -->
-        <CourseInfoCard :course="course" :role="currentRole" @show-modify-dialog="showModifyCourseDialog = true" style="margin: 20px 0;">
-        </CourseInfoCard>
-        <div class="selecor-role-container">
-          <span style="margin: 0 10px;">View</span>
-          <el-select
-            v-model="selectRole"
-            placeholder="Select"
-            size="large"
-            style="width: 100%;"
-            @change="changeRole"
-          >
-            <el-option
-              v-for="role in selectableRoles"
-              :key="role"
-              :label="role"
-              :value="role"
-            />
-          </el-select>
-        </div>
+      <div v-if="course.policies && !course.policies.can_update">
+        <el-row>
+          <el-col :xs="24" :md="18">
+            <div class="course-content-container">
+              <div class="course-menu-bar">
+                <ul class="course-menu">
+                  <li class="tab" :class="$route.path.includes('assignments')?'active':''"><router-link to="assignments">Assignments</router-link></li>
+                </ul>
+              </div>
+              <div class="course-manage-view">
+                <RouterView
+                  :course="course"
+                  :assignments="assignments"
+                  :canManage="false"
+                  @view-assignment="viewAssignment"
+                >
+                </RouterView>
+              </div>
+            </div>
+          </el-col>
+          <el-col :xs="24" :md="6">
+            <CourseInfoCard :course="course" :role="currentRole" @show-modify-dialog="showModifyCourseDialog = true" style="margin: 20px 0;">
+            </CourseInfoCard>
+            <div class="selecor-role-container">
+              <span style="margin: 0 10px;">View</span>
+              <el-select
+                v-model="selectRole"
+                placeholder="Select"
+                size="large"
+                style="width: 100%;"
+                @change="changeRole"
+              >
+                <el-option
+                  v-for="role in selectableRoles"
+                  :key="role"
+                  :label="role"
+                  :value="role"
+                />
+              </el-select>
+            </div>
+          </el-col>
+        </el-row>
       </div>
     </div>
     <ModifyCourseDialog class="dialog-container" :courseForm="courseForm" :visible="showModifyCourseDialog"
@@ -105,7 +126,8 @@
     </template>
 
     <AssignmentDetailDialog :assignment="currentAssignment" :visible="showAssignmentDetailDialog"
-      :attendanceEvents="attendanceEvents" @dialog-closed="showAssignmentDetailDialog = false">
+      :attendanceEvents="attendanceEvents" :submissions="currentSubmissions" :submissionLoading="submissionLoading"
+      @dialog-closed="closeAssignmentDetail" @create-submission="createSubmission">
     </AssignmentDetailDialog>
   </div>
 </template>
@@ -166,7 +188,9 @@ export default {
       currentAssignment: {},
       currentAssignmentId: '',
       currentAssignmentStatus: 'draft',
-      assignmentForm: {}
+      assignmentForm: {},
+      currentSubmissions: [],
+      submissionLoading: false
     };
   },
   computed: {
@@ -191,8 +215,8 @@ export default {
         this.fetchLocations();
         this.fetchEnrollments();
         this.fetchAssignableRoles();
-        this.fetchAssignments();
       }
+      this.fetchAssignments();
     }
   },
   methods: {
@@ -502,9 +526,35 @@ export default {
       api.get(`/course/${this.course.id}/assignments/${assignmentId}`).then(response => {
         this.currentAssignment = response.data.data;
         this.showAssignmentDetailDialog = true;
+        this.fetchSubmissions(assignmentId);
       }).catch(error => {
         console.error('Error fetching assignment:', error);
       });
+    },
+    fetchSubmissions(assignmentId) {
+      this.submissionLoading = true;
+      api.get(`/course/${this.course.id}/assignments/${assignmentId}/submissions`).then(response => {
+        this.currentSubmissions = response.data.data;
+      }).catch(error => {
+        console.error('Error fetching submissions:', error);
+        this.currentSubmissions = [];
+      }).finally(() => {
+        this.submissionLoading = false;
+      });
+    },
+    createSubmission(assignmentId, entries) {
+      api.post(`/course/${this.course.id}/assignments/${assignmentId}/submissions`, { entries }).then(response => {
+        ElMessage({ type: 'success', message: 'Submission saved' });
+        this.fetchSubmissions(assignmentId);
+      }).catch(error => {
+        const msg = error.response?.data?.message || 'Error submitting';
+        ElMessage({ type: 'error', message: msg });
+        console.error('Error creating submission:', error);
+      });
+    },
+    closeAssignmentDetail() {
+      this.showAssignmentDetailDialog = false;
+      this.currentSubmissions = [];
     },
     onConfirm() {
       if (this.optionLocation) {
