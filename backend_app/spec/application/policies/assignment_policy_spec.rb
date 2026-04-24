@@ -39,6 +39,10 @@ describe Tyto::AssignmentPolicy do
       it 'allows viewing draft assignments' do
         _(policy.can_view_drafts?).must_equal true
       end
+
+      it 'denies submitting (teaching staff are not students)' do
+        _(policy.can_submit?).must_equal false
+      end
     end
 
     describe 'with instructor enrollment' do
@@ -56,6 +60,10 @@ describe Tyto::AssignmentPolicy do
 
       it 'allows viewing draft assignments' do
         _(policy.can_view_drafts?).must_equal true
+      end
+
+      it 'denies submitting' do
+        _(policy.can_submit?).must_equal false
       end
     end
 
@@ -75,6 +83,10 @@ describe Tyto::AssignmentPolicy do
       it 'allows viewing draft assignments' do
         _(policy.can_view_drafts?).must_equal true
       end
+
+      it 'denies submitting' do
+        _(policy.can_submit?).must_equal false
+      end
     end
   end
 
@@ -85,6 +97,10 @@ describe Tyto::AssignmentPolicy do
 
     it 'allows viewing published assignments only' do
       _(policy.can_view?).must_equal true
+    end
+
+    it 'allows submitting' do
+      _(policy.can_submit?).must_equal true
     end
 
     it 'denies creating, updating, deleting, publishing, and unpublishing' do
@@ -112,6 +128,7 @@ describe Tyto::AssignmentPolicy do
       _(policy.can_publish?).must_equal false
       _(policy.can_unpublish?).must_equal false
       _(policy.can_view_drafts?).must_equal false
+      _(policy.can_submit?).must_equal false
     end
   end
 
@@ -126,6 +143,7 @@ describe Tyto::AssignmentPolicy do
       _(policy.can_delete?).must_equal false
       _(policy.can_publish?).must_equal false
       _(policy.can_unpublish?).must_equal false
+      _(policy.can_submit?).must_equal false
     end
   end
 
@@ -145,6 +163,7 @@ describe Tyto::AssignmentPolicy do
       _(summary[:can_publish]).must_equal true
       _(summary[:can_unpublish]).must_equal true
       _(summary[:can_view_drafts]).must_equal true
+      _(summary[:can_submit]).must_equal false
     end
   end
 end

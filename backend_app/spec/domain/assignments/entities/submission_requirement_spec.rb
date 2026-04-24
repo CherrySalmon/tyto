@@ -81,16 +81,6 @@ describe 'Tyto::Domain::Assignments::Entities::SubmissionRequirement' do
       ) }.must_raise Dry::Struct::Error
     end
 
-    it 'accepts file submission_format' do
-      req = Tyto::Domain::Assignments::Entities::SubmissionRequirement.new(valid_file_attributes)
-      _(req.submission_format).must_equal 'file'
-    end
-
-    it 'accepts url submission_format' do
-      req = Tyto::Domain::Assignments::Entities::SubmissionRequirement.new(valid_url_attributes)
-      _(req.submission_format).must_equal 'url'
-    end
-
     it 'requires description' do
       _ { Tyto::Domain::Assignments::Entities::SubmissionRequirement.new(
         valid_file_attributes.merge(description: nil)

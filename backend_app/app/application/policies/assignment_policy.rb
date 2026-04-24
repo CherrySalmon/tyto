@@ -38,6 +38,13 @@ module Tyto
       teaching_staff?
     end
 
+    # Whether the user can submit to assignments (students only).
+    # Included here so the assignment detail response has everything
+    # the frontend needs without a separate submission policy call.
+    def can_submit?
+      student?
+    end
+
     def summary
       {
         can_create: can_create?,
@@ -46,7 +53,8 @@ module Tyto
         can_delete: can_delete?,
         can_publish: can_publish?,
         can_unpublish: can_unpublish?,
-        can_view_drafts: can_view_drafts?
+        can_view_drafts: can_view_drafts?,
+        can_submit: can_submit?
       }
     end
 
@@ -54,6 +62,10 @@ module Tyto
 
     def enrolled?
       @enrollment&.active? || false
+    end
+
+    def student?
+      @enrollment&.student? || false
     end
 
     def teaching_staff?

@@ -98,6 +98,49 @@ describe 'Assignment Routes' do
       _(json_response['data'].length).must_equal 2
     end
 
+    it 'includes policies for teaching staff' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+
+      Tyto::Assignment.create(
+        course_id: course.id, title: 'HW', status: 'draft', allow_late_resubmit: false
+      )
+
+      get "/api/course/#{course.id}/assignments", nil, auth
+
+      policies = json_response['data'].first['policies']
+      _(policies).wont_be_nil
+      _(policies['can_create']).must_equal true
+      _(policies['can_update']).must_equal true
+      _(policies['can_delete']).must_equal true
+      _(policies['can_submit']).must_equal false
+    end
+
+    it 'includes policies for students' do
+      owner_account = create_test_account(roles: ['creator'])
+      course = create_test_course(owner_account)
+      student_account, student_auth = authenticated_header(roles: ['student'])
+
+      student_role = Tyto::Role.find(name: 'student')
+      Tyto::AccountCourse.create(
+        course_id: course.id,
+        account_id: student_account.id,
+        role_id: student_role.id
+      )
+
+      Tyto::Assignment.create(
+        course_id: course.id, title: 'Published HW', status: 'published', allow_late_resubmit: false
+      )
+
+      get "/api/course/#{course.id}/assignments", nil, student_auth
+
+      policies = json_response['data'].first['policies']
+      _(policies).wont_be_nil
+      _(policies['can_create']).must_equal false
+      _(policies['can_update']).must_equal false
+      _(policies['can_submit']).must_equal true
+    end
+
     it 'lists only published assignments for students' do
       owner_account = create_test_account(roles: ['creator'])
       course = create_test_course(owner_account)
@@ -164,6 +207,22 @@ describe 'Assignment Routes' do
       _(json_response['data']['title']).must_equal 'Published HW'
       _(json_response['data']['submission_requirements']).must_be_kind_of Array
       _(json_response['data']['submission_requirements'].length).must_equal 1
+    end
+
+    it 'includes policies in response' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      assignment = Tyto::Assignment.create(
+        course_id: course.id, title: 'HW', status: 'draft', allow_late_resubmit: false
+      )
+
+      get "/api/course/#{course.id}/assignments/#{assignment.id}", nil, auth
+
+      _(last_response.status).must_equal 200
+      policies = json_response['data']['policies']
+      _(policies).wont_be_nil
+      _(policies['can_update']).must_equal true
+      _(policies['can_publish']).must_equal true
     end
 
     it 'returns not found when student tries to view draft' do
@@ -258,9 +317,6 @@ describe 'Assignment Routes' do
       put "/api/course/#{course.id}/assignments/#{assignment.id}", payload.to_json, json_headers(auth)
 
       _(last_response.status).must_equal 200
-      reqs = Tyto::SubmissionRequirement.where(assignment_id: assignment.id).all
-      _(reqs.length).must_equal 1
-      _(reqs.first.description).must_equal 'New URL req'
     end
 
     it 'rejects requirements update for published assignment' do

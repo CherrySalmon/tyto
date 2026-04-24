@@ -294,6 +294,57 @@ module Tyto
                   end
                 end
 
+                r.on 'submissions' do
+                  r.on String do |submission_id|
+                    # GET api/course/:course_id/assignments/:assignment_id/submissions/:submission_id
+                    r.get do
+                      case Service::Submissions::GetSubmission.new.call(
+                        requestor:, course_id:, assignment_id:, submission_id:
+                      )
+                      in Success(api_result)
+                        response.status = api_result.http_status_code
+                        { success: true, data: Representer::Submission.new(api_result.message).to_hash }.to_json
+                      in Failure(api_result)
+                        response.status = api_result.http_status_code
+                        api_result.to_json
+                      end
+                    end
+                  end
+
+                  # GET api/course/:course_id/assignments/:assignment_id/submissions
+                  r.get do
+                    case Service::Submissions::ListSubmissions.new.call(
+                      requestor:, course_id:, assignment_id:
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, data: Representer::SubmissionsList.from_entities(api_result.message).to_array }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  end
+
+                  # POST api/course/:course_id/assignments/:assignment_id/submissions
+                  r.post do
+                    request_body = JSON.parse(r.body.read)
+
+                    case Service::Submissions::CreateSubmission.new.call(
+                      requestor:, course_id:, assignment_id:, submission_data: request_body
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, data: Representer::Submission.new(api_result.message).to_hash }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  rescue JSON::ParserError => e
+                    response.status = 400
+                    { error: 'Invalid JSON', details: e.message }.to_json
+                  end
+                end
+
                 # GET api/course/:course_id/assignments/:assignment_id
                 r.get do
                   case Service::Assignments::GetAssignment.new.call(

@@ -2,6 +2,7 @@
 
 require_relative '../../../infrastructure/database/repositories/assignments'
 require_relative '../../../infrastructure/database/repositories/courses'
+require_relative '../../responses/policy_wrapper'
 require_relative '../application_operation'
 
 module Tyto
@@ -49,7 +50,8 @@ module Tyto
                           @assignments_repo.find_by_course_and_status(@course_id, 'published')
                         end
 
-          Success(assignments)
+          wrapped = assignments.map { |a| Response::PolicyWrapper.new(a, policies: @policy.summary) }
+          Success(wrapped)
         end
       end
     end

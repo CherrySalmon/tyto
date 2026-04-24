@@ -34,6 +34,7 @@ module Tyto
       property :updated_at, exec_context: :decorator
       collection :submission_requirements, extend: SubmissionRequirementRepr,
                                            exec_context: :decorator
+      property :policies, exec_context: :decorator
 
       def due_at
         represented.due_at&.utc&.iso8601
@@ -51,6 +52,10 @@ module Tyto
         return [] unless represented.requirements_loaded?
 
         represented.submission_requirements.to_a
+      end
+
+      def policies
+        represented.respond_to?(:policies) ? represented.policies : nil
       end
     end
 

@@ -22,6 +22,8 @@ describe 'Database Setup from Scratch' do
       attendances
       assignments
       submission_requirements
+      submissions
+      submission_entries
       schema_info
     ] # schema_info <-- Sequel’s migration tracking table
   end
