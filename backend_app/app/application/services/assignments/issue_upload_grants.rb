@@ -143,7 +143,7 @@ module Tyto
 
           {
             requirement_id: requirement.id,
-            key:,
+            key: key.to_s,
             upload_url: payload[:upload_url],
             fields: payload[:fields]
           }

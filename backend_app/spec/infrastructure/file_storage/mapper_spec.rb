@@ -80,19 +80,7 @@ describe 'Tyto::FileStorage::Mapper #policy_conditions extension constraint' do
   end
 end
 
-describe 'Tyto::FileStorage::Mapper #policy_conditions input validation' do
-  let(:mapper) { Tyto::FileStorage::Mapper.new }
-  let(:allowed_extensions) { ['.pdf', '.rmd'] }
-
-  it 'raises ArgumentError when key is nil' do
-    _(-> { mapper.policy_conditions(key: nil, allowed_extensions:) }).must_raise ArgumentError
-  end
-
-  it 'raises ArgumentError when key is empty' do
-    _(-> { mapper.policy_conditions(key: '', allowed_extensions:) }).must_raise ArgumentError
-  end
-
-  it 'raises ArgumentError when key is whitespace only' do
-    _(-> { mapper.policy_conditions(key: '   ', allowed_extensions:) }).must_raise ArgumentError
-  end
-end
+# Mapper used to validate `key` itself; that responsibility now lives on
+# Tyto::FileStorage::StorageKey, which raises on construction from invalid
+# input. Mapper trusts its caller to pass a StorageKey.
+# See `storage_key_spec.rb` for the construction-time validation.

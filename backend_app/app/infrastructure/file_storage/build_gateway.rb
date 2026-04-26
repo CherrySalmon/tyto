@@ -20,21 +20,27 @@ module Tyto
       def setup(aws: nil, local: nil)
         @aws = aws
         @local = local
+        @local_gateway = nil
       end
 
       def reset!
         @aws = nil
         @local = nil
+        @local_gateway = nil
       end
 
-      # Selects the right gateway adapter for the current environment (R-P3).
+      # Selects the right gateway adapter for the current environment.
       # Allowlist: only :development and :test get LocalGateway; every other
-      # environment value (including :production, :staging, :preview) gets the
-      # AWS Gateway. Configuration errors raise here rather than at first use,
-      # so misconfigured deploys fail at boot.
+      # environment (including :production, :staging, :preview) gets the AWS
+      # Gateway. Configuration errors raise here rather than at first use, so
+      # misconfigured deploys fail at boot.
+      #
+      # The LocalGateway is memoized so its single-use nonce cache is shared
+      # across requests within the same process. The AWS Gateway is stateless,
+      # so memoizing it would buy nothing.
       def build_gateway(environment: Tyto::Api.environment)
         if LOCAL_ENVIRONMENTS.include?(environment)
-          build_local_gateway
+          @local_gateway ||= build_local_gateway
         else
           build_aws_gateway
         end

@@ -22,7 +22,7 @@ module Tyto
       def presign_upload(key:, allowed_extensions: nil) # rubocop:disable Lint/UnusedMethodArgument
         post = Aws::S3::PresignedPost.new(
           @client.config.credentials, @client.config.region, @bucket,
-          key:,
+          key: key.to_s,
           content_length_range: 1..Tyto::FileStorage::MAX_SIZE_BYTES,
           signature_expiration: Time.now + PRESIGN_TTL_SECONDS
         )
@@ -33,7 +33,7 @@ module Tyto
 
       def presign_download(key:)
         url = presigner.presigned_url(
-          :get_object, bucket: @bucket, key:, expires_in: PRESIGN_TTL_SECONDS
+          :get_object, bucket: @bucket, key: key.to_s, expires_in: PRESIGN_TTL_SECONDS
         )
         Success(download_url: url)
       rescue Aws::Errors::ServiceError => e
@@ -41,7 +41,7 @@ module Tyto
       end
 
       def head(key:)
-        @client.head_object(bucket: @bucket, key:)
+        @client.head_object(bucket: @bucket, key: key.to_s)
         Success(true)
       rescue Aws::S3::Errors::NotFound
         Failure(:not_found)
@@ -50,7 +50,7 @@ module Tyto
       end
 
       def delete(key:)
-        @client.delete_object(bucket: @bucket, key:)
+        @client.delete_object(bucket: @bucket, key: key.to_s)
         Success(true)
       rescue Aws::S3::Errors::ServiceError => e
         Failure("S3 delete failed: #{e.message}")

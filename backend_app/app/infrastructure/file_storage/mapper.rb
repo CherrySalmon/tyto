@@ -14,14 +14,13 @@ module Tyto
     # extension condition emitted here is defence-in-depth.
     class Mapper
       def policy_conditions(key:, allowed_extensions: nil)
-        validate_key!(key)
-
+        key_string = key.to_s
         conditions = [
           ['content-length-range', 1, Tyto::FileStorage::MAX_SIZE_BYTES],
-          { 'key' => key }
+          { 'key' => key_string }
         ]
 
-        ext_condition = extension_condition(key, allowed_extensions)
+        ext_condition = extension_condition(key_string, allowed_extensions)
         conditions << ext_condition if ext_condition
 
         { conditions: }
@@ -29,17 +28,13 @@ module Tyto
 
       private
 
-      def validate_key!(key)
-        raise ArgumentError, 'key cannot be nil or blank' if key.nil? || key.to_s.strip.empty?
-      end
-
-      def extension_condition(key, allowed_extensions)
+      def extension_condition(key_string, allowed_extensions)
         return nil if allowed_extensions.nil? || allowed_extensions.empty?
 
         # Normalise: accept 'rmd' or '.rmd' from callers.
         allowed_extensions.map { |ext| ext.start_with?('.') ? ext : ".#{ext}" }
 
-        prefix = key.sub(/\.[^.]+\z/, '')
+        prefix = key_string.sub(/\.[^.]+\z/, '')
         ['starts-with', '$key', prefix]
       end
     end

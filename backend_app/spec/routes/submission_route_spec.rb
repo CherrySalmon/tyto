@@ -46,6 +46,18 @@ describe 'Submission Routes' do
     "/api/course/#{course_id}/assignments/#{assignment_id}/submissions"
   end
 
+  # Mirrors the real client → presign → upload flow: lays the bytes down on
+  # the LocalGateway at the server-reconstructed key so the service's
+  # HEAD-check passes when the route runs.
+  def materialize_upload(assignment:, requirement:, account:, filename:)
+    key = Tyto::FileStorage::SubmissionMapper.build_key(
+      assignment_id: assignment.id, requirement_id: requirement.id,
+      account_id: account.id, filename:, submission_format: 'file'
+    )
+    Tyto::FileStorage.build_gateway.write(key:, body: 'test bytes')
+    key
+  end
+
   describe 'POST /api/course/:id/assignments/:aid/submissions' do
     it 'creates submission as enrolled student' do
       owner_account = create_test_account(roles: ['creator'])
@@ -53,10 +65,11 @@ describe 'Submission Routes' do
       student_account, student_auth = authenticated_header(roles: ['student'])
       enroll_student(course, student_account)
       assignment, req = create_published_assignment(course)
+      materialize_upload(assignment:, requirement: req, account: student_account, filename: 'solution.rb')
 
       payload = {
         entries: [
-          { requirement_id: req.id, content: 's3/key/file.rb', filename: 'solution.rb',
+          { requirement_id: req.id, filename: 'solution.rb',
             content_type: 'text/plain', file_size: 1024 }
         ]
       }
@@ -79,10 +92,11 @@ describe 'Submission Routes' do
       student_account, student_auth = authenticated_header(roles: ['student'])
       enroll_student(course, student_account)
       assignment, req = create_published_assignment(course)
+      materialize_upload(assignment:, requirement: req, account: student_account, filename: 'solution.rb')
 
       payload = {
         entries: [
-          { requirement_id: req.id, content: 's3/key/file.rb', filename: 'solution.rb',
+          { requirement_id: req.id, filename: 'solution.rb',
             content_type: 'text/plain', file_size: 1024 }
         ]
       }
@@ -103,10 +117,13 @@ describe 'Submission Routes' do
       student_account, student_auth = authenticated_header(roles: ['student'])
       enroll_student(course, student_account)
       assignment, req = create_published_assignment(course)
+      # Both submissions use a `.rb` file, so the reconstructed key is the
+      # same — one materialize call covers both posts.
+      materialize_upload(assignment:, requirement: req, account: student_account, filename: 'v1.rb')
 
       payload = {
         entries: [
-          { requirement_id: req.id, content: 's3/key/v1.rb', filename: 'v1.rb',
+          { requirement_id: req.id, filename: 'v1.rb',
             content_type: 'text/plain', file_size: 512 }
         ]
       }
@@ -117,7 +134,7 @@ describe 'Submission Routes' do
       # Resubmit
       payload2 = {
         entries: [
-          { requirement_id: req.id, content: 's3/key/v2.rb', filename: 'v2.rb',
+          { requirement_id: req.id, filename: 'v2.rb',
             content_type: 'text/plain', file_size: 768 }
         ]
       }

@@ -2,14 +2,17 @@
 
 module Tyto
   module FileStorage
-    # Submission-specific S3 key construction (R2). Used by
+    # Submission-specific storage-key construction. Used by
     # `IssueUploadGrants` to mint keys from authenticated context, and by
-    # `CreateSubmission` to reconstruct keys for HEAD verification (R-P2) —
-    # single source of truth so the reconstructed key is bit-identical to the
-    # one issued at presign time.
+    # `CreateSubmission` to reconstruct keys for HEAD verification — single
+    # source of truth so the reconstructed key is bit-identical to the one
+    # issued at presign time.
     #
-    # URL-type requirements never go through this mapper (Q3 un-unify); their
-    # `content` stays as a raw URL string.
+    # Returns a `Tyto::FileStorage::StorageKey` so downstream code passes a
+    # validated value object to gateway methods rather than a raw string.
+    #
+    # URL-type requirements never go through this mapper; their `content`
+    # stays as a raw URL string.
     module SubmissionMapper
       module_function
 
@@ -20,7 +23,7 @@ module Tyto
         validate_id!(account_id, :account_id)
         ext = extract_extension(filename)
 
-        "#{assignment_id}/#{requirement_id}/#{account_id}.#{ext}"
+        StorageKey.from("#{assignment_id}/#{requirement_id}/#{account_id}.#{ext}")
       end
 
       def validate_format!(submission_format)

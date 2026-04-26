@@ -55,8 +55,10 @@ module IssueUploadGrantsSpecSupport
     end
 
     def presign_upload(key:, allowed_extensions: nil)
-      @calls << { key:, allowed_extensions: }
-      Success(upload_url: 'https://example.invalid/upload', fields: { 'key' => key })
+      # Record the underlying string so tests can assert against String
+      # literals — IssueUploadGrants now passes a Tyto::FileStorage::StorageKey.
+      @calls << { key: key.to_s, allowed_extensions: }
+      Success(upload_url: 'https://example.invalid/upload', fields: { 'key' => key.to_s })
     end
   end
 

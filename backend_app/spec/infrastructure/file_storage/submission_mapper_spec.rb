@@ -30,17 +30,18 @@ end
 describe 'Tyto::FileStorage::SubmissionMapper.build_key happy path' do
   it 'builds a key in the form <assignment_id>/<requirement_id>/<account_id>.<ext>' do
     key = Tyto::FileStorage::SubmissionMapper.build_key(**SubmissionMapperSpecSupport::VALID_ARGS)
-    _(key).must_equal '1/2/3.rmd'
+    _(key).must_be_kind_of Tyto::FileStorage::StorageKey
+    _(key.to_s).must_equal '1/2/3.rmd'
   end
 
   it 'lowercases the extension' do
     args = SubmissionMapperSpecSupport::VALID_ARGS.merge(filename: 'paper.PDF')
-    _(Tyto::FileStorage::SubmissionMapper.build_key(**args)).must_equal '1/2/3.pdf'
+    _(Tyto::FileStorage::SubmissionMapper.build_key(**args).to_s).must_equal '1/2/3.pdf'
   end
 
   it 'uses only the final segment of a multi-dot filename' do
     args = SubmissionMapperSpecSupport::VALID_ARGS.merge(filename: 'archive.tar.gz')
-    _(Tyto::FileStorage::SubmissionMapper.build_key(**args)).must_equal '1/2/3.gz'
+    _(Tyto::FileStorage::SubmissionMapper.build_key(**args).to_s).must_equal '1/2/3.gz'
   end
 end
 

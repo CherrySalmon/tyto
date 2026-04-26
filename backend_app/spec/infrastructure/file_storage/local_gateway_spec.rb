@@ -162,22 +162,9 @@ describe 'Tyto::FileStorage::LocalGateway cross-op token rejection (R-P8)' do
   end
 end
 
-describe 'Tyto::FileStorage::LocalGateway path safety' do
-  include LocalGatewaySpecSupport
-
-  before { @gateway = build_gateway }
-  after  { cleanup_tmp_root }
-
-  it 'rejects keys containing .. path traversal' do
-    _(-> { @gateway.write(key: '../escape.txt', body: 'no') }).must_raise ArgumentError
-  end
-
-  it 'rejects absolute path keys' do
-    _(-> { @gateway.write(key: '/etc/passwd', body: 'no') }).must_raise ArgumentError
-  end
-
-  it 'rejects head/delete for absolute path keys' do
-    _(-> { @gateway.head(key: '/etc/passwd') }).must_raise ArgumentError
-    _(-> { @gateway.delete(key: '/etc/passwd') }).must_raise ArgumentError
-  end
-end
+# Path safety used to live on LocalGateway as a private validate_key! that
+# every public method called. With the StorageKey value object, the
+# guarantee is on the type — there is no way to construct a StorageKey
+# wrapping `..` or an absolute path, so the gateway's public methods can
+# trust their `key:` argument. See `storage_key_spec.rb` for the
+# construction-time tests.

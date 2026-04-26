@@ -7,10 +7,17 @@ module Tyto
     module Assignments
       module Entities
         # RequirementUpload child entity within the Submission aggregate.
-        # Represents one fulfilled submission requirement (file or URL stored in S3).
+        # Represents one fulfilled submission requirement. `content` is
+        # polymorphic per the parent requirement's `submission_format`: an S3
+        # key when 'file', a raw URL string when 'url'.
         # Loaded/saved through the Submission aggregate root.
         # Pure domain object with no infrastructure dependencies.
         # Immutable - updates create new instances via `new()`.
+        #
+        # `filename` and `content_type` are stored as the client sent them and
+        # treated as untrusted display metadata. Type enforcement comes from
+        # the requirement's `allowed_types` extension allowlist applied to
+        # the filename's suffix.
         class RequirementUpload < Dry::Struct
           attribute :id, Types::Integer.optional
           attribute :submission_id, Types::Integer
