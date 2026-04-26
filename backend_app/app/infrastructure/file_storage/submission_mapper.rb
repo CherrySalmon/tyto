@@ -3,7 +3,7 @@
 module Tyto
   module FileStorage
     # Submission-specific S3 key construction (R2). Used by
-    # `IssueUploadUrls` to mint keys from authenticated context, and by
+    # `IssueUploadGrants` to mint keys from authenticated context, and by
     # `CreateSubmission` to reconstruct keys for HEAD verification (R-P2) —
     # single source of truth so the reconstructed key is bit-identical to the
     # one issued at presign time.

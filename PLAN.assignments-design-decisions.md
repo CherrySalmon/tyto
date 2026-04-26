@@ -122,6 +122,8 @@ Resolved during pre-implementation review (2026-03-03).
 
 - [x] **R-P10: Service name — `IssueUploadUrls`, not `CreateUploadUrls`.** Cosmetic but consistent with what the service actually does: mint short-lived credentials, not persist a resource. "Create" reads like a write service; "Issue" reads like a credential mint.
 
+  **Renamed again 2026-04-26**: `IssueUploadUrls` → `IssueUploadGrants`, and the route resource `/upload_urls` → `/upload_grants`. Triggered by a REST-naming review during 3.10: the response is a 4-field credential `{requirement_id, key, upload_url, fields}`, not just a URL, so naming the collection after one field undersells what's returned. "Grant" borrows OAuth/IAM vocabulary for scoped, time-limited authorizations and reads as a noun. Field name `upload_url` inside each grant is unchanged.
+
 - [x] **R-P11: Integration test is an explicit deliverable.** A thin Rack::Test-driven end-to-end test covers the full presign → upload → submit → download path using the LocalGateway. Not a substitute for unit tests; catches hybrid-layer bugs of the kind that consumed disproportionate time in Slice 2 (pain point P5). Scheduled as task 3.14a.
 
 ## Related Issues
@@ -130,4 +132,4 @@ Resolved during pre-implementation review (2026-03-03).
 
 ---
 
-Last updated: 2026-04-24 (Slice 3 second pre-implementation review — recorded R-P1 … R-P11: presigned POST, server-reconstructed keys and best-effort cleanup folded into R2; allowlist env guard, POST dev endpoint, splat download route, single-use HMAC tokens folded into R10; backend download redirect supersedes Q5 Option A; size constant, `content_type` trust level, and integration test recorded as new entries.)
+Last updated: 2026-04-26 (Resource rename: `/upload_urls` → `/upload_grants`, service `IssueUploadUrls` → `IssueUploadGrants` — see R-P10 revisit block. Previous footer (2026-04-24): Slice 3 second pre-implementation review — recorded R-P1 … R-P11: presigned POST, server-reconstructed keys and best-effort cleanup folded into R2; allowlist env guard, POST dev endpoint, splat download route, single-use HMAC tokens folded into R10; backend download redirect supersedes Q5 Option A; size constant, `content_type` trust level, and integration test recorded as new entries.)

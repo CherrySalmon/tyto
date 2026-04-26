@@ -8,7 +8,7 @@ require_relative '../../spec_helper'
 # submission_id (avoids chicken-and-egg with persistence). requirement_id before
 # account_id groups all student uploads per requirement for batch download.
 #
-# Used by IssueUploadUrls to BUILD keys from authenticated context, and by
+# Used by IssueUploadGrants to BUILD keys from authenticated context, and by
 # CreateSubmission to RECONSTRUCT keys for HEAD verification per R-P2 — same
 # method, single source of truth, so the reconstructed key is bit-identical to
 # the one the presign step issued.

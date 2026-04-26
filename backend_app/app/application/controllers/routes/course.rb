@@ -375,6 +375,32 @@ module Tyto
                   end
                 end
 
+                r.on 'upload_grants' do
+                  # POST api/course/:course_id/assignments/:assignment_id/upload_grants
+                  # Mints short-lived upload credentials (key + presigned URL +
+                  # signed policy fields) for each requested file. "Grant"
+                  # borrows OAuth/IAM vocabulary — the response is a credential,
+                  # not just a URL.
+                  r.post do
+                    request_body = JSON.parse(r.body.read)
+                    uploads = request_body['uploads']
+
+                    case Service::Assignments::IssueUploadGrants.new.call(
+                      requestor:, course_id:, assignment_id:, uploads:
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, data: api_result.message }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  rescue JSON::ParserError => e
+                    response.status = 400
+                    { error: 'Invalid JSON', details: e.message }.to_json
+                  end
+                end
+
                 # GET api/course/:course_id/assignments/:assignment_id
                 r.get do
                   case Service::Assignments::GetAssignment.new.call(

@@ -1,0 +1,15 @@
+AllCops:
+  TargetRubyVersion: 3.4
+  NewCops: disable
+  SuggestExtensions: false
+
+# Allow both compact and tabbed/aligned hash styles. The aligned form reads
+# better when keys vary in length; the compact form is fine when they don't.
+# Per-hash choice, not a project-wide forced style.
+Layout/HashAlignment:
+  EnforcedHashRocketStyle:
+    - key
+    - table
+  EnforcedColonStyle:
+    - key
+    - table

@@ -44,12 +44,31 @@ module GatewaySelectionSpecSupport
   def setup_aws_only
     Tyto::FileStorage.setup(aws: AWS_CREDS, local: nil)
   end
+
+  # FileStorage credentials live on class instance variables — these tests
+  # mutate that state, so snapshot at start and restore at end. Without this,
+  # a downstream spec (e.g. routes that call IssueUploadGrants and reach
+  # Tyto::FileStorage.build_gateway) sees a half-cleared state and 500s.
+  def snapshot_file_storage
+    {
+      aws: Tyto::FileStorage.instance_variable_get(:@aws),
+      local: Tyto::FileStorage.instance_variable_get(:@local)
+    }
+  end
+
+  def restore_file_storage(snapshot)
+    Tyto::FileStorage.setup(aws: snapshot[:aws], local: snapshot[:local])
+  end
 end
 
 describe 'Tyto::FileStorage.build_gateway with allowlisted environments (R-P3)' do
   include GatewaySelectionSpecSupport
 
-  before { setup_local_only }
+  before do
+    @snapshot = snapshot_file_storage
+    setup_local_only
+  end
+  after { restore_file_storage(@snapshot) }
 
   it 'returns LocalGateway for :development' do
     gateway = Tyto::FileStorage.build_gateway(environment: :development)
@@ -65,7 +84,11 @@ end
 describe 'Tyto::FileStorage.build_gateway for non-allowlisted environments (R-P3)' do
   include GatewaySelectionSpecSupport
 
-  before { setup_aws_only }
+  before do
+    @snapshot = snapshot_file_storage
+    setup_aws_only
+  end
+  after { restore_file_storage(@snapshot) }
 
   it 'returns AWS Gateway for :production' do
     gateway = Tyto::FileStorage.build_gateway(environment: :production)
@@ -85,6 +108,9 @@ end
 
 describe 'Tyto::FileStorage.build_gateway error handling' do
   include GatewaySelectionSpecSupport
+
+  before { @snapshot = snapshot_file_storage }
+  after  { restore_file_storage(@snapshot) }
 
   it 'raises when AWS Gateway is selected but bucket is missing' do
     Tyto::FileStorage.setup(aws: GatewaySelectionSpecSupport::AWS_CREDS.merge(bucket: nil))
