@@ -1,49 +1,55 @@
 # frozen_string_literal: true
 
-require 'rbnacl'
 require 'base64'
 
 module Tyto
   module AuthToken
     # Gateway for encrypting and decrypting token payloads.
-    # Handles RbNaCl SecretBox operations - knows nothing about domain objects.
+    # Wraps Tyto::Security::Secret with the URL-safe base64 token framing.
+    #
+    # The signing key is loaded once at boot via `Gateway.setup(key:)` (called
+    # from `config/initializers/credentials.rb`) — this class never reads ENV
+    # itself. Tests can call `Gateway.setup` directly with a fresh key.
     class Gateway
       class EncryptionError < StandardError; end
+      class NotConfiguredError < StandardError; end
+
+      class << self
+        # Cache the signing key on the class. Accepts the Base64-encoded form
+        # (matching how the key lives in secrets.yml / ENV) and decodes once.
+        # `nil` is allowed so boot doesn't fail in environments where JWT_KEY
+        # is genuinely absent — the first call to `new` will surface the
+        # missing-config error instead.
+        def setup(key:)
+          @raw_key = key.nil? || key.empty? ? nil : Base64.strict_decode64(key)
+        end
+
+        def reset!
+          @raw_key = nil
+        end
+
+        def shared_key
+          @raw_key || raise(NotConfiguredError,
+                            'AuthToken::Gateway has no signing key — call Gateway.setup(key:) at boot')
+        end
+
+        def generate_key
+          Tyto::Security.generate_secret_key
+        end
+      end
 
       def initialize(key = nil)
-        @key = key || self.class.fetch_key
+        @secret = Tyto::Security::Secret.new(key: key || self.class.shared_key)
       end
 
-      # Encrypts a payload string into a URL-safe Base64 token
       def encrypt(payload)
-        secret_box = RbNaCl::SecretBox.new(@key)
-        nonce = RbNaCl::Random.random_bytes(secret_box.nonce_bytes)
-        encrypted = secret_box.encrypt(nonce, payload)
-
-        Base64.urlsafe_encode64(nonce + encrypted)
+        Base64.urlsafe_encode64(@secret.encrypt(payload))
       end
 
-      # Decrypts a URL-safe Base64 token into the original payload string
       def decrypt(token)
-        secret_box = RbNaCl::SecretBox.new(@key)
-        decoded = Base64.urlsafe_decode64(token)
-        nonce, encrypted = decoded.unpack("a#{secret_box.nonce_bytes}a*")
-
-        secret_box.decrypt(nonce, encrypted)
-      rescue RbNaCl::CryptoError, ArgumentError => e
+        @secret.decrypt(Base64.urlsafe_decode64(token))
+      rescue Tyto::Security::Secret::EncryptionError, ArgumentError => e
         raise EncryptionError, "Decryption failed: #{e.message}"
-      end
-
-      # Generates a new encryption key (Base64 encoded)
-      def self.generate_key
-        key = RbNaCl::Random.random_bytes(RbNaCl::SecretBox.key_bytes)
-        Base64.strict_encode64(key)
-      end
-
-      # Fetches and decodes the key from environment
-      def self.fetch_key
-        base64_key = ENV.fetch('JWT_KEY') { raise EncryptionError, 'JWT_KEY not set in environment' }
-        Base64.strict_decode64(base64_key)
       end
     end
   end

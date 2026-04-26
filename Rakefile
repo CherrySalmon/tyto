@@ -140,4 +140,10 @@ namespace :generate do
 
   # Alias for backwards compatibility
   task msg_key: :jwt_key
+
+  desc 'Generate LOCAL_STORAGE_SIGNING_KEY for secrets.yml (dev/test only)'
+  task :local_storage_signing_key do
+    require_relative 'backend_app/app/lib/security'
+    puts "LOCAL_STORAGE_SIGNING_KEY: #{Tyto::Security.generate_signing_key}"
+  end
 end

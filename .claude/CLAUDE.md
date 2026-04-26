@@ -102,6 +102,9 @@ Policies check global roles (admin, creator) and course enrollment roles (owner,
 3. Backend returns encrypted JWT (account_id + roles)
 4. JWT stored in cookie, sent in Authorization header
 
+### Cryptographic code
+All crypto goes through `Tyto::Security` (`backend_app/app/lib/security.rb`). Application code does not call `RbNaCl`, `OpenSSL`, or `SecureRandom` directly. See `doc/security.md` for the rule, the available primitives, and how to add new ones.
+
 ## Configuration
 
 ### Required Setup Files (copied by `rake setup`)

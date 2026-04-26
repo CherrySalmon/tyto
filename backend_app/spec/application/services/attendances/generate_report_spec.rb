@@ -26,7 +26,7 @@ describe 'Service::Attendances::GenerateReport' do
   end
 
   def create_event(course, name: 'Event')
-    location_name = "Room-#{SecureRandom.hex(4)}"
+    location_name = "Room-#{Tyto::Security.unique_id(4)}"
     location = Tyto::Location.create(
       course_id: course.id, name: location_name, latitude: 0, longitude: 0
     )
