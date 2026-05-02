@@ -431,4 +431,99 @@ describe 'Submission Routes' do
       _(last_response.status).must_equal 404
     end
   end
+
+  # Locks the route → representer wiring so the frontend can rely on
+  # `requirement_uploads[].download_url` showing up in JSON for file-type
+  # entries. Without this assertion the contract is unit-tested only at
+  # the representer level and would silently regress if a route forgot
+  # to thread user_options.
+  describe 'download_url wiring on submission JSON' do
+    def create_assignment_with_mixed_requirements(course)
+      assignment = Tyto::Assignment.create(
+        course_id: course.id, title: 'Mixed HW', status: 'published',
+        allow_late_resubmit: false
+      )
+      file_req = Tyto::SubmissionRequirement.create(
+        assignment_id: assignment.id, submission_format: 'file',
+        description: 'Source', allowed_types: 'rb', sort_order: 0
+      )
+      url_req = Tyto::SubmissionRequirement.create(
+        assignment_id: assignment.id, submission_format: 'url',
+        description: 'Repo link', sort_order: 1
+      )
+      [assignment, file_req, url_req]
+    end
+
+    def submit_mixed(course:, assignment:, file_req:, url_req:, account:, auth:)
+      materialize_upload(assignment:, requirement: file_req, account:, filename: 'main.rb')
+      payload = {
+        entries: [
+          { requirement_id: file_req.id, filename: 'main.rb',
+            content_type: 'text/plain', file_size: 7 },
+          { requirement_id: url_req.id, content: 'https://github.com/me/repo' }
+        ]
+      }
+      post submission_url(course.id, assignment.id), payload.to_json, json_headers(auth)
+    end
+
+    it 'emits download_url for file-type uploads on POST submission response' do
+      owner = create_test_account(roles: ['creator'])
+      course = create_test_course(owner)
+      student, student_auth = authenticated_header(roles: ['student'])
+      enroll_student(course, student)
+      assignment, file_req, url_req = create_assignment_with_mixed_requirements(course)
+
+      submit_mixed(course:, assignment:, file_req:, url_req:, account: student, auth: student_auth)
+
+      _(last_response.status).must_equal 201
+      uploads = json_response['data']['requirement_uploads']
+      file_entry = uploads.find { |u| u['requirement_id'] == file_req.id }
+      url_entry  = uploads.find { |u| u['requirement_id'] == url_req.id }
+
+      _(file_entry['download_url']).must_match(
+        %r{\A/api/course/#{course.id}/assignments/#{assignment.id}/submissions/\d+/uploads/\d+/download\z}
+      )
+      _(url_entry['download_url']).must_be_nil
+    end
+
+    it 'emits download_url on GET single submission response' do
+      owner = create_test_account(roles: ['creator'])
+      course = create_test_course(owner)
+      student, student_auth = authenticated_header(roles: ['student'])
+      enroll_student(course, student)
+      assignment, file_req, url_req = create_assignment_with_mixed_requirements(course)
+
+      submit_mixed(course:, assignment:, file_req:, url_req:, account: student, auth: student_auth)
+      submission_id = json_response['data']['id']
+
+      get "#{submission_url(course.id, assignment.id)}/#{submission_id}", nil, student_auth
+
+      _(last_response.status).must_equal 200
+      uploads = json_response['data']['requirement_uploads']
+      file_entry = uploads.find { |u| u['requirement_id'] == file_req.id }
+      _(file_entry['download_url']).must_match(
+        %r{\A/api/course/#{course.id}/assignments/#{assignment.id}/submissions/#{submission_id}/uploads/\d+/download\z}
+      )
+    end
+
+    it 'emits download_url on LIST submissions response (teaching staff)' do
+      owner_account, owner_auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(owner_account)
+      student, student_auth = authenticated_header(roles: ['student'])
+      enroll_student(course, student)
+      assignment, file_req, url_req = create_assignment_with_mixed_requirements(course)
+
+      submit_mixed(course:, assignment:, file_req:, url_req:, account: student, auth: student_auth)
+
+      get submission_url(course.id, assignment.id), nil, owner_auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['data']).must_be_kind_of Array
+      submission = json_response['data'].first
+      file_entry = submission['requirement_uploads'].find { |u| u['requirement_id'] == file_req.id }
+      _(file_entry['download_url']).must_match(
+        %r{\A/api/course/#{course.id}/assignments/#{assignment.id}/submissions/#{submission['id']}/uploads/\d+/download\z}
+      )
+    end
+  end
 end

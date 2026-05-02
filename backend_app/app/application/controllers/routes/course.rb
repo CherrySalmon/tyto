@@ -12,6 +12,24 @@ module Tyto
       plugin :all_verbs
       plugin :request_headers
 
+      # Builds the `user_options` hash threaded into Representer::Submission
+      # so each nested RequirementUploadRepr can emit `download_url`. Reaches
+      # for the assignment's requirements once per response — submission and
+      # list endpoints already gate on view permission upstream, so any caller
+      # who reaches the representer is allowed to see download links.
+      def submission_render_options(course_id, assignment_id)
+        assignment = Repository::Assignments.new.find_with_requirements(assignment_id.to_i)
+        requirements = assignment&.submission_requirements&.to_a || []
+        requirements_by_id = requirements.each_with_object({}) { |req, hash| hash[req.id] = req }
+
+        {
+          course_id: course_id.to_i,
+          assignment_id: assignment_id.to_i,
+          requirements_by_id:,
+          can_download: true
+        }
+      end
+
       route do |r|
         r.on do
           auth_header = r.headers['Authorization']
@@ -326,6 +344,29 @@ module Tyto
 
                 r.on 'submissions' do
                   r.on String do |submission_id|
+                    r.on 'uploads' do
+                      r.on String do |upload_id|
+                        # GET api/course/:cid/assignments/:aid/submissions/:sid/uploads/:uid/download
+                        # Mints a fresh presigned GET and 302-redirects. Each click
+                        # gets new credentials so long-open staff views never click
+                        # an expired URL.
+                        r.get 'download' do
+                          case Service::Submissions::DownloadUpload.new.call(
+                            requestor:, course_id:, assignment_id:,
+                            submission_id:, upload_id:
+                          )
+                          in Success(api_result)
+                            response.status = 302
+                            response.headers['Location'] = api_result.message
+                            ''
+                          in Failure(api_result)
+                            response.status = api_result.http_status_code
+                            api_result.to_json
+                          end
+                        end
+                      end
+                    end
+
                     # GET api/course/:course_id/assignments/:assignment_id/submissions/:submission_id
                     r.get do
                       case Service::Submissions::GetSubmission.new.call(
@@ -333,7 +374,9 @@ module Tyto
                       )
                       in Success(api_result)
                         response.status = api_result.http_status_code
-                        { success: true, data: Representer::Submission.new(api_result.message).to_hash }.to_json
+                        opts = submission_render_options(course_id, assignment_id)
+                        { success: true,
+                          data: Representer::Submission.new(api_result.message).to_hash(user_options: opts) }.to_json
                       in Failure(api_result)
                         response.status = api_result.http_status_code
                         api_result.to_json
@@ -348,7 +391,9 @@ module Tyto
                     )
                     in Success(api_result)
                       response.status = api_result.http_status_code
-                      { success: true, data: Representer::SubmissionsList.from_entities(api_result.message).to_array }.to_json
+                      opts = submission_render_options(course_id, assignment_id)
+                      { success: true,
+                        data: Representer::SubmissionsList.from_entities(api_result.message).to_array(user_options: opts) }.to_json
                     in Failure(api_result)
                       response.status = api_result.http_status_code
                       api_result.to_json
@@ -364,7 +409,9 @@ module Tyto
                     )
                     in Success(api_result)
                       response.status = api_result.http_status_code
-                      { success: true, data: Representer::Submission.new(api_result.message).to_hash }.to_json
+                      opts = submission_render_options(course_id, assignment_id)
+                      { success: true,
+                        data: Representer::Submission.new(api_result.message).to_hash(user_options: opts) }.to_json
                     in Failure(api_result)
                       response.status = api_result.http_status_code
                       api_result.to_json

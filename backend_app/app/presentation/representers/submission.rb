@@ -6,7 +6,20 @@ require 'roar/json'
 
 module Tyto
   module Representer
-    # Serializes RequirementUpload entity to JSON
+    # Serializes RequirementUpload entity to JSON.
+    #
+    # `download_url` is emitted only when the caller passes user_options carrying
+    # `can_download: true`, a `requirements_by_id` lookup containing the matching
+    # requirement, and `course_id` / `assignment_id`. The URL points at a backend
+    # route that authorizes and 302-redirects to a freshly-minted presigned GET
+    # — render-time presigned URLs would silently expire on long-open views.
+    # URL-type entries (where `submission_format` is `url`) never get a
+    # `download_url`; the raw URL in `content` is the link.
+    #
+    # `user_options` is captured in `to_hash` and re-used by the `download_url`
+    # method. Roar/Representable does not pass user_options to plain decorator
+    # methods, and its getter-lambda calling convention is awkward in this gem
+    # version, so the override keeps the property method ordinary.
     class RequirementUploadRepr < Roar::Decorator
       include Roar::JSON
 
@@ -19,6 +32,12 @@ module Tyto
       property :file_size
       property :created_at, exec_context: :decorator
       property :updated_at, exec_context: :decorator
+      property :download_url, exec_context: :decorator
+
+      def to_hash(options = {})
+        @user_options = options[:user_options] || {}
+        super
+      end
 
       def created_at
         represented.created_at&.utc&.iso8601
@@ -26,6 +45,21 @@ module Tyto
 
       def updated_at
         represented.updated_at&.utc&.iso8601
+      end
+
+      def download_url
+        opts = @user_options || {}
+        return nil unless opts[:can_download]
+
+        requirement = opts[:requirements_by_id]&.[](represented.requirement_id)
+        return nil unless requirement&.submission_format == 'file'
+
+        course_id     = opts[:course_id]
+        assignment_id = opts[:assignment_id]
+        return nil unless course_id && assignment_id
+
+        "/api/course/#{course_id}/assignments/#{assignment_id}" \
+          "/submissions/#{represented.submission_id}/uploads/#{represented.id}/download"
       end
     end
 
@@ -91,8 +125,8 @@ module Tyto
         new(wrapper)
       end
 
-      def to_array
-        ::JSON.parse(to_json)['entries']
+      def to_array(user_options: {})
+        ::JSON.parse(to_json(user_options:))['entries']
       end
     end
   end
