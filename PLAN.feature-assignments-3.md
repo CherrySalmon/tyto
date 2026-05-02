@@ -305,7 +305,7 @@ The A1 flow is safe under partial failure because S3 keys are deterministic per 
 
 ### Phase 4 — Verification (hybrid: Chrome + manual)
 
-- [ ] 3.21 Chrome walkthrough (LocalGateway, dev DB reset): (a) staff creates assignment with mixed file + URL requirements; (b) student uploads a file + URL via the form; (c) staff views the submission, downloads the file, opens the `.url` entry; (d) student resubmits with a different extension; (e) error paths (file too large, extension mismatch) show inline errors. Record in Review Log below.
+- [x] 3.21 Chrome walkthrough (LocalGateway, dev DB reset). **Done 2026-05-03.** All five sub-steps green: (a) staff created an assignment with mixed `rmd,qmd` file + URL requirements; (b) student uploaded `/tmp/work.rmd` + a GitHub URL and saw both render with clickable links; (c) staff opened the All Submissions table, clicked the row to expand (3.22a UX fix), downloaded the file (302 redirect to LocalGateway, bytes match), opened the URL; (d) student resubmitted with `/tmp/work.qmd` — extension change persisted, old `.rmd` LocalGateway object best-effort-deleted per R-P6; (e) wrong-extension `/tmp/wrong.txt` rejected at OS-picker level via `accept` attribute (defense-in-depth — JS check is the second gate, exercisable by removing `accept` in DevTools and confirmed to toast `"File type not allowed. Expected: rmd,qmd"`); oversize `/tmp/big.rmd` (11 MB) rejected by JS size check with toast `"File exceeds 10 MB limit."` Four bugs surfaced and fixed in 3.22a (commit `762b787`): download 401, row-click expand, URL prefill race, file input native-state persistence.
 - [ ] 3.22 Resolve any bugs found in 3.21 as `3.22a`, `3.22b`, … (TDD gate still applies to any backend fixes).
   - [x] 3.22a Frontend bugs found while walking through steps 2–4. **Done 2026-05-03.** All in `AssignmentDetailDialog.vue` — no backend change, no TDD gate.
     1. **Download link 401**: plain `<a href={download_url}>` clicks couldn't carry the Bearer JWT, so the route's `r.headers['Authorization']` lookup returned nil and bounced the request. Replaced with a click handler that fetches via `api.get(path, { responseType: 'blob' })` — axios interceptor adds the JWT, browser auto-follows the 302 to the self-authenticating presigned URL (LocalGateway token / S3 signature), and we trigger a Save-As via `URL.createObjectURL` + dynamic anchor. Only the first hop needs our JWT; the redirect destination authenticates via signed query params.
@@ -323,13 +323,24 @@ The A1 flow is safe under partial failure because S3 keys are deterministic per 
 
 > Captured during 3.21 Chrome walkthrough.
 
-- [ ] (empty — populate during 3.21)
+- [x] **Download link 401** — `<a href={download_url}>` couldn't carry the Bearer JWT. Fixed in 3.22a #1.
+- [x] **Staff row needed extra click** — chevron-only expand was non-obvious. Fixed in 3.22a #2 (whole row clickable, cursor:pointer).
+- [x] **URL prefill race on dialog reopen** — submissions arrived after `watch.visible` ran prefill, leaving URL field empty. Fixed in 3.22a #3.
+- [x] **File input native state persisted across dialog hide/show** — el-dialog hides via CSS, file inputs can't be cleared via property bindings. Fixed in 3.22a #4.
 
 ## Review Log (Slice 3)
 
 ### 3.21 Hybrid Verification
 
-(To be populated.)
+Walked through the full flow with two browser contexts (regular = staff, incognito = student) on 2026-05-03 against LocalGateway. Every sub-step (a–e) verified green after the 3.22a bug round. Concretely: file picked, validated, uploaded direct to LocalGateway via signed POST; submission persisted; download click returned bytes matching the upload; resubmit with a different extension cleaned up the old object; oversize and wrong-extension files rejected client-side without hitting the network.
+
+**Pain points**:
+
+- **P5 from Slice 2 recurred (slightly)**: backend was test-locked to 1388 runs / 0F / 0E, and the integration test in `file_upload_flow_spec.rb` exercised the HTTP plumbing — yet four hybrid-layer bugs only surfaced under real browser interaction (auth-header propagation through `<a href>`, dialog-hide-not-destroy, file input native state, two-fetch race condition). Confirms the integration test is necessary but not sufficient — a Playwright/Capybara-driven browser test would have caught at least #1 and #4 before manual verification.
+- **P2 (two-account login)** did not recur because the user used regular + incognito. That pattern should be the default — note for future slices.
+- **P4 (dialog-open stale caches)** recurred as the URL-prefill race. The fix (backfill on submissions watcher) is a band-aid; a cleaner pattern would be for the parent to await both fetches before opening the dialog. Noting for future refactor; out of scope here.
+
+**Bug round** (3.22a, commit `762b787`): four frontend fixes, all in `AssignmentDetailDialog.vue`. No backend changes needed.
 
 ## Pain Points / Meta-review
 
