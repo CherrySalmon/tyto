@@ -137,6 +137,7 @@
 </template>
 
 <script>
+import axios from 'axios';
 import api from '@/lib/tytoApi';
 import session from '../../lib/session';
 import CourseInfoCard from './components/CourseInfoCard.vue';
@@ -580,18 +581,64 @@ export default {
         this.submissionLoading = false;
       });
     },
-    createSubmission(assignmentId, entries) {
-      api.post(`/course/${this.course.id}/assignments/${assignmentId}/submissions`, { entries }).then(response => {
+    async createSubmission(assignmentId, entries, files = {}) {
+      // Pipeline (per Q1/A1 + R-P1/R-P2):
+      //   1. presign → POST /upload_grants for every file-type entry
+      //   2. upload → parallel multipart form-POST to each grant.upload_url,
+      //      sent without our JWT (presigned URLs auth via signature)
+      //   3. confirm → POST /submissions with metadata only; backend
+      //      reconstructs S3 keys from authenticated context
+      const fileEntries = entries.filter(e => files[e.requirement_id]);
+      try {
+        if (fileEntries.length > 0) {
+          const grants = await this.requestUploadGrants(assignmentId, fileEntries);
+          await this.uploadFilesToGrants(grants, files);
+        }
+        await api.post(
+          `/course/${this.course.id}/assignments/${assignmentId}/submissions`,
+          { entries }
+        );
         ElMessage({ type: 'success', message: 'Submission saved' });
         this.fetchSubmissions(assignmentId);
-      }).catch(error => {
-        // Backend error bodies are { error, details } — surface details when available.
+      } catch (error) {
         const data = error.response?.data || {};
-        const msg = data.details || data.error || 'Error submitting';
+        const msg = error.userMessage || data.details || data.error || 'Error submitting';
         ElMessage({ type: 'error', message: msg });
         this.submissionErrorNonce += 1;
         console.error('Error creating submission:', error);
-      });
+      }
+    },
+    async requestUploadGrants(assignmentId, fileEntries) {
+      const uploads = fileEntries.map(e => ({
+        requirement_id: e.requirement_id,
+        filename: e.filename
+      }));
+      try {
+        const response = await api.post(
+          `/course/${this.course.id}/assignments/${assignmentId}/upload_grants`,
+          { uploads }
+        );
+        return response.data.data;
+      } catch (error) {
+        error.userMessage = 'Could not prepare upload — please try again.';
+        throw error;
+      }
+    },
+    async uploadFilesToGrants(grants, files) {
+      // Raw axios — bypasses tytoApi's interceptor so the JWT is NOT sent
+      // to S3/LocalGateway. Presigned POSTs authenticate via the signed
+      // policy in `fields`; an extra Authorization header would be ignored
+      // at best, suspicious at worst.
+      await Promise.all(grants.map(grant => {
+        const file = files[grant.requirement_id];
+        const formData = new FormData();
+        Object.entries(grant.fields).forEach(([key, val]) => formData.append(key, val));
+        formData.append('file', file);
+        return axios.post(grant.upload_url, formData).catch(error => {
+          error.userMessage = `Could not upload ${file.name} — please try again.`;
+          throw error;
+        });
+      }));
     },
     closeAssignmentDetail() {
       this.showAssignmentDetailDialog = false;

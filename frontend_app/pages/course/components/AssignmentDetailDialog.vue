@@ -61,6 +61,9 @@
             <div v-for="upload in mySubmission.requirement_uploads" :key="upload.id" class="upload-entry">
               <span class="upload-label">{{ requirementDescription(upload.requirement_id) }}:</span>
               <a v-if="isUrl(upload)" :href="upload.content" target="_blank" rel="noopener">{{ upload.content }}</a>
+              <a v-else-if="upload.download_url" :href="upload.download_url" target="_blank" rel="noopener">
+                {{ upload.filename || 'Download' }}
+              </a>
               <span v-else>{{ upload.filename || upload.content }}</span>
             </div>
           </div>
@@ -98,13 +101,23 @@
               clearable
             />
             <div v-else class="file-entry">
-              <el-input
-                v-model="entryValues[req.id]"
-                placeholder="Enter filename (e.g., report.Rmd)"
-                clearable
+              <input
+                type="file"
+                :accept="acceptAttr(req)"
+                @change="onFileChange(req, $event)"
+                :ref="el => setFileInputRef(req.id, el)"
               />
+              <div v-if="entryFiles[req.id]" class="file-pick">
+                <span class="file-pick-name">{{ entryFiles[req.id].name }}</span>
+                <span class="file-pick-size">({{ formatFileSize(entryFiles[req.id].size) }})</span>
+                <el-button size="small" link type="primary" @click="clearFile(req.id)">Clear</el-button>
+              </div>
+              <div v-else-if="existingFilename(req.id)" class="file-pick">
+                <span class="file-pick-existing">Currently submitted: {{ existingFilename(req.id) }}</span>
+                <span class="file-pick-hint">— pick a file to replace it</span>
+              </div>
               <p v-if="req.allowed_types" class="file-note">Allowed types: {{ req.allowed_types }}</p>
-              <p class="file-note">File upload will be available soon — for now, enter the filename you plan to submit.</p>
+              <p class="file-note">Max {{ maxSizeMB }} MB per file.</p>
             </div>
           </div>
           <div style="margin-top: 12px;">
@@ -127,6 +140,9 @@
                 <div v-for="upload in scope.row.requirement_uploads" :key="upload.id" class="upload-entry">
                   <span class="upload-label">{{ requirementDescription(upload.requirement_id) }}:</span>
                   <a v-if="isUrl(upload)" :href="upload.content" target="_blank" rel="noopener">{{ upload.content }}</a>
+                  <a v-else-if="upload.download_url" :href="upload.download_url" target="_blank" rel="noopener">
+                    {{ upload.filename || 'Download' }}
+                  </a>
                   <span v-else>{{ upload.filename || upload.content }}</span>
                 </div>
               </div>
@@ -171,7 +187,9 @@
 
 <script>
 import { marked } from 'marked'
+import { ElMessage } from 'element-plus'
 import { formatLocalDateTime } from '../../../lib/dates'
+import { MAX_SIZE_BYTES, MAX_SIZE_MB } from '../../../lib/fileLimits'
 
 export default {
   emits: ['dialog-closed', 'create-submission'],
@@ -204,7 +222,10 @@ export default {
       showDialog: false,
       showSubmitForm: false,
       submitting: false,
-      entryValues: {}
+      entryValues: {},
+      entryFiles: {},
+      fileInputRefs: {},
+      maxSizeMB: MAX_SIZE_MB
     }
   },
   computed: {
@@ -251,7 +272,10 @@ export default {
     hasValidEntries() {
       if (!this.assignment.submission_requirements) return false
       return this.assignment.submission_requirements.some(req => {
-        return this.entryValues[req.id] && this.entryValues[req.id].trim()
+        if (req.submission_format === 'url') {
+          return this.entryValues[req.id] && this.entryValues[req.id].trim()
+        }
+        return Boolean(this.entryFiles[req.id])
       })
     }
   },
@@ -263,6 +287,7 @@ export default {
           this.showSubmitForm = false
           this.submitting = false
           this.entryValues = {}
+          this.entryFiles = {}
           this.prefillEntries()
         }
       }
@@ -317,43 +342,111 @@ export default {
       return `Account #${submission.account_id}`
     },
     prefillEntries() {
+      // URL-type values are prefilled so the user can edit them in place.
+      // File-type entries cannot reconstruct a File from a stored filename —
+      // existingFilename() shows the old name beside the picker so the user
+      // knows what's currently submitted before deciding to replace it.
       if (!this.mySubmission || !this.mySubmission.requirement_uploads) return
       this.mySubmission.requirement_uploads.forEach(upload => {
         const req = this.findRequirement(upload.requirement_id)
         if (!req) return
         if (req.submission_format === 'url') {
           this.entryValues[upload.requirement_id] = upload.content
-        } else {
-          this.entryValues[upload.requirement_id] = upload.filename || upload.content
         }
       })
     },
+    setFileInputRef(reqId, el) {
+      if (el) {
+        this.fileInputRefs[reqId] = el
+      } else {
+        delete this.fileInputRefs[reqId]
+      }
+    },
+    acceptAttr(req) {
+      if (!req.allowed_types) return ''
+      // backend stores either ".rmd,.qmd" or "rmd,qmd" — normalise to ".ext"
+      return req.allowed_types
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean)
+        .map(t => (t.startsWith('.') ? t : `.${t}`))
+        .join(',')
+    },
+    extensionAllowed(req, filename) {
+      if (!req.allowed_types) return true
+      const allowed = req.allowed_types
+        .split(',')
+        .map(t => t.trim().toLowerCase().replace(/^\./, ''))
+        .filter(Boolean)
+      const ext = (filename.split('.').pop() || '').toLowerCase()
+      return allowed.includes(ext)
+    },
+    onFileChange(req, event) {
+      const file = event.target.files && event.target.files[0]
+      if (!file) {
+        this.clearFile(req.id)
+        return
+      }
+      if (!this.extensionAllowed(req, file.name)) {
+        ElMessage({ type: 'error', message: `File type not allowed. Expected: ${req.allowed_types}` })
+        this.resetFileInput(req.id)
+        return
+      }
+      if (file.size > MAX_SIZE_BYTES) {
+        ElMessage({ type: 'error', message: `File exceeds ${MAX_SIZE_MB} MB limit.` })
+        this.resetFileInput(req.id)
+        return
+      }
+      this.entryFiles[req.id] = file
+    },
+    clearFile(reqId) {
+      delete this.entryFiles[reqId]
+      this.resetFileInput(reqId)
+    },
+    resetFileInput(reqId) {
+      const input = this.fileInputRefs[reqId]
+      if (input) input.value = ''
+    },
+    existingFilename(reqId) {
+      if (!this.mySubmission || !this.mySubmission.requirement_uploads) return null
+      const existing = this.mySubmission.requirement_uploads.find(u => u.requirement_id === reqId)
+      return existing ? existing.filename : null
+    },
+    formatFileSize(bytes) {
+      if (bytes < 1024) return `${bytes} B`
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+    },
     submitEntries() {
       if (!this.assignment.submission_requirements) return
-      const entries = this.assignment.submission_requirements
-        .filter(req => this.entryValues[req.id] && this.entryValues[req.id].trim())
-        .map(req => {
-          const value = this.entryValues[req.id].trim()
-          if (req.submission_format === 'url') {
-            return {
-              requirement_id: req.id,
-              content: value,
-              filename: null,
-              content_type: null,
-              file_size: null
-            }
-          }
-          return {
+      const entries = []
+      const files = {}
+      this.assignment.submission_requirements.forEach(req => {
+        if (req.submission_format === 'url') {
+          const val = this.entryValues[req.id]
+          if (!val || !val.trim()) return
+          entries.push({
             requirement_id: req.id,
-            content: value,
-            filename: value,
+            content: val.trim(),
+            filename: null,
             content_type: null,
             file_size: null
-          }
+          })
+          return
+        }
+        const file = this.entryFiles[req.id]
+        if (!file) return
+        entries.push({
+          requirement_id: req.id,
+          filename: file.name,
+          content_type: file.type || 'application/octet-stream',
+          file_size: file.size
         })
+        files[req.id] = file
+      })
       if (entries.length === 0) return
       this.submitting = true
-      this.$emit('create-submission', this.assignment.id, entries)
+      this.$emit('create-submission', this.assignment.id, entries, files)
     },
     onDialogClose() {
       this.$emit('dialog-closed')
@@ -428,6 +521,32 @@ export default {
 
 .file-entry {
   max-width: 400px;
+}
+
+.file-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.875rem;
+}
+
+.file-pick-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.file-pick-size {
+  color: #909399;
+}
+
+.file-pick-existing {
+  color: #606266;
+}
+
+.file-pick-hint {
+  color: #909399;
+  font-size: 0.8rem;
 }
 
 .file-note {
