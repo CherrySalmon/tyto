@@ -61,7 +61,7 @@
             <div v-for="upload in mySubmission.requirement_uploads" :key="upload.id" class="upload-entry">
               <span class="upload-label">{{ requirementDescription(upload.requirement_id) }}:</span>
               <a v-if="isUrl(upload)" :href="upload.content" target="_blank" rel="noopener">{{ upload.content }}</a>
-              <a v-else-if="upload.download_url" :href="upload.download_url" target="_blank" rel="noopener">
+              <a v-else-if="upload.download_url" href="#" @click.prevent="downloadUpload(upload)">
                 {{ upload.filename || 'Download' }}
               </a>
               <span v-else>{{ upload.filename || upload.content }}</span>
@@ -133,14 +133,22 @@
       <!-- Teaching Staff: All Submissions -->
       <div v-if="canViewAll && submissions.length" class="detail-section submission-section">
         <h4>All Submissions ({{ submissions.length }})</h4>
-        <el-table :data="submissions" style="width: 100%" size="small">
+        <el-table
+          ref="submissionsTable"
+          :data="submissions"
+          style="width: 100%"
+          size="small"
+          row-key="id"
+          class="clickable-rows"
+          @row-click="toggleSubmissionExpand"
+        >
           <el-table-column type="expand">
             <template #default="scope">
               <div v-if="(scope.row.requirement_uploads || []).length" class="submission-expand">
                 <div v-for="upload in scope.row.requirement_uploads" :key="upload.id" class="upload-entry">
                   <span class="upload-label">{{ requirementDescription(upload.requirement_id) }}:</span>
                   <a v-if="isUrl(upload)" :href="upload.content" target="_blank" rel="noopener">{{ upload.content }}</a>
-                  <a v-else-if="upload.download_url" :href="upload.download_url" target="_blank" rel="noopener">
+                  <a v-else-if="upload.download_url" href="#" @click.prevent="downloadUpload(upload)">
                     {{ upload.filename || 'Download' }}
                   </a>
                   <span v-else>{{ upload.filename || upload.content }}</span>
@@ -188,6 +196,7 @@
 <script>
 import { marked } from 'marked'
 import { ElMessage } from 'element-plus'
+import api from '@/lib/tytoApi'
 import { formatLocalDateTime } from '../../../lib/dates'
 import { MAX_SIZE_BYTES, MAX_SIZE_MB } from '../../../lib/fileLimits'
 
@@ -288,6 +297,14 @@ export default {
           this.submitting = false
           this.entryValues = {}
           this.entryFiles = {}
+          // <input type="file"> keeps its native picked-file state across
+          // dialog hide/show because el-dialog hides via CSS rather than
+          // destroying. Reactively-bound entryFiles is empty, but the
+          // browser's display still shows the previous filename until
+          // we explicitly clear input.value.
+          Object.values(this.fileInputRefs).forEach(el => {
+            if (el) el.value = ''
+          })
           this.prefillEntries()
         }
       }
@@ -299,6 +316,12 @@ export default {
       if (this.submitting) {
         this.submitting = false
         this.showSubmitForm = false
+      }
+      // Backfill URL prefill if submissions arrived after the dialog
+      // opened (parent fetches assignment + submissions in two awaits,
+      // and the dialog watcher fires on the first one).
+      if (this.showDialog && Object.keys(this.entryValues).length === 0) {
+        this.prefillEntries()
       }
     },
     submissionErrorNonce() {
@@ -416,6 +439,36 @@ export default {
       if (bytes < 1024) return `${bytes} B`
       if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
       return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+    },
+    toggleSubmissionExpand(row) {
+      // Element Plus stops propagation on the expand chevron's own click,
+      // so this row-click handler only fires for clicks on cells outside
+      // the chevron — turning the whole row into the affordance.
+      this.$refs.submissionsTable.toggleRowExpansion(row)
+    },
+    async downloadUpload(upload) {
+      // Plain <a href> can't carry our Bearer JWT, so we fetch the route
+      // through axios (which adds Authorization), let the browser auto-follow
+      // the 302 to the self-authenticating presigned URL, and deliver the
+      // bytes as a blob download. Only the first hop needs our JWT — the
+      // presigned URL auths via its signed query params.
+      const path = upload.download_url.replace(/^\/api/, '')
+      try {
+        const response = await api.get(path, { responseType: 'blob' })
+        const blobUrl = URL.createObjectURL(response.data)
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = upload.filename || 'download'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(blobUrl)
+      } catch (error) {
+        const data = error.response?.data || {}
+        const msg = data.details || data.error || 'Could not download file'
+        ElMessage({ type: 'error', message: msg })
+        console.error('Download failed:', error)
+      }
     },
     submitEntries() {
       if (!this.assignment.submission_requirements) return
@@ -577,5 +630,9 @@ export default {
   padding: 8px 16px;
   background-color: #fafafa;
   border-radius: 4px;
+}
+
+.clickable-rows :deep(.el-table__row) {
+  cursor: pointer;
 }
 </style>
