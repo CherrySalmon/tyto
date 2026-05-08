@@ -94,7 +94,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
         'entries' => [
           {
             'requirement_id' => file_requirement.id,
-            'content' => "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd",
+            'content' => "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd",
             'filename' => 'homework1.Rmd',
             'content_type' => 'text/x-r-markdown',
             'file_size' => 2048
@@ -128,7 +128,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
         'entries' => [
           {
             'requirement_id' => file_requirement.id,
-            'content' => "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd",
+            'content' => "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd",
             'filename' => 'old_file.Rmd',
             'content_type' => 'text/x-r-markdown',
             'file_size' => 1024
@@ -146,7 +146,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
         'entries' => [
           {
             'requirement_id' => file_requirement.id,
-            'content' => "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.qmd",
+            'content' => "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.qmd",
             'filename' => 'new_file.qmd',
             'content_type' => 'text/x-quarto',
             'file_size' => 4096
@@ -354,7 +354,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
         'entries' => [
           {
             'requirement_id' => file_requirement.id,
-            'content' => "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.pdf",
+            'content' => "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.pdf",
             'filename' => 'report.pdf',
             'content_type' => 'application/pdf',
             'file_size' => 2048
@@ -378,7 +378,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
         'entries' => [
           {
             'requirement_id' => file_requirement.id,
-            'content' => "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.RMD",
+            'content' => "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.RMD",
             'filename' => 'homework1.RMD',
             'content_type' => 'text/x-r-markdown',
             'file_size' => 2048
@@ -401,7 +401,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
         'entries' => [
           {
             'requirement_id' => file_requirement.id,
-            'content' => "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd",
+            'content' => "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd",
             'filename' => 'huge.Rmd',
             'content_type' => 'text/plain',
             'file_size' => 11_000_000
@@ -470,7 +470,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
     # SubmissionMapper lowercases the extension when building the key, so the
     # server-reconstructed key for a `homework1.Rmd` upload ends in `.rmd`.
     let(:expected_file_key) do
-      "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
+      "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
     end
 
     it 'reconstructs the S3 key server-side and HEADs that key, not the client-supplied content' do
@@ -522,8 +522,8 @@ describe Tyto::Service::Submissions::CreateSubmission do
 
     it "rejects a body whose content points at another account's key (server reconstructs from auth)" do
       file_requirement
-      foreign_key = "#{assignment.id}/#{file_requirement.id}/#{another_student.id}.rmd"
-      own_key     = "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
+      foreign_key = "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{another_student.id}.rmd"
+      own_key     = "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
       # The foreign key is "present" in storage; the requestor's own key is missing.
       # The server must HEAD the own key (reconstructed from auth) — never the
       # foreign key the body provides.
@@ -559,7 +559,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
 
     it 'returns bad_request when the reconstructed S3 key does not exist (HEAD returns not_found)' do
       file_requirement
-      own_key = "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
+      own_key = "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
       gateway_with_missing = CreateSubmissionRecordingGateway.new(
         head_results: { own_key => Dry::Monads::Result::Failure.new(:not_found) }
       )
@@ -610,8 +610,8 @@ describe Tyto::Service::Submissions::CreateSubmission do
 
     it 'on resubmit with a changed extension, calls gateway.delete with the old key after persisting the new entry' do
       file_requirement
-      old_key = "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
-      new_key = "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.qmd"
+      old_key = "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
+      new_key = "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.qmd"
 
       Tyto::Service::Submissions::CreateSubmission.new(gateway: CreateSubmissionRecordingGateway.new).call(
         requestor: student_requestor, course_id: course.id,
@@ -646,7 +646,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
 
     it 'on resubmit with the same extension, does NOT call gateway.delete (overwrite at the same key)' do
       file_requirement
-      own_key = "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd"
+      own_key = "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd"
 
       Tyto::Service::Submissions::CreateSubmission.new(gateway: CreateSubmissionRecordingGateway.new).call(
         requestor: student_requestor, course_id: course.id,
@@ -678,8 +678,8 @@ describe Tyto::Service::Submissions::CreateSubmission do
 
     it 'persists the new entry even when gateway.delete fails for the old key (best-effort cleanup)' do
       file_requirement
-      old_key = "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
-      new_key = "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.qmd"
+      old_key = "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
+      new_key = "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.qmd"
 
       Tyto::Service::Submissions::CreateSubmission.new(gateway: CreateSubmissionRecordingGateway.new).call(
         requestor: student_requestor, course_id: course.id,
@@ -751,7 +751,7 @@ describe Tyto::Service::Submissions::CreateSubmission do
 
     it "persists the client's content_type as-is (untrusted display metadata)" do
       file_requirement
-      own_key = "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd"
+      own_key = "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.Rmd"
       weird_content_type = 'application/x-totally-fake-mime'
 
       submission_data = {

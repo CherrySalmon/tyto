@@ -4,9 +4,11 @@ require_relative '../../spec_helper'
 
 # 3.1e — SubmissionMapper: submission-specific S3 key construction.
 #
-# Per R2: key = "<assignment_id>/<requirement_id>/<account_id>.<extension>". No
-# submission_id (avoids chicken-and-egg with persistence). requirement_id before
-# account_id groups all student uploads per requirement for batch download.
+# Per R2: key = "<course_id>/<assignment_id>/<requirement_id>/<account_id>.<extension>".
+# No submission_id (avoids chicken-and-egg with persistence). course_id at the
+# top groups everything for a course so an operator can browse a course's
+# uploads by S3 prefix; requirement_id before account_id groups all student
+# uploads per requirement for batch download.
 #
 # Used by IssueUploadGrants to BUILD keys from authenticated context, and by
 # CreateSubmission to RECONSTRUCT keys for HEAD verification per R-P2 — same
@@ -19,6 +21,7 @@ require_relative '../../spec_helper'
 # Shared args — kept top-level so each describe stays under Metrics/BlockLength.
 module SubmissionMapperSpecSupport
   VALID_ARGS = {
+    course_id: 10,
     assignment_id: 1,
     requirement_id: 2,
     account_id: 3,
@@ -28,20 +31,20 @@ module SubmissionMapperSpecSupport
 end
 
 describe 'Tyto::FileStorage::SubmissionMapper.build_key happy path' do
-  it 'builds a key in the form <assignment_id>/<requirement_id>/<account_id>.<ext>' do
+  it 'builds a key in the form <course_id>/<assignment_id>/<requirement_id>/<account_id>.<ext>' do
     key = Tyto::FileStorage::SubmissionMapper.build_key(**SubmissionMapperSpecSupport::VALID_ARGS)
     _(key).must_be_kind_of Tyto::FileStorage::StorageKey
-    _(key.to_s).must_equal '1/2/3.rmd'
+    _(key.to_s).must_equal '10/1/2/3.rmd'
   end
 
   it 'lowercases the extension' do
     args = SubmissionMapperSpecSupport::VALID_ARGS.merge(filename: 'paper.PDF')
-    _(Tyto::FileStorage::SubmissionMapper.build_key(**args).to_s).must_equal '1/2/3.pdf'
+    _(Tyto::FileStorage::SubmissionMapper.build_key(**args).to_s).must_equal '10/1/2/3.pdf'
   end
 
   it 'uses only the final segment of a multi-dot filename' do
     args = SubmissionMapperSpecSupport::VALID_ARGS.merge(filename: 'archive.tar.gz')
-    _(Tyto::FileStorage::SubmissionMapper.build_key(**args).to_s).must_equal '1/2/3.gz'
+    _(Tyto::FileStorage::SubmissionMapper.build_key(**args).to_s).must_equal '10/1/2/3.gz'
   end
 end
 
@@ -58,6 +61,16 @@ describe 'Tyto::FileStorage::SubmissionMapper.build_key submission_format valida
 end
 
 describe 'Tyto::FileStorage::SubmissionMapper.build_key id validation' do
+  it 'rejects nil course_id' do
+    args = SubmissionMapperSpecSupport::VALID_ARGS.merge(course_id: nil)
+    _(-> { Tyto::FileStorage::SubmissionMapper.build_key(**args) }).must_raise ArgumentError
+  end
+
+  it 'rejects non-positive course_id' do
+    args = SubmissionMapperSpecSupport::VALID_ARGS.merge(course_id: 0)
+    _(-> { Tyto::FileStorage::SubmissionMapper.build_key(**args) }).must_raise ArgumentError
+  end
+
   it 'rejects nil assignment_id' do
     args = SubmissionMapperSpecSupport::VALID_ARGS.merge(assignment_id: nil)
     _(-> { Tyto::FileStorage::SubmissionMapper.build_key(**args) }).must_raise ArgumentError

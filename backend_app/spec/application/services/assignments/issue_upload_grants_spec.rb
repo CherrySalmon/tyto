@@ -143,7 +143,7 @@ describe Tyto::Service::Assignments::IssueUploadGrants do
       )
 
       key = result.value!.message.first[:key]
-      _(key).must_equal "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
+      _(key).must_equal "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
     end
 
     it 'returns one presigned entry per upload when multiple are requested' do
@@ -204,7 +204,7 @@ describe Tyto::Service::Assignments::IssueUploadGrants do
 
       _(result).must_be_kind_of Dry::Monads::Result::Success
       key = result.value!.message.first[:key]
-      _(key).must_equal "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
+      _(key).must_equal "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
     end
 
     it 'forwards the reconstructed key (not any client value) to the gateway' do
@@ -223,7 +223,7 @@ describe Tyto::Service::Assignments::IssueUploadGrants do
 
       _(recorder.calls.size).must_equal 1
       _(recorder.calls.first[:key])
-        .must_equal "#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
+        .must_equal "#{course.id}/#{assignment.id}/#{file_requirement.id}/#{student_account.id}.rmd"
     end
   end
 

@@ -16,14 +16,15 @@ module Tyto
     module SubmissionMapper
       module_function
 
-      def build_key(assignment_id:, requirement_id:, account_id:, filename:, submission_format:)
+      def build_key(course_id:, assignment_id:, requirement_id:, account_id:, filename:, submission_format:)
         validate_format!(submission_format)
+        validate_id!(course_id, :course_id)
         validate_id!(assignment_id, :assignment_id)
         validate_id!(requirement_id, :requirement_id)
         validate_id!(account_id, :account_id)
         ext = extract_extension(filename)
 
-        StorageKey.from("#{assignment_id}/#{requirement_id}/#{account_id}.#{ext}")
+        StorageKey.from("#{course_id}/#{assignment_id}/#{requirement_id}/#{account_id}.#{ext}")
       end
 
       def validate_format!(submission_format)

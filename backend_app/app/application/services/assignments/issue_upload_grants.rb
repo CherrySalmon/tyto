@@ -132,6 +132,7 @@ module Tyto
 
         def build_entry(requirement, filename)
           key = Tyto::FileStorage::SubmissionMapper.build_key(
+            course_id: @course_id,
             assignment_id: @assignment.id,
             requirement_id: requirement.id,
             account_id: @requestor.account_id,

@@ -150,6 +150,7 @@ module Tyto
         # the authenticated account_id and that is what we persist and verify.
         def reconstruct_and_verify_key(filename, requirement)
           key = Tyto::FileStorage::SubmissionMapper.build_key(
+            course_id: @course_id,
             assignment_id: @assignment.id,
             requirement_id: requirement.id,
             account_id: @requestor.account_id,

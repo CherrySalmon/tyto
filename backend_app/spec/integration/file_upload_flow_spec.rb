@@ -56,8 +56,9 @@ describe 'File upload flow (presign → upload → submit → download)' do
   # transactions, so two consecutive tests can land on the same key path).
   after do
     key = Tyto::FileStorage::SubmissionMapper.build_key(
-      assignment_id: @assignment.id, requirement_id: @file_req.id,
-      account_id: @student.id, filename: filename, submission_format: 'file'
+      course_id: @course.id, assignment_id: @assignment.id,
+      requirement_id: @file_req.id, account_id: @student.id,
+      filename: filename, submission_format: 'file'
     )
     Tyto::FileStorage.build_gateway.delete(key:)
   rescue StandardError

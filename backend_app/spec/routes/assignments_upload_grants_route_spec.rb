@@ -106,7 +106,7 @@ describe 'Assignments Upload Grants Route' do
 
       _(last_response.status).must_equal 201
       key = json_response['data'].first['key']
-      _(key).must_equal "#{assignment.id}/#{file_req.id}/#{student_account.id}.rmd"
+      _(key).must_equal "#{course.id}/#{assignment.id}/#{file_req.id}/#{student_account.id}.rmd"
     end
 
     it 'returns 403 when teaching staff requests upload URLs (only students can submit)' do

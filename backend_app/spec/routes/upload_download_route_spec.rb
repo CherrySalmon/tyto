@@ -55,8 +55,9 @@ describe 'Upload Download Route' do
   # then creates the submission row + entry row pointing at that key.
   def create_file_submission(assignment:, requirement:, account:, filename: 'solution.rb')
     key = Tyto::FileStorage::SubmissionMapper.build_key(
-      assignment_id: assignment.id, requirement_id: requirement.id,
-      account_id: account.id, filename:, submission_format: 'file'
+      course_id: assignment.course_id, assignment_id: assignment.id,
+      requirement_id: requirement.id, account_id: account.id,
+      filename:, submission_format: 'file'
     )
     Tyto::FileStorage.build_gateway.write(key:, body: 'student bytes')
 

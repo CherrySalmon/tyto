@@ -51,8 +51,9 @@ describe 'Submission Routes' do
   # HEAD-check passes when the route runs.
   def materialize_upload(assignment:, requirement:, account:, filename:)
     key = Tyto::FileStorage::SubmissionMapper.build_key(
-      assignment_id: assignment.id, requirement_id: requirement.id,
-      account_id: account.id, filename:, submission_format: 'file'
+      course_id: assignment.course_id, assignment_id: assignment.id,
+      requirement_id: requirement.id, account_id: account.id,
+      filename:, submission_format: 'file'
     )
     Tyto::FileStorage.build_gateway.write(key:, body: 'test bytes')
     key
