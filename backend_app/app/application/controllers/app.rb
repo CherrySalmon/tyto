@@ -6,6 +6,7 @@ require_relative '../../infrastructure/database/orm/account'
 require_relative './routes/account'
 require_relative './routes/authentication'
 require_relative './routes/course'
+require_relative './routes/local_storage'
 require 'rack/ssl-enforcer'
 
 module Tyto
@@ -54,6 +55,14 @@ module Tyto
         # All current-event-related routes are under 'api/current_events'
         r.on 'current_events' do
           r.run Routes::CurrentEvents
+        end
+
+        # LocalGateway HTTP endpoints for development/test only — mounted in
+        # the route tree (not at class-load) so the runtime allowlist guard
+        # inside the route module gets a chance to halt with 404 in other
+        # environments.
+        r.on '_local_storage' do
+          r.run Routes::LocalStorage
         end
 
         r.get do

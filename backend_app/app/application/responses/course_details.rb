@@ -5,7 +5,7 @@ module Tyto
     # DTO for course data with enrollment and policy summary
     CourseDetails = Data.define(
       :id, :name, :logo, :start_at, :end_at,
-      :created_at, :updated_at, :enroll_identity, :policies
+      :created_at, :updated_at, :enroll_identity, :policies, :has_assignments
     )
   end
 end

@@ -11,6 +11,7 @@
                   <li class="tab" :class="$route.path.includes('attendance')?'active':''"><router-link to="attendance">Attendance Events</router-link></li>
                   <li class="tab" :class="$route.path.includes('location')?'active':''"><router-link to="location">Locations</router-link></li>
                   <li class="tab" :class="$route.path.includes('people')?'active':''"><router-link to="people">People</router-link></li>
+                  <li class="tab" :class="$route.path.includes('assignments')?'active':''"><router-link to="assignments">Assignments</router-link></li>
                 </ul>
               </div>
               <div class="course-manage-view">
@@ -19,6 +20,7 @@
                   :attendance-events="attendanceEvents" :locations="locations" @create-event="showAttendanceEvent" @edit-event="editAttendanceEvent" @delete-event="deleteAttendanceEvent"
                   @create-location="createNewLocation" @update-location="updateLocation" @delete-location="deleteLocation"
                   :enrollments="enrollments" :assignableRoles="assignableRoles" @new-enrolls="addEnrollments" @update-enrollment="updateEnrollment" @delete-enrollment="deleteEnrollments" :currentRole="currentRole"
+                  :assignments="assignments" :canManage="true" @create-assignment="showCreateAssignment" @edit-assignment="editAssignment" @delete-assignment="deleteAssignment" @publish-assignment="publishAssignment" @unpublish-assignment="unpublishAssignment" @view-assignment="viewAssignment"
                 >
                 </RouterView>
               </div>
@@ -53,27 +55,48 @@
       </el-col>
     </el-row>
     <div v-if="currentRole">
-      <div class="center-content" v-if="course.policies && !course.policies.can_update">
-        <!-- <el-button type="primary" @click="changeRoute($route.params.id + '/attendance')">Mark Attendance</el-button> -->
-        <CourseInfoCard :course="course" :role="currentRole" @show-modify-dialog="showModifyCourseDialog = true" style="margin: 20px 0;">
-        </CourseInfoCard>
-        <div class="selecor-role-container">
-          <span style="margin: 0 10px;">View</span>
-          <el-select
-            v-model="selectRole"
-            placeholder="Select"
-            size="large"
-            style="width: 100%;"
-            @change="changeRole"
-          >
-            <el-option
-              v-for="role in selectableRoles"
-              :key="role"
-              :label="role"
-              :value="role"
-            />
-          </el-select>
-        </div>
+      <div v-if="course.policies && !course.policies.can_update">
+        <el-row>
+          <el-col :xs="24" :md="18">
+            <div class="course-content-container">
+              <div class="course-menu-bar">
+                <ul class="course-menu">
+                  <li v-if="course.has_assignments" class="tab" :class="$route.path.includes('assignments')?'active':''"><router-link to="assignments">Assignments</router-link></li>
+                </ul>
+              </div>
+              <div class="course-manage-view">
+                <RouterView
+                  :course="course"
+                  :assignments="assignments"
+                  :canManage="false"
+                  @view-assignment="viewAssignment"
+                >
+                </RouterView>
+              </div>
+            </div>
+          </el-col>
+          <el-col :xs="24" :md="6">
+            <CourseInfoCard :course="course" :role="currentRole" @show-modify-dialog="showModifyCourseDialog = true" style="margin: 20px 0;">
+            </CourseInfoCard>
+            <div class="selecor-role-container">
+              <span style="margin: 0 10px;">View</span>
+              <el-select
+                v-model="selectRole"
+                placeholder="Select"
+                size="large"
+                style="width: 100%;"
+                @change="changeRole"
+              >
+                <el-option
+                  v-for="role in selectableRoles"
+                  :key="role"
+                  :label="role"
+                  :value="role"
+                />
+              </el-select>
+            </div>
+          </el-col>
+        </el-row>
       </div>
     </div>
     <ModifyCourseDialog class="dialog-container" :courseForm="courseForm" :visible="showModifyCourseDialog"
@@ -91,10 +114,30 @@
         @update-event="updateAttendanceEvent">
       </ModifyAttendanceEventDialog>
     </template>
+
+    <CreateAssignmentDialog class="dialog-container" :visible="showCreateAssignmentDialog" :attendanceEvents="attendanceEvents"
+      @dialog-closed="showCreateAssignmentDialog = false" @create-assignment="createAssignment">
+    </CreateAssignmentDialog>
+
+    <template v-if="showModifyAssignmentDialog">
+      <ModifyAssignmentDialog class="dialog-container" :assignmentForm="assignmentForm" :assignmentStatus="currentAssignmentStatus"
+        :canUnpublish="currentAssignmentCanUnpublish"
+        :visible="showModifyAssignmentDialog"
+        :attendanceEvents="attendanceEvents" @dialog-closed="showModifyAssignmentDialog = false"
+        @update-assignment="updateAssignment">
+      </ModifyAssignmentDialog>
+    </template>
+
+    <AssignmentDetailDialog :assignment="currentAssignment" :visible="showAssignmentDetailDialog"
+      :attendanceEvents="attendanceEvents" :submissions="currentSubmissions" :submissionLoading="submissionLoading"
+      :submissionErrorNonce="submissionErrorNonce"
+      @dialog-closed="closeAssignmentDetail" @create-submission="createSubmission">
+    </AssignmentDetailDialog>
   </div>
 </template>
 
 <script>
+import axios from 'axios';
 import api from '@/lib/tytoApi';
 import session from '../../lib/session';
 import CourseInfoCard from './components/CourseInfoCard.vue';
@@ -104,11 +147,14 @@ import CreateEventsDialog from './components/CreateEventsDialog.vue';
 import ModifyAttendanceEventDialog from './components/ModifyAttendanceEventDialog.vue'
 import AttendanceEventCard from './components/AttendanceEventCard.vue';
 import LocationCard from './components/LocationCard.vue'
+import CreateAssignmentDialog from './components/CreateAssignmentDialog.vue';
+import ModifyAssignmentDialog from './components/ModifyAssignmentDialog.vue';
+import AssignmentDetailDialog from './components/AssignmentDetailDialog.vue';
 import { ElMessage } from 'element-plus'
 
 export default {
   name: 'SingleCourse',
-  components: { CourseInfoCard, ModifyCourseDialog, ManagePeopleCard, CreateEventsDialog, AttendanceEventCard, ModifyAttendanceEventDialog, LocationCard },
+  components: { CourseInfoCard, ModifyCourseDialog, ManagePeopleCard, CreateEventsDialog, AttendanceEventCard, ModifyAttendanceEventDialog, LocationCard, CreateAssignmentDialog, ModifyAssignmentDialog, AssignmentDetailDialog },
   data() {
     return {
       course: {
@@ -141,7 +187,19 @@ export default {
       enrollments: [],
       assignableRoles: [],
       currentEventID: '',
-      activeTab: 'events'
+      activeTab: 'events',
+      assignments: [],
+      showCreateAssignmentDialog: false,
+      showModifyAssignmentDialog: false,
+      showAssignmentDetailDialog: false,
+      currentAssignment: {},
+      currentAssignmentId: '',
+      currentAssignmentStatus: 'draft',
+      currentAssignmentCanUnpublish: true,
+      assignmentForm: {},
+      currentSubmissions: [],
+      submissionLoading: false,
+      submissionErrorNonce: 0
     };
   },
   computed: {
@@ -175,6 +233,7 @@ export default {
         this.fetchEnrollments();
         this.fetchAssignableRoles();
       }
+      this.fetchAssignments();
     }
   },
   methods: {
@@ -412,6 +471,178 @@ export default {
       }).catch(error => {
         console.error('Error modifying attendance event:', error);
       });
+    },
+    fetchAssignments() {
+      api.get(`/course/${this.course.id}/assignments`).then(response => {
+        this.assignments = response.data.data;
+      }).catch(error => {
+        console.error('Error fetching assignments:', error);
+      });
+    },
+    showCreateAssignment() {
+      this.showCreateAssignmentDialog = true;
+    },
+    createAssignment(form) {
+      api.post(`/course/${this.course.id}/assignments`, form).then(() => {
+        this.showCreateAssignmentDialog = false;
+        this.fetchAssignments();
+        ElMessage({ type: 'success', message: 'Assignment created' });
+      }).catch(error => {
+        console.error('Error creating assignment:', error);
+      });
+    },
+    editAssignment(assignmentId) {
+      api.get(`/course/${this.course.id}/assignments/${assignmentId}`).then(response => {
+        const assignment = response.data.data;
+        this.assignmentForm = {
+          title: assignment.title,
+          description: assignment.description,
+          due_at: assignment.due_at,
+          event_id: assignment.event_id,
+          allow_late_resubmit: assignment.allow_late_resubmit,
+          submission_requirements: assignment.submission_requirements || []
+        };
+        this.currentAssignmentId = assignmentId;
+        this.currentAssignmentStatus = assignment.status;
+        this.currentAssignmentCanUnpublish = assignment.policies?.can_unpublish !== false;
+        this.showModifyAssignmentDialog = true;
+      }).catch(error => {
+        console.error('Error fetching assignment for edit:', error);
+      });
+    },
+    updateAssignment(form) {
+      api.put(`/course/${this.course.id}/assignments/${this.currentAssignmentId}`, form).then(() => {
+        this.showModifyAssignmentDialog = false;
+        this.fetchAssignments();
+        ElMessage({ type: 'success', message: 'Assignment updated' });
+      }).catch(error => {
+        console.error('Error updating assignment:', error);
+      });
+    },
+    deleteAssignment(assignmentId) {
+      ElMessageBox.confirm(
+        'Are you sure you want to delete this assignment?',
+        'Delete Assignment',
+        { confirmButtonText: 'Delete', cancelButtonText: 'Cancel', type: 'warning' }
+      ).then(() => {
+        api.delete(`/course/${this.course.id}/assignments/${assignmentId}`).then(() => {
+          this.fetchAssignments();
+          ElMessage({ type: 'success', message: 'Assignment deleted' });
+        }).catch(error => {
+          console.error('Error deleting assignment:', error);
+        });
+      }).catch(() => {});
+    },
+    publishAssignment(assignmentId) {
+      ElMessageBox.confirm(
+        'Publishing makes this assignment visible to students. Submission requirements (e.g., files, URLs to upload) cannot be modified while published — unpublish first to make changes. Continue?',
+        'Publish Assignment',
+        { confirmButtonText: 'Publish', cancelButtonText: 'Cancel', type: 'warning' }
+      ).then(() => {
+        api.post(`/course/${this.course.id}/assignments/${assignmentId}/publish`).then(() => {
+          this.fetchAssignments();
+          ElMessage({ type: 'success', message: 'Assignment published' });
+        }).catch(error => {
+          console.error('Error publishing assignment:', error);
+        });
+      }).catch(() => {});
+    },
+    unpublishAssignment(assignmentId) {
+      ElMessageBox.confirm(
+        'This will return the assignment to draft status and hide it from students. You can then edit requirements before republishing. Continue?',
+        'Unpublish Assignment',
+        { confirmButtonText: 'Unpublish', cancelButtonText: 'Cancel', type: 'warning' }
+      ).then(() => {
+        api.post(`/course/${this.course.id}/assignments/${assignmentId}/unpublish`).then(() => {
+          this.fetchAssignments();
+          ElMessage({ type: 'success', message: 'Assignment unpublished' });
+        }).catch(error => {
+          console.error('Error unpublishing assignment:', error);
+        });
+      }).catch(() => {});
+    },
+    viewAssignment(assignmentId) {
+      api.get(`/course/${this.course.id}/assignments/${assignmentId}`).then(response => {
+        this.currentAssignment = response.data.data;
+        this.showAssignmentDetailDialog = true;
+        this.fetchSubmissions(assignmentId);
+      }).catch(error => {
+        console.error('Error fetching assignment:', error);
+      });
+    },
+    fetchSubmissions(assignmentId) {
+      this.submissionLoading = true;
+      api.get(`/course/${this.course.id}/assignments/${assignmentId}/submissions`).then(response => {
+        this.currentSubmissions = response.data.data;
+      }).catch(error => {
+        console.error('Error fetching submissions:', error);
+        this.currentSubmissions = [];
+      }).finally(() => {
+        this.submissionLoading = false;
+      });
+    },
+    async createSubmission(assignmentId, entries, files = {}) {
+      // Pipeline (per Q1/A1 + R-P1/R-P2):
+      //   1. presign → POST /upload_grants for every file-type entry
+      //   2. upload → parallel multipart form-POST to each grant.upload_url,
+      //      sent without our JWT (presigned URLs auth via signature)
+      //   3. confirm → POST /submissions with metadata only; backend
+      //      reconstructs S3 keys from authenticated context
+      const fileEntries = entries.filter(e => files[e.requirement_id]);
+      try {
+        if (fileEntries.length > 0) {
+          const grants = await this.requestUploadGrants(assignmentId, fileEntries);
+          await this.uploadFilesToGrants(grants, files);
+        }
+        await api.post(
+          `/course/${this.course.id}/assignments/${assignmentId}/submissions`,
+          { entries }
+        );
+        ElMessage({ type: 'success', message: 'Submission saved' });
+        this.fetchSubmissions(assignmentId);
+      } catch (error) {
+        const data = error.response?.data || {};
+        const msg = error.userMessage || data.details || data.error || 'Error submitting';
+        ElMessage({ type: 'error', message: msg });
+        this.submissionErrorNonce += 1;
+        console.error('Error creating submission:', error);
+      }
+    },
+    async requestUploadGrants(assignmentId, fileEntries) {
+      const uploads = fileEntries.map(e => ({
+        requirement_id: e.requirement_id,
+        filename: e.filename
+      }));
+      try {
+        const response = await api.post(
+          `/course/${this.course.id}/assignments/${assignmentId}/upload_grants`,
+          { uploads }
+        );
+        return response.data.data;
+      } catch (error) {
+        error.userMessage = 'Could not prepare upload — please try again.';
+        throw error;
+      }
+    },
+    async uploadFilesToGrants(grants, files) {
+      // Raw axios — bypasses tytoApi's interceptor so the JWT is NOT sent
+      // to S3/LocalGateway. Presigned POSTs authenticate via the signed
+      // policy in `fields`; an extra Authorization header would be ignored
+      // at best, suspicious at worst.
+      await Promise.all(grants.map(grant => {
+        const file = files[grant.requirement_id];
+        const formData = new FormData();
+        Object.entries(grant.fields).forEach(([key, val]) => formData.append(key, val));
+        formData.append('file', file);
+        return axios.post(grant.upload_url, formData).catch(error => {
+          error.userMessage = `Could not upload ${file.name} — please try again.`;
+          throw error;
+        });
+      }));
+    },
+    closeAssignmentDetail() {
+      this.showAssignmentDetailDialog = false;
+      this.currentSubmissions = [];
     },
     onConfirm() {
       if (this.optionLocation) {
