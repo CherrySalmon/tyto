@@ -2,6 +2,8 @@
 
 require 'base64'
 
+require_relative '../../../lib/security'
+
 module Tyto
   module AuthToken
     # Gateway for encrypting and decrypting token payloads.
