@@ -2,6 +2,7 @@
 
 require_relative '../application_operation'
 require_relative '../../responses/course_details'
+require_relative '../../../infrastructure/database/repositories/assignments'
 
 module Tyto
   module Service
@@ -9,6 +10,11 @@ module Tyto
       # Service: List courses the user is enrolled in
       # Returns Success(ApiResult) with list of courses with enrollment info
       class ListUserCourses < ApplicationOperation
+        def initialize(assignments_repo: Repository::Assignments.new)
+          @assignments_repo = assignments_repo
+          super()
+        end
+
         def call(requestor:)
           requestor = step validate_requestor(requestor)
           courses = step fetch_user_courses(requestor)
@@ -58,6 +64,11 @@ module Tyto
             roles: course_roles, created_at: nil, updated_at: nil
           )
           policy = Policy::Course.new(requestor, enrollment)
+          assignment_policy = Policy::Assignment.new(requestor, enrollment)
+
+          has_assignments = @assignments_repo.course_has_assignments?(
+            course.id, statuses: assignment_policy.viewable_statuses
+          )
 
           Response::CourseDetails.new(
             id: course.id,
@@ -68,7 +79,8 @@ module Tyto
             created_at: course.created_at,
             updated_at: course.updated_at,
             enroll_identity: roles,
-            policies: policy.summary
+            policies: policy.summary,
+            has_assignments:
           )
         end
       end

@@ -61,7 +61,7 @@
             <div class="course-content-container">
               <div class="course-menu-bar">
                 <ul class="course-menu">
-                  <li class="tab" :class="$route.path.includes('assignments')?'active':''"><router-link to="assignments">Assignments</router-link></li>
+                  <li v-if="course.has_assignments" class="tab" :class="$route.path.includes('assignments')?'active':''"><router-link to="assignments">Assignments</router-link></li>
                 </ul>
               </div>
               <div class="course-manage-view">

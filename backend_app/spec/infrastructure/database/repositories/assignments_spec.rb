@@ -612,4 +612,63 @@ describe 'Tyto::Repository::Assignments' do
       _(final.event_id).must_equal orm_event.id
     end
   end
+
+  describe '#course_has_assignments?' do
+    it 'returns false when the course has no assignments' do
+      _(repository.course_has_assignments?(orm_course.id)).must_equal false
+    end
+
+    it 'returns true when the course has any assignment and no status filter is given' do
+      Tyto::Assignment.create(
+        course_id: orm_course.id,
+        title: 'Draft only',
+        status: 'draft'
+      )
+
+      _(repository.course_has_assignments?(orm_course.id)).must_equal true
+    end
+
+    it 'returns false with statuses: ["published"] when only drafts exist' do
+      Tyto::Assignment.create(
+        course_id: orm_course.id,
+        title: 'Draft only',
+        status: 'draft'
+      )
+
+      _(repository.course_has_assignments?(orm_course.id, statuses: ['published'])).must_equal false
+    end
+
+    it 'returns true with statuses: ["published"] when at least one published assignment exists' do
+      Tyto::Assignment.create(
+        course_id: orm_course.id,
+        title: 'Published one',
+        status: 'published'
+      )
+
+      _(repository.course_has_assignments?(orm_course.id, statuses: ['published'])).must_equal true
+    end
+
+    it 'returns true with multi-status filter when one matching status exists' do
+      Tyto::Assignment.create(
+        course_id: orm_course.id,
+        title: 'Draft only',
+        status: 'draft'
+      )
+
+      _(repository.course_has_assignments?(
+        orm_course.id, statuses: %w[draft published disabled]
+      )).must_equal true
+    end
+
+    it 'scopes by course_id (assignments in another course do not count)' do
+      other_course = Tyto::Course.create(name: 'Other Course')
+      Tyto::Assignment.create(
+        course_id: other_course.id,
+        title: 'In another course',
+        status: 'published'
+      )
+
+      _(repository.course_has_assignments?(orm_course.id)).must_equal false
+    end
+  end
 end

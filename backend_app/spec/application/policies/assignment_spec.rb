@@ -40,6 +40,10 @@ describe Tyto::Policy::Assignment do
         _(policy.can_view_drafts?).must_equal true
       end
 
+      it 'lists all statuses as viewable' do
+        _(policy.viewable_statuses).must_equal %w[draft published disabled]
+      end
+
       it 'denies submitting (teaching staff are not students)' do
         _(policy.can_submit?).must_equal false
       end
@@ -114,6 +118,10 @@ describe Tyto::Policy::Assignment do
     it 'denies viewing draft assignments' do
       _(policy.can_view_drafts?).must_equal false
     end
+
+    it 'lists only published as viewable statuses' do
+      _(policy.viewable_statuses).must_equal %w[published]
+    end
   end
 
   describe 'not enrolled' do
@@ -129,6 +137,10 @@ describe Tyto::Policy::Assignment do
       _(policy.can_unpublish?).must_equal false
       _(policy.can_view_drafts?).must_equal false
       _(policy.can_submit?).must_equal false
+    end
+
+    it 'lists only published as viewable statuses (default-deny)' do
+      _(policy.viewable_statuses).must_equal %w[published]
     end
   end
 
@@ -164,6 +176,7 @@ describe Tyto::Policy::Assignment do
       _(summary[:can_unpublish]).must_equal true
       _(summary[:can_view_drafts]).must_equal true
       _(summary[:can_submit]).must_equal false
+      _(summary[:viewable_statuses]).must_equal %w[draft published disabled]
     end
   end
 

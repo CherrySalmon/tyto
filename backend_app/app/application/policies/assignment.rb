@@ -44,6 +44,14 @@ module Tyto
         teaching_staff?
       end
 
+      # Statuses of Assignment this viewer is permitted to see in lists/queries.
+      # Teaching staff: every status. Students (and unenrolled): published only.
+      # Returned as an explicit, exhaustive set rather than nil-as-no-filter so
+      # callers don't have to interpret a sentinel value.
+      def viewable_statuses
+        can_view_drafts? ? %w[draft published disabled] : %w[published]
+      end
+
       # Whether the user can submit to assignments (students only).
       # Included here so the assignment detail response has everything
       # the frontend needs without a separate submission policy call.
@@ -60,7 +68,8 @@ module Tyto
           can_publish: can_publish?,
           can_unpublish: can_unpublish?,
           can_view_drafts: can_view_drafts?,
-          can_submit: can_submit?
+          can_submit: can_submit?,
+          viewable_statuses:
         }
       end
 

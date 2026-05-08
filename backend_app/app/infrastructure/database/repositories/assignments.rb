@@ -61,6 +61,17 @@ module Tyto
           .map { |record| rebuild_entity(record) }
       end
 
+      # Existence check: does the course have any assignment?
+      # When statuses: is given, restricts to assignments matching one of them.
+      # Pair with `Policy::Assignment#viewable_statuses` to drive viewer-aware
+      # UI gates (e.g., the Assignments tab) without leaking the visibility
+      # rule into infrastructure.
+      def course_has_assignments?(course_id, statuses: nil)
+        scope = Tyto::Assignment.where(course_id:)
+        scope = scope.where(status: statuses) if statuses && !statuses.empty?
+        scope.any?
+      end
+
       # Find all assignments for a course with requirements loaded
       def find_by_course_with_requirements(course_id)
         Tyto::Assignment
