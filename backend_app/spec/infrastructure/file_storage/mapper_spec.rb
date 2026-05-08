@@ -2,26 +2,23 @@
 
 require_relative '../../spec_helper'
 
-# 3.1a — Generic constraints encoding for the file_storage Mapper.
+# Generic constraints encoding for the file_storage Mapper.
 #
-# The Mapper takes a target S3 key + optional allowed-extension list and emits the
-# AWS presigned-POST policy fields that the Gateway will hand to bucket.presigned_post.
-# Per R-P1 we need POST (not PUT) so the size cap is enforced server-side by S3 via
-# the signed policy doc; per R-P7 the size cap pulls from a single Tyto::FileStorage::MAX_SIZE_BYTES.
+# The Mapper takes a target S3 key and emits the AWS presigned-POST policy
+# fields that the Gateway will hand to bucket.presigned_post. Per R-P1 we
+# need POST (not PUT) so the size cap is enforced server-side by S3 via the
+# signed policy doc; per R-P7 the size cap pulls from the single
+# Tyto::FileStorage::MAX_SIZE_BYTES constant.
+#
+# Extension enforcement is delivered upstream of the policy doc — see the
+# class-level comment on Mapper for the rationale.
 
-# Policy-condition lookups, kept top-level so each describe stays under Metrics/BlockLength.
 def length_condition(conditions)
   conditions.find { |c| c.is_a?(Array) && c.first == 'content-length-range' }
 end
 
 def key_condition(conditions)
   conditions.find { |c| c.is_a?(Hash) && c.key?('key') }
-end
-
-def extension_condition(conditions)
-  conditions.find do |c|
-    c.is_a?(Array) && (c[1] == '$Content-Type' || (c.first == 'starts-with' && c[1] == '$key'))
-  end
 end
 
 describe 'Tyto::FileStorage::Mapper #policy_conditions output shape' do
@@ -46,37 +43,18 @@ describe 'Tyto::FileStorage::Mapper #policy_conditions output shape' do
     _(cond).wont_be_nil
     _(cond['key']).must_equal '1/2/3.pdf'
   end
-end
 
-describe 'Tyto::FileStorage::Mapper #policy_conditions extension constraint' do
-  let(:mapper) { Tyto::FileStorage::Mapper.new }
-  let(:key) { '1/2/3.pdf' }
-
-  it 'encodes allowed extensions via $Content-Type or starts-with $key' do
-    result = mapper.policy_conditions(key:, allowed_extensions: ['.pdf', '.rmd'])
-    _(extension_condition(result[:conditions])).wont_be_nil
+  it 'emits exactly two conditions — extension enforcement happens upstream' do
+    _(result[:conditions].length).must_equal 2
   end
 
-  it 'omits any extension constraint when allowed_extensions is empty' do
-    result = mapper.policy_conditions(key:, allowed_extensions: [])
-    _(extension_condition(result[:conditions])).must_be_nil
-  end
+  it 'accepts allowed_extensions for API symmetry but does not encode it' do
+    with_ext  = mapper.policy_conditions(key: '1/2/3.pdf', allowed_extensions: ['.pdf'])
+    no_ext    = mapper.policy_conditions(key: '1/2/3.pdf', allowed_extensions: nil)
+    empty_ext = mapper.policy_conditions(key: '1/2/3.pdf', allowed_extensions: [])
 
-  it 'omits any extension constraint when allowed_extensions is nil' do
-    result = mapper.policy_conditions(key:, allowed_extensions: nil)
-    _(extension_condition(result[:conditions])).must_be_nil
-  end
-
-  it 'still emits content-length-range when allowed_extensions is empty' do
-    result = mapper.policy_conditions(key:, allowed_extensions: [])
-    cond = length_condition(result[:conditions])
-    _(cond).wont_be_nil
-    _(cond[2]).must_equal Tyto::FileStorage::MAX_SIZE_BYTES
-  end
-
-  it 'normalises extensions with or without leading dots' do
-    result = mapper.policy_conditions(key: '1/2/3.rmd', allowed_extensions: ['rmd', '.pdf'])
-    _(extension_condition(result[:conditions])).wont_be_nil
+    _(with_ext).must_equal(no_ext)
+    _(with_ext).must_equal(empty_ext)
   end
 end
 

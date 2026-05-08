@@ -124,6 +124,18 @@ describe 'Tyto::FileStorage.build_gateway error handling' do
       .must_raise Tyto::FileStorage::ConfigurationError
   end
 
+  it 'raises when a credential is the empty string (treats blank as missing)' do
+    Tyto::FileStorage.setup(aws: GatewaySelectionSpecSupport::AWS_CREDS.merge(bucket: ''))
+    _(-> { Tyto::FileStorage.build_gateway(environment: :production) })
+      .must_raise Tyto::FileStorage::ConfigurationError
+  end
+
+  it 'raises when a credential is whitespace-only' do
+    Tyto::FileStorage.setup(local: { root: '   ', signing_key: 'k', base_url: 'http://localhost' })
+    _(-> { Tyto::FileStorage.build_gateway(environment: :development) })
+      .must_raise Tyto::FileStorage::ConfigurationError
+  end
+
   it 'falls back to Tyto::Api.environment when no kwarg is passed' do
     setup_local_only
     Tyto::Api.stub :environment, :test do

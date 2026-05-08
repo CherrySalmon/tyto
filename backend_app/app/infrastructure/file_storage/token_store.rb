@@ -19,6 +19,12 @@ module Tyto
       def initialize(signing_key:)
         @signer = Tyto::Security::Signer.new(key: signing_key)
         @consumed = {}
+        # Mutex guards the cleanup → replay-check → consume sequence in `verify`.
+        # Puma is multi-threaded, so without this guard two concurrent verifies
+        # of the same token can both pass the replay check before either
+        # inserts the nonce into @consumed — defeating the single-use guarantee.
+        # The cryptographic decode (slow, stateless) stays outside the mutex.
+        @mutex = Mutex.new
       end
 
       def mint(key:, operation:, ttl:)
@@ -33,13 +39,16 @@ module Tyto
 
       # Returns :ok on success, or a Symbol describing why verification failed.
       def verify(token:, key:, expected_op:)
-        cleanup_consumed
         payload = decode(token)
-        reason = validation_failure(payload, key:, expected_op:)
-        return reason if reason
 
-        @consumed[payload[:nonce]] = payload[:exp]
-        :ok
+        @mutex.synchronize do
+          cleanup_consumed
+          reason = validation_failure(payload, key:, expected_op:)
+          return reason if reason
+
+          @consumed[payload[:nonce]] = payload[:exp]
+          :ok
+        end
       end
 
       private

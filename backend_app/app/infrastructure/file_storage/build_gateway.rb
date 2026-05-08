@@ -69,7 +69,13 @@ module Tyto
                 "#{label} credentials not configured (call Tyto::FileStorage.setup at boot)"
         end
         keys.each do |k|
-          raise ConfigurationError, "#{label} credential :#{k} is missing" if creds[k].nil?
+          value = creds[k]
+          # Treat empty / whitespace-only as missing — `S3_BUCKET=""` is a
+          # realistic misconfiguration that should fail fast at boot rather
+          # than surface later as an opaque AWS error.
+          next unless value.nil? || value.to_s.strip.empty?
+
+          raise ConfigurationError, "#{label} credential :#{k} is missing or blank"
         end
       end
     end
