@@ -37,7 +37,9 @@ jobs:
         run: |
           set -o pipefail
           JWT_KEY=$(bundle exec rake generate:jwt_key | grep 'JWT_KEY:' | cut -d' ' -f2)
-          printf "test:\n  DATABASE_URL: sqlite://backend_app/db/store/test.db\n  JWT_KEY: %s\n  ADMIN_EMAIL: test@example.com\n" "$JWT_KEY" > backend_app/config/secrets.yml
+          SIGNING_KEY=$(bundle exec rake generate:local_storage_signing_key | grep 'LOCAL_STORAGE_SIGNING_KEY:' | cut -d' ' -f2)
+          mkdir -p backend_app/tmp/local_storage_test
+          printf "test:\n  DATABASE_URL: sqlite://backend_app/db/store/test.db\n  JWT_KEY: %s\n  ADMIN_EMAIL: test@example.com\n  LOCAL_STORAGE_ROOT: backend_app/tmp/local_storage_test\n  LOCAL_STORAGE_SIGNING_KEY: %s\n  LOCAL_STORAGE_BASE_URL: http://localhost:9292\n" "$JWT_KEY" "$SIGNING_KEY" > backend_app/config/secrets.yml
 
       - name: Setup test database
         run: RACK_ENV=test bundle exec rake db:setup

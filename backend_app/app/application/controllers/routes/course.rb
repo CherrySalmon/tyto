@@ -12,6 +12,24 @@ module Tyto
       plugin :all_verbs
       plugin :request_headers
 
+      # Builds the `user_options` hash threaded into Representer::Submission
+      # so each nested RequirementUploadRepr can emit `download_url`. Reaches
+      # for the assignment's requirements once per response — submission and
+      # list endpoints already gate on view permission upstream, so any caller
+      # who reaches the representer is allowed to see download links.
+      def submission_render_options(course_id, assignment_id)
+        assignment = Repository::Assignments.new.find_with_requirements(assignment_id.to_i)
+        requirements = assignment&.submission_requirements&.to_a || []
+        requirements_by_id = requirements.each_with_object({}) { |req, hash| hash[req.id] = req }
+
+        {
+          course_id: course_id.to_i,
+          assignment_id: assignment_id.to_i,
+          requirements_by_id:,
+          can_download: true
+        }
+      end
+
       route do |r|
         r.on do
           auth_header = r.headers['Authorization']
@@ -287,6 +305,227 @@ module Tyto
                     api_result.to_json
                   end
                 end
+              end
+            end
+
+            r.on 'assignments' do
+              r.on String do |assignment_id|
+                r.on 'publish' do
+                  # POST api/course/:course_id/assignments/:assignment_id/publish
+                  r.post do
+                    case Service::Assignments::PublishAssignment.new.call(
+                      requestor:, course_id:, assignment_id:
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, message: api_result.message }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  end
+                end
+
+                r.on 'unpublish' do
+                  # POST api/course/:course_id/assignments/:assignment_id/unpublish
+                  r.post do
+                    case Service::Assignments::UnpublishAssignment.new.call(
+                      requestor:, course_id:, assignment_id:
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, message: api_result.message }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  end
+                end
+
+                r.on 'submissions' do
+                  r.on String do |submission_id|
+                    r.on 'uploads' do
+                      r.on String do |upload_id|
+                        # GET api/course/:cid/assignments/:aid/submissions/:sid/uploads/:uid/download
+                        # Mints a fresh presigned GET and 302-redirects. Each click
+                        # gets new credentials so long-open staff views never click
+                        # an expired URL.
+                        r.get 'download' do
+                          case Service::Submissions::DownloadUpload.new.call(
+                            requestor:, course_id:, assignment_id:,
+                            submission_id:, upload_id:
+                          )
+                          in Success(api_result)
+                            response.status = 302
+                            response.headers['Location'] = api_result.message
+                            ''
+                          in Failure(api_result)
+                            response.status = api_result.http_status_code
+                            api_result.to_json
+                          end
+                        end
+                      end
+                    end
+
+                    # GET api/course/:course_id/assignments/:assignment_id/submissions/:submission_id
+                    r.get do
+                      case Service::Submissions::GetSubmission.new.call(
+                        requestor:, course_id:, assignment_id:, submission_id:
+                      )
+                      in Success(api_result)
+                        response.status = api_result.http_status_code
+                        opts = submission_render_options(course_id, assignment_id)
+                        { success: true,
+                          data: Representer::Submission.new(api_result.message).to_hash(user_options: opts) }.to_json
+                      in Failure(api_result)
+                        response.status = api_result.http_status_code
+                        api_result.to_json
+                      end
+                    end
+                  end
+
+                  # GET api/course/:course_id/assignments/:assignment_id/submissions
+                  r.get do
+                    case Service::Submissions::ListSubmissions.new.call(
+                      requestor:, course_id:, assignment_id:
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      opts = submission_render_options(course_id, assignment_id)
+                      { success: true,
+                        data: Representer::SubmissionsList.from_entities(api_result.message).to_array(user_options: opts) }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  end
+
+                  # POST api/course/:course_id/assignments/:assignment_id/submissions
+                  r.post do
+                    request_body = JSON.parse(r.body.read)
+
+                    case Service::Submissions::CreateSubmission.new.call(
+                      requestor:, course_id:, assignment_id:, submission_data: request_body
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      opts = submission_render_options(course_id, assignment_id)
+                      { success: true,
+                        data: Representer::Submission.new(api_result.message).to_hash(user_options: opts) }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  rescue JSON::ParserError => e
+                    response.status = 400
+                    { error: 'Invalid JSON', details: e.message }.to_json
+                  end
+                end
+
+                r.on 'upload_grants' do
+                  # POST api/course/:course_id/assignments/:assignment_id/upload_grants
+                  # Mints short-lived upload credentials (key + presigned URL +
+                  # signed policy fields) for each requested file. "Grant"
+                  # borrows OAuth/IAM vocabulary — the response is a credential,
+                  # not just a URL.
+                  r.post do
+                    request_body = JSON.parse(r.body.read)
+                    uploads = request_body['uploads']
+
+                    case Service::Assignments::IssueUploadGrants.new.call(
+                      requestor:, course_id:, assignment_id:, uploads:
+                    )
+                    in Success(api_result)
+                      response.status = api_result.http_status_code
+                      { success: true, data: api_result.message }.to_json
+                    in Failure(api_result)
+                      response.status = api_result.http_status_code
+                      api_result.to_json
+                    end
+                  rescue JSON::ParserError => e
+                    response.status = 400
+                    { error: 'Invalid JSON', details: e.message }.to_json
+                  end
+                end
+
+                # GET api/course/:course_id/assignments/:assignment_id
+                r.get do
+                  case Service::Assignments::GetAssignment.new.call(
+                    requestor:, course_id:, assignment_id:
+                  )
+                  in Success(api_result)
+                    response.status = api_result.http_status_code
+                    { success: true, data: Representer::Assignment.new(api_result.message).to_hash }.to_json
+                  in Failure(api_result)
+                    response.status = api_result.http_status_code
+                    api_result.to_json
+                  end
+                end
+
+                # PUT api/course/:course_id/assignments/:assignment_id
+                r.put do
+                  request_body = JSON.parse(r.body.read)
+
+                  case Service::Assignments::UpdateAssignment.new.call(
+                    requestor:, course_id:, assignment_id:, assignment_data: request_body
+                  )
+                  in Success(api_result)
+                    response.status = api_result.http_status_code
+                    { success: true, message: api_result.message }.to_json
+                  in Failure(api_result)
+                    response.status = api_result.http_status_code
+                    api_result.to_json
+                  end
+                rescue JSON::ParserError => e
+                  response.status = 400
+                  { error: 'Invalid JSON', details: e.message }.to_json
+                end
+
+                # DELETE api/course/:course_id/assignments/:assignment_id
+                r.delete do
+                  case Service::Assignments::DeleteAssignment.new.call(
+                    requestor:, course_id:, assignment_id:
+                  )
+                  in Success(api_result)
+                    response.status = api_result.http_status_code
+                    { success: true, message: api_result.message }.to_json
+                  in Failure(api_result)
+                    response.status = api_result.http_status_code
+                    api_result.to_json
+                  end
+                end
+              end
+
+              # GET api/course/:course_id/assignments
+              r.get do
+                case Service::Assignments::ListAssignments.new.call(requestor:, course_id:)
+                in Success(api_result)
+                  response.status = api_result.http_status_code
+                  { success: true, data: Representer::AssignmentsList.from_entities(api_result.message).to_array }.to_json
+                in Failure(api_result)
+                  response.status = api_result.http_status_code
+                  api_result.to_json
+                end
+              end
+
+              # POST api/course/:course_id/assignments
+              r.post do
+                request_body = JSON.parse(r.body.read)
+
+                case Service::Assignments::CreateAssignment.new.call(
+                  requestor:, course_id:, assignment_data: request_body
+                )
+                in Success(api_result)
+                  response.status = api_result.http_status_code
+                  { success: true, message: 'Assignment created',
+                    assignment_info: Representer::Assignment.new(api_result.message).to_hash }.to_json
+                in Failure(api_result)
+                  response.status = api_result.http_status_code
+                  api_result.to_json
+                end
+              rescue JSON::ParserError => e
+                response.status = 400
+                { error: 'Invalid JSON', details: e.message }.to_json
               end
             end
 

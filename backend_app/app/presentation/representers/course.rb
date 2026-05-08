@@ -47,6 +47,7 @@ module Tyto
       property :updated_at, exec_context: :decorator
       property :enroll_identity, exec_context: :decorator
       property :policies, exec_context: :decorator
+      property :has_assignments, exec_context: :decorator
 
       def start_at
         represented.start_at&.utc&.iso8601
@@ -71,6 +72,13 @@ module Tyto
 
       def policies
         represented.respond_to?(:policies) ? represented.policies : nil
+      end
+
+      # Method name matches the JSON key (Roar/Representable looks it up by
+      # name); a trailing `?` would be invalid in JS/JSON. Predicate-naming
+      # cop disabled at the serialization boundary only.
+      def has_assignments # rubocop:disable Naming/PredicateName
+        represented.respond_to?(:has_assignments) ? represented.has_assignments : false
       end
     end
 

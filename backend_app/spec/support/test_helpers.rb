@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
-require 'securerandom'
 require 'json'
 
 module TestHelpers
   # Create a test account and return it
   def create_test_account(name: 'Test User', email: nil, roles: ['creator'])
-    email ||= "test-#{SecureRandom.hex(4)}@example.com"
+    email ||= "test-#{Tyto::Security.unique_id(4)}@example.com"
     Tyto::Account.add_account(
       name: name,
       email: email,

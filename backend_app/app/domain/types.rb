@@ -35,5 +35,12 @@ module Tyto
 
     # All roles (system + course)
     Role = Types::String.enum(*SystemRole.values, *CourseRole.values)
+
+    # Assignment types
+    AssignmentTitle = Types::String.constrained(min_size: 1, max_size: 200)
+    AssignmentStatus = Types::String.enum('draft', 'published', 'disabled')
+
+    # Submission requirement types
+    RequirementType = Types::String.enum('file', 'url')
   end
 end

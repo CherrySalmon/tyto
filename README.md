@@ -85,6 +85,8 @@ bundle exec rake db:drop        # Delete database (destructive)
 
 - [Google OAuth Setup](doc/google.md) — Configure Google Cloud credentials
 - [Heroku Deployment](doc/heroku.md) — Deploy to production
+- [AWS S3 Setup](doc/s3.md) — Configure S3 bucket, IAM, and CORS for file uploads (production)
+- [S3 Production Smoke Test](doc/s3-smoke-test.md) — One-shot verification after first deploy with S3
 - [Future Work](doc/future-work.md) — Planned improvements and known issues
 
 ## Key Dependencies

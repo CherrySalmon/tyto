@@ -102,6 +102,9 @@ Policies check global roles (admin, creator) and course enrollment roles (owner,
 3. Backend returns encrypted JWT (account_id + roles)
 4. JWT stored in cookie, sent in Authorization header
 
+### Cryptographic code
+All crypto goes through `Tyto::Security` (`backend_app/app/lib/security.rb`). Application code does not call `RbNaCl`, `OpenSSL`, or `SecureRandom` directly. See `doc/security.md` for the rule, the available primitives, and how to add new ones.
+
 ## Configuration
 
 ### Required Setup Files (copied by `rake setup`)
@@ -140,7 +143,12 @@ rake run:api
 - Module namespacing: `Tyto::Api`, `Tyto::Routes::*`
 - RuboCop for linting
 - **Testing**: Minitest with spec-style syntax (`describe`/`it`), NOT RSpec.
-- **Test-first development**: Use red-green-refactor TDD when adding new features, fixing bugs, or refactoring. Write a failing test first, then write the minimum implementation to make it pass, then refactor. Run the test suite between each phase — never skip the test run. One test at a time; do not batch.
+- **TDD Protocol** (MANDATORY for backend tasks marked "test" or "red" in planning docs): red-green-refactor, one test at a time, never batched.
+  1. Write test file(s) only — reference classes/methods that do not exist yet
+  2. Run `bundle exec rake spec` — confirm failures. Record count in the plan task line (e.g., `red: 5F`)
+  3. Only then write the implementation to make them pass
+  4. Run tests again — confirm green. Record count in the plan task line (e.g., `green: 5P, total 1096`)
+  5. Never combine steps 1+3 in a single pass. The red run is non-negotiable proof of test-first.
 - **Avoid `nil` as state**: Use Null Object pattern instead of returning `nil` for missing/empty states. This eliminates guard clauses and follows "Tell, Don't Ask" principle. Example: `NullTimeRange` instead of `nil` for courses without dates.
 
 ### Vue/JavaScript

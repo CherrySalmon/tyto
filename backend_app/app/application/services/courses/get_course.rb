@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../../../infrastructure/database/repositories/courses'
+require_relative '../../../infrastructure/database/repositories/assignments'
 require_relative '../application_operation'
 require_relative '../../responses/course_details'
 
@@ -10,8 +11,10 @@ module Tyto
       # Service: Get a single course by ID
       # Returns Success(ApiResult) with course or Failure(ApiResult) with error
       class GetCourse < ApplicationOperation
-        def initialize(courses_repo: Repository::Courses.new)
+        def initialize(courses_repo: Repository::Courses.new,
+                       assignments_repo: Repository::Assignments.new)
           @courses_repo = courses_repo
+          @assignments_repo = assignments_repo
           super()
         end
 
@@ -46,10 +49,15 @@ module Tyto
 
           return Failure(forbidden('You have no access to view this course')) unless policy.can_view?
 
-          Success({ enrollment:, policy: })
+          Success({ requestor:, enrollment:, policy: })
         end
 
         def build_course_response(course_orm, auth)
+          assignment_policy = Policy::Assignment.new(auth[:requestor], auth[:enrollment])
+          has_assignments = @assignments_repo.course_has_assignments?(
+            course_orm.id, statuses: assignment_policy.viewable_statuses
+          )
+
           course = Response::CourseDetails.new(
             id: course_orm.id,
             name: course_orm.name,
@@ -59,7 +67,8 @@ module Tyto
             created_at: course_orm.created_at,
             updated_at: course_orm.updated_at,
             enroll_identity: auth[:enrollment]&.roles,
-            policies: auth[:policy].summary
+            policies: auth[:policy].summary,
+            has_assignments:
           )
 
           Success(course)

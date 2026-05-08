@@ -40,6 +40,9 @@ gem 'rake', '~>13.0'
 # DATABASE
 gem 'sequel', '~>5.0'
 
+# FILE STORAGE
+gem 'aws-sdk-s3', '~>1.0'
+
 # CONSOLE (available in all environments so `rake console` works on production)
 gem 'pry'
 gem 'table_print', '~>1.0' # loaded by .pryrc for pretty table output

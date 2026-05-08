@@ -168,6 +168,80 @@ describe 'Course Routes' do
 
       _(last_response.status).must_equal 403
     end
+
+    it 'returns has_assignments=false when the course has none' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+
+      get "/api/course/#{course.id}", nil, auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['data']).must_include 'has_assignments'
+      _(json_response['data']['has_assignments']).must_equal false
+    end
+
+    it 'returns has_assignments=true for an owner when only drafts exist' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course = create_test_course(account)
+      Tyto::Assignment.create(course_id: course.id, title: 'Draft', status: 'draft')
+
+      get "/api/course/#{course.id}", nil, auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['data']['has_assignments']).must_equal true
+    end
+
+    it 'returns has_assignments=false for a student when only drafts exist' do
+      owner_account = create_test_account(roles: ['creator'])
+      course = create_test_course(owner_account)
+      Tyto::Assignment.create(course_id: course.id, title: 'Draft', status: 'draft')
+
+      student_account, student_auth = authenticated_header(roles: ['student'])
+      Tyto::AccountCourse.create(
+        course_id: course.id,
+        account_id: student_account.id,
+        role_id: Tyto::Role.find(name: 'student').id
+      )
+
+      get "/api/course/#{course.id}", nil, student_auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['data']['has_assignments']).must_equal false
+    end
+
+    it 'returns has_assignments=true for a student when a published assignment exists' do
+      owner_account = create_test_account(roles: ['creator'])
+      course = create_test_course(owner_account)
+      Tyto::Assignment.create(course_id: course.id, title: 'Published', status: 'published')
+
+      student_account, student_auth = authenticated_header(roles: ['student'])
+      Tyto::AccountCourse.create(
+        course_id: course.id,
+        account_id: student_account.id,
+        role_id: Tyto::Role.find(name: 'student').id
+      )
+
+      get "/api/course/#{course.id}", nil, student_auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['data']['has_assignments']).must_equal true
+    end
+  end
+
+  describe 'GET /api/course (list, has_assignments per course)' do
+    it 'includes has_assignments per course in the list' do
+      account, auth = authenticated_header(roles: ['creator'])
+      course_with    = create_test_course(account, name: 'With Assignment')
+      course_without = create_test_course(account, name: 'Without Assignment')
+      Tyto::Assignment.create(course_id: course_with.id, title: 'Some', status: 'published')
+
+      get '/api/course', nil, auth
+
+      _(last_response.status).must_equal 200
+      data_by_id = json_response['data'].each_with_object({}) { |c, h| h[c['id']] = c }
+      _(data_by_id[course_with.id]['has_assignments']).must_equal true
+      _(data_by_id[course_without.id]['has_assignments']).must_equal false
+    end
   end
 
   describe 'POST /api/course' do

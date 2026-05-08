@@ -51,7 +51,7 @@ describe Tyto::AuthToken::Gateway do
       _(key).wont_be_empty
     end
 
-    it 'produces valid 32-byte keys for RbNaCl SecretBox' do
+    it 'produces a 32-byte key after base64-decoding' do
       key = Tyto::AuthToken::Gateway.generate_key
       decoded = Base64.strict_decode64(key)
 
