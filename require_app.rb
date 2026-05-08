@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-def require_app(folders = %w[lib domain infrastructure application presentation])
+def require_app(folders = %w[lib domain infrastructure application presentation], with_initializers: true)
   # 1. Load config (defines Tyto::Api, runs Figaro.load, connects DB).
   #    Top-level config files only — initializers/ runs last.
   Dir.glob('./backend_app/config/*.rb').each { |file| require_relative file }
@@ -12,5 +12,9 @@ def require_app(folders = %w[lib domain infrastructure application presentation]
   end
 
   # 3. Run initializers — depend on both config and app code being loaded.
+  #    Pass with_initializers: false when loading only config (e.g., minimal
+  #    rake-task setup that does not need credentials wiring).
+  return unless with_initializers
+
   Dir.glob('./backend_app/config/initializers/*.rb').each { |file| require_relative file }
 end

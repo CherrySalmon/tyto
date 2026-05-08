@@ -75,7 +75,7 @@ end
 namespace :db do
   task :config do
     require('sequel')
-    require_app('config')
+    require_app('config', with_initializers: false)
   end
 
   desc 'Migrate the database to the latest version'
