@@ -204,6 +204,7 @@ DEPENDENCIES
   rack-test
   rake (~> 13.0)
   rbnacl
+  rexml
   roar (~> 1.2)
   roda (~> 3.0)
   rubocop

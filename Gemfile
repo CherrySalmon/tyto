@@ -42,6 +42,7 @@ gem 'sequel', '~>5.0'
 
 # FILE STORAGE
 gem 'aws-sdk-s3', '~>1.0'
+gem 'rexml' # aws-sdk needs an XML parser at runtime; not a default gem on Ruby 4+
 
 # CONSOLE (available in all environments so `rake console` works on production)
 gem 'pry'
