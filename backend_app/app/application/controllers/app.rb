@@ -28,6 +28,8 @@ module Tyto
         response.status = 404
         { error: 'Not Found' }.to_json
       else
+        warn "[error_handler] #{e.class}: #{e.message}"
+        warn e.backtrace.first(20).join("\n") if e.backtrace
         response.status = 500
         { error: 'Internal Server Error', details: e.message }.to_json
       end
