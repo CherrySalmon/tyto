@@ -270,6 +270,19 @@ export default {
     changeRoute(route) {
       this.$router.push({ path: route })
     },
+    redirectIfNotManager() {
+      // Non-teaching roles (e.g. students) get only the read-only branch,
+      // whose menu offers just an Assignments tab. But the course-list links
+      // land everyone on /attendance, so a non-manager can otherwise mount the
+      // attendance management component directly — seeing controls that do
+      // nothing because the read-only RouterView binds no management handlers.
+      // Send them to the one view they can use.
+      const managementRoutes = ['attendance', 'location', 'people'];
+      const onManagementRoute = managementRoutes.some(r => this.$route.path.includes(r));
+      if (this.course.policies && !this.course.policies.can_update && onManagementRoute) {
+        this.$router.replace({ name: 'AssignmentsCard', params: { id: this.$route.params.id } });
+      }
+    },
     fetchCourse(id) {
       api.get(`/course/${id}`).then(response => {
         this.course = response.data.data;
@@ -281,6 +294,7 @@ export default {
         this.selectableRoles = this.course.enroll_identity
         this.selectRole = this.selectableRoles[0]
         this.currentRole = this.selectRole
+        this.redirectIfNotManager()
         // Deleting non-form keys from courseForm
         delete this.courseForm.id;
         delete this.courseForm.enroll_identity;

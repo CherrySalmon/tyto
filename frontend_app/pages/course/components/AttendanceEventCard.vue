@@ -1,11 +1,11 @@
 <template>
   <div class="event-card-container course-card-container">
     <div class="course-content-title">Attendance Events</div>
-    <div class="course-download-btn">
+    <div v-if="canManage" class="course-download-btn">
       <el-button color="#824533" :dark="true" @click="downloadReport()">Download Record</el-button>
     </div>
-    
-    <el-card class="event-item" shadow="hover" @click.stop="$emit('create-event')">
+
+    <el-card v-if="canManage" class="event-item" shadow="hover" @click.stop="$emit('create-event')">
       <h3>Create Event</h3>
       <el-icon :size="24" style="margin-top: 10px;"><DocumentAdd /></el-icon>
     </el-card>
@@ -15,15 +15,17 @@
         <p>Location: {{ getEventLocationName(event.location_id) }}</p>
         <!-- <p>Start Time: {{ event.start_at }}</p>
         <p>End Time: {{ event.end_at }}</p> -->
-        <el-icon :size="18" @click="showAttendanceMap(event)"><MapLocation /></el-icon>
-        <el-icon :size="18" @click="showManageAttendance(event)" style="margin-left: 10px;"><User /></el-icon>
-        <el-icon :size="18" @click="$emit('edit-event', event.id)" style="margin-left: 10px;">
-          <Edit />
-        </el-icon>
-        <span style="margin-left: 10px;"></span>
-        <el-icon :size="18" @click.stop="$emit('delete-event', event.id)">
-          <Delete />
-        </el-icon>
+        <template v-if="canManage">
+          <el-icon :size="18" @click="showAttendanceMap(event)"><MapLocation /></el-icon>
+          <el-icon :size="18" @click="showManageAttendance(event)" style="margin-left: 10px;"><User /></el-icon>
+          <el-icon :size="18" @click="$emit('edit-event', event.id)" style="margin-left: 10px;">
+            <Edit />
+          </el-icon>
+          <span style="margin-left: 10px;"></span>
+          <el-icon :size="18" @click.stop="$emit('delete-event', event.id)">
+            <Delete />
+          </el-icon>
+        </template>
       </div>   
     </el-card>
     <el-dialog v-model="attendanceMapVisible" :title="selectedEvent.name"  :width="dialogWidth">
@@ -51,8 +53,9 @@ import ManageEventAttendance from './ManageEventAttendance.vue';
       course: Object,
       attendanceEvents: Object,
       locations: Array,
-      enrollments: Object, 
-      currentRole: String
+      enrollments: Object,
+      currentRole: String,
+      canManage: { type: Boolean, default: false }
     },
     components: {AttendanceMap, ManageEventAttendance},
     data() {
