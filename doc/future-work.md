@@ -24,6 +24,7 @@ Planned improvements and features to be addressed in future tasks.
 
 ## Security (Priority)
 
+- [ ] **🚨 TOP PRIORITY — npm dependency vulnerability sweep (ASAP)** — `npm audit` reports **26 vulnerabilities (1 critical, 9 high, 16 moderate)** as of 2026-06-04. Crucially, several affect **direct production dependencies that ship in the frontend bundle**, not just dev tooling: `axios` (HIGH — 4 advisories incl. credential theft / full MitM via prototype-pollution gadgets in config merge, GHSA-3g43-6gmg-66jw, GHSA-35jp-ww65-95wh), `js-cookie` (HIGH, direct — this is the library that stores the auth JWT), and `lodash`/`lodash-es` (HIGH, transitive via element-plus — `_.template` code injection). Dev-only: `vitest` (CRITICAL), `esbuild`, `node-forge`/`serialize-javascript`/`path-to-regexp` (webpack-dev-server chain — moderate/high but not shipped to prod). **Remediation path**: (1) `npm audit fix` resolves most non-breaking (axios, js-cookie, lodash, follow-redirects); (2) `npm audit fix --force` or manual major bumps for esbuild/vitest; (3) verify with `bundle exec rake spec:frontend`, `npm run prod` build, and a manual login + attendance smoke (axios and js-cookie sit on the auth path). Prioritize the prod-bundle deps (axios, js-cookie, lodash) even if the dev-only ones need a separate pass.
 - [ ] **Input whitelisting on PUT routes** - Prevent mass assignment vulnerabilities. PUT routes currently accept arbitrary JSON fields that get written to DB (e.g., users could potentially update their own roles). Implement Sequel's `set_allowed_columns` or manual input filtering in services. *Note: Input validation contracts (above) would also address this.*
 - [ ] **Review Policy::Role** - Exists but unused. Either wire it into AccountService for role assignment authorization, or remove if not needed.
 - [ ] **Security tests** - Add tests verifying that sensitive fields (roles, etc.) cannot be modified via API without proper authorization.
@@ -32,7 +33,7 @@ Planned improvements and features to be addressed in future tasks.
 ## Testing
 
 - [ ] **Test suite** - Implement backend tests using Minitest/Rack::Test
-- [ ] **Frontend tests** - Add Vue component and integration tests
+- [ ] **Frontend tests** - Expand Vue component and integration test coverage. *Infrastructure landed on `fix-add-course-button` (2026-06-04): Vitest + @vue/test-utils + jsdom, `vitest.config.js`, `npm test` / `rake spec:frontend`, first regression spec at `frontend_app/pages/course/components/AttendanceEventCard.spec.js`. Remaining: cover SingleCourse's `redirectIfNotManager()` (needs vue-router + api mocks), then grow coverage with new features.*
 
 ## Domain Layer (Prepared for Future Use)
 
