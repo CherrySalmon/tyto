@@ -44,5 +44,23 @@ jobs:
       - name: Setup test database
         run: RACK_ENV=test bundle exec rake db:setup
 
-      - name: Run tests
-        run: bundle exec rake spec
+      - name: Run backend tests
+        run: bundle exec rake spec:backend
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm test
