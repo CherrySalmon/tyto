@@ -126,7 +126,7 @@ All crypto goes through `Tyto::Security` (`backend_app/app/lib/security.rb`). Ap
 ## Development
 
 ### DevContainer
-Open in VS Code and use "Reopen in Container" for a pre-configured Ruby 3.4 + Node.js 22 environment. The container automatically runs `rake setup` on creation, installing dependencies and generating config files.
+Open in VS Code and use "Reopen in Container" for a pre-configured Ruby 3.4 + Node.js 24 environment. The container automatically runs `rake setup` on creation, installing dependencies and generating config files.
 
 ### Running Both Servers
 ```bash

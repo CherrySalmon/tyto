@@ -12,7 +12,7 @@
 
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": {
-			"version": "22"
+			"version": "24"
 		},
 		"ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
 		"ghcr.io/wxw-matt/devcontainer-features/script_runner:0": {},
