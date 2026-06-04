@@ -11,6 +11,7 @@ Planned improvements and features to be addressed in future tasks.
 - [x] **Automated migrations on deploy** — shipped 2026-04-21 (Slice 1 of `feature-multi-event`). `Procfile` declares `release: bundle exec rake db:migrate`; every Heroku deploy runs migrations in the release phase and fails atomically if any migration raises.
 - [ ] **CI/CD pipeline** - Set up continuous integration for automated testing on PRs
 - [ ] **Heroku Review Apps** - Configure `app.json` to enable auto-provisioned review environments for PRs
+- [ ] **Remove devcontainer** — no longer used by the maintainer (2026-06-04); can be deleted soon unless other contributors rely on it. Before removing: confirm no contributor uses it, then delete `.devcontainer/` and strip devcontainer references from `CLAUDE.md` (DevContainer section) and `README.md` if present. Note `.nvmrc` (node 22) is now the source of truth for Node version (CI reads it via `node-version-file`); the devcontainer's pinned Node/Ruby versions are redundant.
 
 ## Application Layer
 
