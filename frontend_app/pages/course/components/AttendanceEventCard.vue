@@ -51,9 +51,9 @@ import ManageEventAttendance from './ManageEventAttendance.vue';
     emits: ['create-event', 'edit-event', 'delete-event', 'create-location', 'update-location', 'delete-location', 'new-enrolls', 'update-enrollment', 'delete-enrollment'],
     props: {
       course: Object,
-      attendanceEvents: Object,
-      locations: Array,
-      enrollments: Object,
+      attendanceEvents: { type: Array, default: () => [] },
+      locations: { type: Array, default: () => [] },
+      enrollments: { type: Array, default: () => [] },
       currentRole: String,
       canManage: { type: Boolean, default: false }
     },
