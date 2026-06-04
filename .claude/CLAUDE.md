@@ -41,10 +41,13 @@ bundle exec rake generate:jwt_key  # Generate JWT_KEY for secrets.yml
 
 ### Testing
 ```bash
-bundle exec rake spec          # Run all tests (default task)
+bundle exec rake spec          # Run all tests, backend + frontend (default task)
+bundle exec rake spec:backend  # Backend only (Minitest)
+bundle exec rake spec:frontend # Frontend only (Vitest; same as npm test)
 bundle exec rake test          # Alias for spec
 RACK_ENV=test bundle exec rake db:migrate  # Setup test database first
 ```
+The backend suite reports one intentional skip (`courses_spec.rb` — testing a missing `owner` role would require deleting seed data the suite depends on). Expected; not a regression.
 
 ## Architecture
 

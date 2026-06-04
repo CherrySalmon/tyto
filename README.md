@@ -61,8 +61,9 @@ rake run:api
 ## Testing
 
 ```shell
-bundle exec rake spec    # Run all backend tests
-bundle exec rake         # Same (default task)
+bundle exec rake spec            # Run all tests, backend + frontend (default task)
+bundle exec rake spec:backend    # Backend only (Minitest)
+bundle exec rake spec:frontend   # Frontend only (Vitest; same as npm test)
 ```
 
 Ensure the test database is set up first:
@@ -70,6 +71,8 @@ Ensure the test database is set up first:
 ```shell
 RACK_ENV=test bundle exec rake db:setup
 ```
+
+Note: the backend suite reports one intentional skip (`courses_spec.rb` — testing a missing `owner` role would require deleting seed data the rest of the suite depends on).
 
 ## Database Commands
 
