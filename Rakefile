@@ -3,11 +3,21 @@
 require 'rake/testtask'
 require_relative './require_app'
 
-desc 'Run all tests'
-Rake::TestTask.new(:spec) do |t|
-  t.pattern = 'backend_app/spec/**/*_spec.rb'
-  t.warning = false
+namespace :spec do
+  desc 'Run backend (Ruby/Minitest) tests'
+  Rake::TestTask.new(:backend) do |t|
+    t.pattern = 'backend_app/spec/**/*_spec.rb'
+    t.warning = false
+  end
+
+  desc 'Run frontend (Vue/Vitest) tests'
+  task :frontend do
+    sh 'npm test'
+  end
 end
+
+desc 'Run all tests (backend + frontend)'
+task spec: %w[spec:backend spec:frontend]
 
 desc 'Run all tests'
 task test: :spec
