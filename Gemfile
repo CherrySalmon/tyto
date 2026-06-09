@@ -8,7 +8,7 @@ ruby File.read('.ruby-version').strip
 # WEB APPLICATION
 gem 'logger'
 gem 'ostruct'
-gem 'puma', '~>6.0'
+gem 'puma', '~>7.2'
 gem 'roda', '~>3.0'
 gem 'tilt'
 
