@@ -10,12 +10,16 @@
     "dev": "webpack serve --config webpack/webpack.dev.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ui": "playwright test --ui",
     "prod": "webpack --config webpack/webpack.prod.js",
     "heroku-postbuild": "npm run prod"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vue/test-utils": "^2.4.10",
     "clean-webpack-plugin": "^4.0.0",

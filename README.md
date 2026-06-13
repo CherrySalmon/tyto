@@ -60,17 +60,30 @@ rake run:api
 
 ## Testing
 
+The project has three test layers:
+
+| Layer | Tool | What it covers | Command |
+| --- | --- | --- | --- |
+| Backend | Minitest | API routes, services, policies, domain | `bundle exec rake spec:backend` |
+| Frontend | Vitest | Vue components in isolation (jsdom) | `bundle exec rake spec:frontend` |
+| End-to-end | Playwright | Real browser driving the live app + API | `bundle exec rake spec:e2e` |
+
 ```shell
-bundle exec rake spec            # Run all tests, backend + frontend (default task)
+bundle exec rake spec            # Backend + frontend (default task) — does NOT run e2e
 bundle exec rake spec:backend    # Backend only (Minitest)
 bundle exec rake spec:frontend   # Frontend only (Vitest; same as npm test)
+bundle exec rake spec:e2e        # Browser end-to-end (Playwright); opt-in, self-contained
 ```
 
-Ensure the test database is set up first:
+Set up the test database before running backend or frontend specs:
 
 ```shell
 RACK_ENV=test bundle exec rake db:setup
 ```
+
+`spec:e2e` is opt-in (not part of `rake spec`) and manages its own test DB, seed, and
+frontend build. See **[Testing Guide](doc/testing.md)** for full setup and how the
+e2e harness works.
 
 Note: the backend suite reports one intentional skip (`courses_spec.rb` — testing a missing `owner` role would require deleting seed data the rest of the suite depends on).
 
@@ -86,6 +99,7 @@ bundle exec rake db:drop        # Delete database (destructive)
 
 ## Documentation
 
+- [Testing Guide](doc/testing.md) — Backend (Minitest), frontend (Vitest), and end-to-end (Playwright) tests
 - [Google OAuth Setup](doc/google.md) — Configure Google Cloud credentials
 - [Heroku Deployment](doc/heroku.md) — Deploy to production
 - [AWS S3 Setup](doc/s3.md) — Configure S3 bucket, IAM, and CORS for file uploads (production)

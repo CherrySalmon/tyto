@@ -14,6 +14,18 @@ namespace :spec do
   task :frontend do
     sh 'npm test'
   end
+
+  desc 'Run browser-based E2E (Playwright). Resets+seeds the test DB, builds the frontend, then runs specs against :9292.'
+  task :e2e do
+    # Separate processes on purpose: `db:reset` in one process is broken for
+    # SQLite. See .claude/plans/PLAN.test-ui.md "DB reset footgun".
+    sh 'RACK_ENV=test bundle exec rake db:drop'
+    sh 'RACK_ENV=test bundle exec rake db:migrate'
+    sh 'RACK_ENV=test bundle exec rake db:seed'
+
+    sh 'npm run prod'
+    sh 'npx playwright test'
+  end
 end
 
 desc 'Run all tests (backend + frontend)'
@@ -155,5 +167,57 @@ namespace :generate do
   task :local_storage_signing_key do
     require_relative 'backend_app/app/lib/security'
     puts "LOCAL_STORAGE_SIGNING_KEY: #{Tyto::Security.generate_signing_key}"
+  end
+
+  desc 'Mint an auth credential for a seeded account (E2E login bypass). Usage: rake "generate:test_credential[email@example.com]"'
+  task :test_credential, [:email] do |_t, args|
+    require('json')
+    require_relative 'require_app'
+    require_app # full app + initializers so AuthToken::Gateway is configured
+
+    email = args[:email] or abort('Usage: rake "generate:test_credential[email@example.com]"')
+
+    account = Tyto::Repository::Accounts.new.find_by_email_with_roles(email)
+    abort("No account found for email: #{email}") unless account
+
+    roles = account.roles.to_a
+    credential = Tyto::AuthToken::Mapper.new.from_credentials(account.id, roles)
+
+    # Emit a single JSON line so the Playwright login fixture can parse stdout.
+    puts JSON.generate(
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      avatar: account.avatar,
+      roles: roles,
+      credential: credential
+    )
+  end
+
+  desc 'Mint credentials for every E2E account (@e2e.test) in one boot, keyed by role. Used by the Playwright E2E global setup.'
+  task :e2e_credentials do
+    require('json')
+    require_relative 'require_app'
+    require_app
+
+    mapper = Tyto::AuthToken::Mapper.new
+    accounts = Tyto::Account.where(Sequel.like(:email, '%@e2e.test')).all
+
+    by_role = accounts.each_with_object({}) do |orm, acc|
+      # 'e2e-owner@e2e.test' -> 'owner'
+      role_key = orm.email.split('@').first.sub(/\Ae2e-/, '')
+      roles = orm.roles.map(&:name)
+      acc[role_key] = {
+        id: orm.id,
+        name: orm.name,
+        email: orm.email,
+        avatar: orm.avatar,
+        roles: roles,
+        credential: mapper.from_credentials(orm.id, roles)
+      }
+    end
+
+    # Single JSON object on stdout: { "owner": {...}, "student": {...}, ... }
+    puts JSON.generate(by_role)
   end
 end
