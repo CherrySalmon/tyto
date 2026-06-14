@@ -16,7 +16,9 @@ export class PeoplePage {
   }
 
   row(email) {
-    return this.page.getByRole('row', { name: new RegExp(email) });
+    // Plain string => Playwright matches the accessible name case-insensitively
+    // as a substring, with '.'/'+' treated literally (a RegExp would not).
+    return this.page.getByRole('row', { name: email });
   }
 
   async enroll(email) {

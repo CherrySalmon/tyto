@@ -43,7 +43,9 @@ export class RolesDialog {
 // resulting row state themselves (durable for People, transient for ManageAccount
 // — see confirm()).
 export async function editRolesByEmail(page, email, role) {
-  await page.getByRole('row', { name: new RegExp(email) }).getByRole('button', { name: 'Edit' }).click();
+  // Plain string => case-insensitive substring match on the row's accessible
+  // name, with '.'/'+' literal (a RegExp would treat them as metacharacters).
+  await page.getByRole('row', { name: email }).getByRole('button', { name: 'Edit' }).click();
   const dialog = await new RolesDialog(page).expectOpen();
   await dialog.addRole(role);
   await dialog.confirm();

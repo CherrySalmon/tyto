@@ -44,7 +44,13 @@ Tyto::Account.add_account(admin_user_data)
 # The fixture *data* (accounts, course name, locations, event) lives in the pure
 # `Tyto::E2EFixtures` module so the Playwright specs can import the same values
 # (via `rake generate:e2e_seed_data`) and never drift from what is seeded here.
+#
+# DEV + TEST ONLY — never seed these deterministic fixtures into production,
+# where they would pollute real data. Roles + the admin account above still
+# seed in every environment.
 # ---------------------------------------------------------------------------
+
+return if Tyto::Api.environment == :production
 
 fx = Tyto::E2EFixtures
 E2E_COURSE_NAME = fx::COURSE_NAME

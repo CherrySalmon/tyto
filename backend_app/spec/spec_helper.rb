@@ -26,8 +26,13 @@ DB = Tyto::Api.db
 # relationships that an unordered table-by-table delete would otherwise violate.
 DB.synchronize do
   DB.run('PRAGMA foreign_keys = OFF')
-  DB.tables.each { |table| DB[table].delete }
-  DB.run('PRAGMA foreign_keys = ON')
+  begin
+    DB.tables.each { |table| DB[table].delete }
+  ensure
+    # Always restore enforcement, even if a delete raises — otherwise FK checks
+    # would stay OFF for the rest of the suite and mask integrity issues.
+    DB.run('PRAGMA foreign_keys = ON')
+  end
 end
 
 # Seed roles (same as production)
