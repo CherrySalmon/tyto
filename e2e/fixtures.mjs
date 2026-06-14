@@ -1,6 +1,15 @@
 import { test as base, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { CREDENTIALS_PATH } from './global-setup.mjs';
+import { CoursesPage } from './pages/courses-page.mjs';
+import { SingleCoursePage } from './pages/single-course-page.mjs';
+import { PeoplePage } from './pages/people-page.mjs';
+import { AttendanceEventsPage } from './pages/attendance-events-page.mjs';
+import { AssignmentsPage } from './pages/assignments-page.mjs';
+import { LocationsPage } from './pages/locations-page.mjs';
+import { ManageAccountPage } from './pages/manage-account-page.mjs';
+import { LoginPage } from './pages/login-page.mjs';
+import { AppShell } from './pages/app-shell.mjs';
 
 // Cookie-injection login for E2E. global-setup.mjs has already minted a real
 // credential per seeded `@e2e.test` account into e2e/.auth/credentials.json;
@@ -49,6 +58,19 @@ export const test = base.extend({
     };
     await use(setSession);
   },
+
+  // Page objects, injected per test. Specs receive these instead of
+  // constructing them or touching selectors directly.
+  coursesPage: async ({ page }, use) => use(new CoursesPage(page)),
+  singleCoursePage: async ({ page }, use) => use(new SingleCoursePage(page)),
+  peoplePage: async ({ page }, use) => use(new PeoplePage(page)),
+  attendanceEventsPage: async ({ page }, use) => use(new AttendanceEventsPage(page)),
+  assignmentsPage: async ({ page }, use) => use(new AssignmentsPage(page)),
+  locationsPage: async ({ page }, use) => use(new LocationsPage(page)),
+  manageAccountPage: async ({ page }, use) => use(new ManageAccountPage(page)),
+  // LoginPage is anemic (URL-only) and needs no page handle.
+  loginPage: async ({}, use) => use(new LoginPage()),
+  appShell: async ({ page }, use) => use(new AppShell(page)),
 });
 
 export { expect };

@@ -6,6 +6,7 @@ require_relative '../../app/infrastructure/database/orm/course'
 require_relative '../../app/infrastructure/database/orm/account_course'
 require_relative '../../app/infrastructure/database/orm/location'
 require_relative '../../app/infrastructure/database/orm/event'
+require_relative 'e2e_fixtures'
 
 # Define the role descriptions
 role_descriptions = ['admin', 'creator', 'member', 'owner', 'instructor', 'staff', 'student']
@@ -39,34 +40,18 @@ Tyto::Account.add_account(admin_user_data)
 # Emails use the reserved-for-tests `e2e.test` domain so they can never collide
 # with a real Google account. Mint a login credential for any of these with:
 #   RACK_ENV=test bundle exec rake "generate:test_credential[e2e-owner@e2e.test]"
+#
+# The fixture *data* (accounts, course name, locations, event) lives in the pure
+# `Tyto::E2EFixtures` module so the Playwright specs can import the same values
+# (via `rake generate:e2e_seed_data`) and never drift from what is seeded here.
 # ---------------------------------------------------------------------------
 
-E2E_ACCOUNTS = {
-  admin:      { name: 'E2E Admin',      email: 'e2e-admin@e2e.test',      system_roles: %w[admin creator member] },
-  creator:    { name: 'E2E Creator',    email: 'e2e-creator@e2e.test',    system_roles: %w[creator member] },
-  owner:      { name: 'E2E Owner',      email: 'e2e-owner@e2e.test',      system_roles: %w[member] },
-  instructor: { name: 'E2E Instructor', email: 'e2e-instructor@e2e.test', system_roles: %w[member] },
-  staff:      { name: 'E2E Staff',      email: 'e2e-staff@e2e.test',      system_roles: %w[member] },
-  student:    { name: 'E2E Student',    email: 'e2e-student@e2e.test',    system_roles: %w[member] },
-  # Enrolled with TWO course roles so the SingleCourse "view as role" switcher
-  # has more than one option to switch between (task 8a).
-  multi:      { name: 'E2E Multi-role', email: 'e2e-multi@e2e.test',      system_roles: %w[member] }
-}.freeze
+fx = Tyto::E2EFixtures
+E2E_COURSE_NAME = fx::COURSE_NAME
+E2E_LOCATION = fx::MAIN_HALL
+E2E_EVENT_NAME = fx::EVENT_NAME
 
-# Per-course enrollment: account key => course role(s). admin + creator stay
-# unenrolled so specs have a "not a member of this course" actor to assert on.
-E2E_COURSE_ENROLLMENTS = {
-  owner: %w[owner],
-  instructor: %w[instructor],
-  staff: %w[staff],
-  student: %w[student],
-  multi: %w[instructor student]
-}.freeze
-E2E_COURSE_NAME = 'E2E Course'
-E2E_LOCATION = { name: 'E2E Main Hall', latitude: 25.0330, longitude: 121.5654 }.freeze
-E2E_EVENT_NAME = 'E2E Live Session'
-
-e2e_accounts = E2E_ACCOUNTS.transform_values do |spec|
+e2e_accounts = fx::ACCOUNTS.transform_values do |spec|
   # A non-blank avatar so App.vue renders the avatar popover (and its Logout
   # control) — the UI path E2E specs click. The URL need not resolve.
   avatar = "https://e2e.test/avatar/#{spec[:email].split('@').first}.png"
@@ -83,7 +68,7 @@ end
 e2e_course = Tyto::Course.first(name: E2E_COURSE_NAME) ||
              Tyto::Course.create(name: E2E_COURSE_NAME, account_id: e2e_accounts[:owner].id)
 
-E2E_COURSE_ENROLLMENTS.each do |account_key, role_names|
+fx::COURSE_ENROLLMENTS.each do |account_key, role_names|
   account = e2e_accounts[account_key]
   role_names.each do |role_name|
     role = Tyto::Role.first(name: role_name)
@@ -104,8 +89,13 @@ e2e_location = Tyto::Location.first(course_id: e2e_course.id, name: E2E_LOCATION
 
 # A second, event-free location the Locations spec can delete (task 14). Kept
 # separate from E2E Main Hall so deleting it never cascades the seeded event.
-unless Tyto::Location.first(course_id: e2e_course.id, name: 'E2E Spare Room')
-  Tyto::Location.create(course_id: e2e_course.id, name: 'E2E Spare Room', latitude: 25.0340, longitude: 121.5660)
+unless Tyto::Location.first(course_id: e2e_course.id, name: fx::SPARE_ROOM[:name])
+  Tyto::Location.create(
+    course_id: e2e_course.id,
+    name: fx::SPARE_ROOM[:name],
+    latitude: fx::SPARE_ROOM[:latitude],
+    longitude: fx::SPARE_ROOM[:longitude]
+  )
 end
 
 # An attendance event whose window spans "now" (±1 day) so the student always

@@ -1,14 +1,18 @@
 import { expect } from '@playwright/test';
+import { CoursesPage } from './pages/courses-page.mjs';
+import { SEED } from './seed-data.mjs';
 
-// Shared navigation helpers for E2E specs.
+// Pure navigation helpers shared by the page objects (e2e/pages/). Selector
+// quarantine lives in the page/component objects; these are URL/role-locator
+// navigation only.
 
 // Open the seeded "E2E Course" by clicking its card on the home page, so the
 // course id is never hardcoded. Lands on /course/:id/attendance (or, for
 // non-managers, wherever redirectIfNotManager sends them).
 export async function openE2eCourse(page) {
-  await page.goto('/');
-  await page.getByRole('heading', { level: 3, name: 'E2E Course' }).click();
-  await page.waitForURL(/\/course\/\d+\//);
+  const courses = new CoursesPage(page);
+  await courses.goto();
+  await courses.openCourse(SEED.course.name);
 }
 
 // Open a management tab (Attendance Events | Locations | People | Assignments)
@@ -24,12 +28,4 @@ export async function openCourseTab(page, tabName) {
 // parallel workers (worker index keeps concurrent workers distinct).
 export function uniqueEmail(prefix, workerIndex = 0) {
   return `${prefix}-${workerIndex}-${Date.now()}@e2e.test`;
-}
-
-// Pick an option from an already-opened Element Plus dropdown (el-select).
-// Options render in a body-level overlay, so this is scoped to the page, not
-// the trigger. `scope` clicks the trigger first (defaults to the page).
-export async function chooseOption(page, optionText, trigger) {
-  if (trigger) await trigger.click();
-  await page.locator('.el-select-dropdown__item', { hasText: optionText }).click();
 }

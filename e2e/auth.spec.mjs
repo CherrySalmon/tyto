@@ -4,19 +4,19 @@ import { test, expect, ROLES } from './fixtures.mjs';
 // the whole harness: seed -> mint -> cookie injection -> SPA boots authed.
 
 test.describe('Authentication / session', () => {
-  test('unauthenticated visit redirects to /login', async ({ page }) => {
-    await page.goto('/course');
-    await expect(page).toHaveURL(/\/login/);
+  test('unauthenticated visit redirects to /login', async ({ page, coursesPage, loginPage }) => {
+    await page.goto(coursesPage.path);
+    await expect(page).toHaveURL(loginPage.url);
   });
 
   for (const role of ROLES) {
-    test(`cookie-injection login as ${role} lands authenticated (not /login)`, async ({ page, loginAs }) => {
+    test(`cookie-injection login as ${role} lands authenticated (not /login)`, async ({ page, loginAs, coursesPage, loginPage }) => {
       const account = await loginAs(role);
-      await page.goto('/');
+      await coursesPage.goto();
 
       // App.vue redirects to /login when session.getAccount() is falsy; staying
       // off /login proves the injected session was accepted.
-      await expect(page).not.toHaveURL(/\/login/);
+      await expect(page).not.toHaveURL(loginPage.url);
 
       // The SPA recognizes the account: the credential cookie round-tripped.
       const credential = await page.evaluate(() =>
@@ -26,17 +26,14 @@ test.describe('Authentication / session', () => {
     });
   }
 
-  test('logout clears the session and forces re-login', async ({ page, loginAs }) => {
+  test('logout clears the session and forces re-login', async ({ page, loginAs, appShell, coursesPage, loginPage }) => {
     await loginAs('owner');
-    await page.goto('/');
-    await expect(page).not.toHaveURL(/\/login/);
+    await coursesPage.goto();
+    await expect(page).not.toHaveURL(loginPage.url);
 
-    // The avatar popover holds the Logout control (renders because E2E accounts
-    // have an avatar). Hover to reveal it, then click.
-    await page.locator('.avatar-btn').first().hover();
-    await page.getByText('Logout', { exact: true }).click();
+    await appShell.logout();
 
-    await expect(page).toHaveURL(/\/login/);
+    await expect(page).toHaveURL(loginPage.url);
     const hasCredential = await page.evaluate(() => document.cookie.includes('account_credential='));
     expect(hasCredential).toBe(false);
   });

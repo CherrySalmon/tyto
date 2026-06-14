@@ -220,4 +220,14 @@ namespace :generate do
     # Single JSON object on stdout: { "owner": {...}, "student": {...}, ... }
     puts JSON.generate(by_role)
   end
+
+  desc 'Emit E2E seed-reference data (course/location/event names + coords, account emails) as JSON for the Playwright specs. Pure data — no app boot, no DB.'
+  task :e2e_seed_data do
+    require('json')
+    require_relative 'backend_app/db/seeds/e2e_fixtures'
+
+    # Single JSON object on stdout, consumed by e2e/seed-data.mjs. Mirrors the
+    # seed fixtures so specs and the seeded DB never drift.
+    puts JSON.generate(Tyto::E2EFixtures.as_json)
+  end
 end

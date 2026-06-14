@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.mjs';
+import { SEED } from './seed-data.mjs';
 
 // Plan task 11 — student geo-fenced attendance check-in.
 //
@@ -12,37 +13,36 @@ import { test, expect } from './fixtures.mjs';
 // success attempt records last. Assumes a freshly-seeded DB (rake spec:e2e),
 // since a recorded attendance hides the button on re-run.
 
-const FENCE = { latitude: 25.0330, longitude: 121.5654 }; // E2E Main Hall
+// The geo-fence is the seeded Main Hall's own coordinates (the event is held
+// there), sourced from the seed so the fence and the location never drift.
+const FENCE = { latitude: SEED.mainHall.latitude, longitude: SEED.mainHall.longitude };
 const FAR_AWAY = { latitude: 24.0, longitude: 121.0 }; // ~100+ km away
+const LIVE_SESSION = SEED.event.name;
 
 test.use({ permissions: ['geolocation'], geolocation: FENCE });
 
 test.describe.serial('Student attendance check-in (task 11)', () => {
-  function liveSessionCard(page) {
-    return page.locator('.course-item', { hasText: 'E2E Live Session' });
-  }
-
-  test('rejects check-in from outside the geo-fence', async ({ page, context, loginAs }) => {
+  test('rejects check-in from outside the geo-fence', async ({ page, context, loginAs, coursesPage }) => {
     await context.setGeolocation(FAR_AWAY);
     await loginAs('student');
-    await page.goto('/');
+    await coursesPage.goto();
 
-    await liveSessionCard(page).getByRole('button', { name: 'Mark Attendance' }).click();
+    await coursesPage.markAttendance(LIVE_SESSION);
 
     // recordAttendance surfaces the backend 403 detail in an alert.
     await expect(page.getByText(/outside the allowed geo-fence range/i)).toBeVisible();
   });
 
-  test('accepts check-in from inside the geo-fence', async ({ page, context, loginAs }) => {
+  test('accepts check-in from inside the geo-fence', async ({ page, context, loginAs, coursesPage }) => {
     await context.setGeolocation(FENCE);
     await loginAs('student');
-    await page.goto('/');
+    await coursesPage.goto();
 
-    await liveSessionCard(page).getByRole('button', { name: 'Mark Attendance' }).click();
+    await coursesPage.markAttendance(LIVE_SESSION);
 
     await expect(page.getByText('Attendance recorded successfully')).toBeVisible();
     // Dismiss the success alert; the card flips to the recorded state.
     await page.getByRole('button', { name: 'OK' }).click();
-    await expect(liveSessionCard(page).getByRole('button', { name: 'Attendance Recorded' })).toBeVisible();
+    await expect(coursesPage.eventCard(LIVE_SESSION).getByRole('button', { name: 'Attendance Recorded' })).toBeVisible();
   });
 });
