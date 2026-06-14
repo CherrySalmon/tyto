@@ -20,7 +20,15 @@ require_relative 'support/test_helpers'
 
 # Database setup (run ONCE before all tests)
 DB = Tyto::Api.db
-DB.tables.each { |table| DB[table].delete }
+# Wipe every table before the suite. Disable FK enforcement for the wipe (on a
+# single held connection) so delete order doesn't matter — the seeded fixtures
+# (incl. the E2E course graph: course -> enrollments/locations/events) carry FK
+# relationships that an unordered table-by-table delete would otherwise violate.
+DB.synchronize do
+  DB.run('PRAGMA foreign_keys = OFF')
+  DB.tables.each { |table| DB[table].delete }
+  DB.run('PRAGMA foreign_keys = ON')
+end
 
 # Seed roles (same as production)
 %w[admin creator member owner instructor staff student].each do |role_name|
