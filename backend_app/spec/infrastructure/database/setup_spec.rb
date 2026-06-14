@@ -83,14 +83,27 @@ describe 'Database Setup from Scratch' do
       _(current_version).must_equal migration_count
 
       # Load seed file (this requires the app to be loaded)
-      # We need to temporarily set up the environment so models use our db
+      # We need to temporarily set up the environment so models use our db.
+      #
+      # Redirect EVERY model the seed writes to the setup DB — not just
+      # roles/accounts. The seed's E2E fixture block also creates courses,
+      # enrollments, locations and events; a partial redirect would split those
+      # across two databases and trip a cross-DB FOREIGN KEY violation.
+      seeded_models = {
+        Tyto::Role => :roles,
+        Tyto::Account => :accounts,
+        Tyto::Course => :courses,
+        Tyto::AccountCourse => :account_course_roles,
+        Tyto::Location => :locations,
+        Tyto::Event => :events
+      }
+
       original_db = Tyto::Api.instance_variable_get(:@db)
       original_admin_email = ENV['ADMIN_EMAIL']
       Tyto::Api.instance_variable_set(:@db, db)
 
       # Point Sequel models at the setup database (set_dataset takes a dataset, not db)
-      Tyto::Role.set_dataset(db[:roles])
-      Tyto::Account.set_dataset(db[:accounts]) if defined?(Tyto::Account)
+      seeded_models.each { |model, table| model.set_dataset(db[table]) }
 
       # Set ADMIN_EMAIL for seed file
       ENV['ADMIN_EMAIL'] = 'test-admin@example.com'
@@ -101,8 +114,7 @@ describe 'Database Setup from Scratch' do
       ensure
         # Restore original database connection and model datasets
         Tyto::Api.instance_variable_set(:@db, original_db)
-        Tyto::Role.set_dataset(original_db[:roles]) if original_db
-        Tyto::Account.set_dataset(original_db[:accounts]) if original_db && defined?(Tyto::Account)
+        seeded_models.each { |model, table| model.set_dataset(original_db[table]) } if original_db
         ENV['ADMIN_EMAIL'] = original_admin_email
       end
 

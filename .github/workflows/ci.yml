@@ -64,3 +64,55 @@ jobs:
 
       - name: Run frontend tests
         run: npm test
+
+  e2e-tests:
+    # Browser-based E2E (Playwright). Needs both Ruby (API + rake) and Node
+    # (build + Playwright). `rake spec:e2e` resets+seeds the test DB, builds the
+    # SPA, and runs the specs against a backend it boots itself on :9292.
+    runs-on: ubuntu-latest
+
+    env:
+      BUNDLE_WITHOUT: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libsodium
+        run: sudo apt-get update && sudo apt-get install -y libsodium-dev
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Create test secrets
+        run: |
+          set -o pipefail
+          JWT_KEY=$(bundle exec rake generate:jwt_key | grep 'JWT_KEY:' | cut -d' ' -f2)
+          SIGNING_KEY=$(bundle exec rake generate:local_storage_signing_key | grep 'LOCAL_STORAGE_SIGNING_KEY:' | cut -d' ' -f2)
+          mkdir -p backend_app/tmp/local_storage_test
+          printf "test:\n  DATABASE_URL: sqlite://backend_app/db/store/test.db\n  JWT_KEY: %s\n  ADMIN_EMAIL: test@example.com\n  LOCAL_STORAGE_ROOT: backend_app/tmp/local_storage_test\n  LOCAL_STORAGE_SIGNING_KEY: %s\n  LOCAL_STORAGE_BASE_URL: http://localhost:9292\n" "$JWT_KEY" "$SIGNING_KEY" > backend_app/config/secrets.yml
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        run: bundle exec rake spec:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
