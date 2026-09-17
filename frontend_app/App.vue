@@ -116,15 +116,23 @@ export default {
           this.$router.push({ path: '/login', query: { redirect: window.location.pathname } })
         }
       }
+      this.refreshAccount()
     },
     watch: {
       $route(to, from) {
         if (from.name == 'Login' || to.name == 'Login') {
           this.account = session.getAccount()
         }
+        // Roles can change while someone is logged in; pick that up on each
+        // navigation so the header and nav never lag the server by much.
+        this.refreshAccount()
       }
     },
     methods: {
+      async refreshAccount() {
+        const refreshed = await session.refresh()
+        if (refreshed) this.account = refreshed
+      },
       handleSelect(key, keyPath) {
         this.$router.push(key)
       },

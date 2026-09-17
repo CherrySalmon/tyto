@@ -25,7 +25,9 @@ import { AppShell } from './pages/app-shell.mjs';
 
 let cache;
 
-function credentialFor(role) {
+// Exported so a spec can act as another role over the API (e.g. an admin
+// changing the roles of the account the browser is logged in as).
+export function credentialFor(role) {
   cache ??= JSON.parse(readFileSync(CREDENTIALS_PATH, 'utf8'));
   const entry = cache[role];
   if (!entry) {

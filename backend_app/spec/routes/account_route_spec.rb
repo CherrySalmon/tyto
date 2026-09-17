@@ -69,6 +69,38 @@ describe 'Account Routes' do
       _(json_response['error']).must_equal 'Token error'
     end
 
+    it 'drops admin access on the next request after a demotion, without re-login' do
+      account, auth = authenticated_header(roles: ['admin'])
+      get '/api/account', nil, auth
+      _(last_response.status).must_equal 200
+
+      account.remove_all_roles
+      account.add_role(Tyto::Role.first(name: 'member'))
+
+      get '/api/account', nil, auth
+      _(last_response.status).must_equal 403
+    end
+
+    it 'returns 401 Unauthorized for an expired token so the app logs the user out' do
+      account = create_test_account(roles: ['admin'])
+      long_ago = Tyto::AuthToken::Mapper.new(clock: -> { Time.now - (200 * 24 * 60 * 60) })
+      stale = { 'HTTP_AUTHORIZATION' => "Bearer #{long_ago.to_token(account.id)}" }
+
+      get '/api/account', nil, stale
+
+      _(last_response.status).must_equal 401
+      _(json_response['error']).must_equal 'Unauthorized'
+    end
+
+    it 'returns 401 Unauthorized for a token whose account was deleted' do
+      account, auth = authenticated_header(roles: ['admin'])
+      account.destroy
+
+      get '/api/account', nil, auth
+
+      _(last_response.status).must_equal 401
+    end
+
     it 'returns 500 Internal Server Error when a service raises unexpectedly' do
       _, auth = authenticated_header(roles: ['admin'])
       boom = ->(*) { raise 'unexpected failure' }

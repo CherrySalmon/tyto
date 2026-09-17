@@ -181,7 +181,7 @@ namespace :generate do
     abort("No account found for email: #{email}") unless account
 
     roles = account.roles.to_a
-    credential = Tyto::AuthToken::Mapper.new.from_credentials(account.id, roles)
+    credential = Tyto::AuthToken::Mapper.new.to_token(account.id)
 
     # Emit a single JSON line so the Playwright login fixture can parse stdout.
     puts JSON.generate(
@@ -213,7 +213,7 @@ namespace :generate do
         email: orm.email,
         avatar: orm.avatar,
         roles: roles,
-        credential: mapper.from_credentials(orm.id, roles)
+        credential: mapper.to_token(orm.id)
       }
     end
 
