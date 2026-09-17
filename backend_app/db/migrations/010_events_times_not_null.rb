@@ -3,7 +3,7 @@
 require 'sequel'
 
 # Require start_at and end_at on events — null times make no sense for an
-# attendance event. Prerequisite audit in PLAN.feature-multi-event.md task 1.6b
+# attendance event. Prerequisite audit in .claude/plans/016-PLAN-feature-multi-event/a-PLAN.md task 1.6b
 # confirmed prod has zero rows with null time columns.
 Sequel.migration do
   up do

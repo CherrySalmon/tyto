@@ -18,7 +18,7 @@ namespace :spec do
   desc 'Run browser-based E2E (Playwright). Resets+seeds the test DB, builds the frontend, then runs specs against :9292.'
   task :e2e do
     # Separate processes on purpose: `db:reset` in one process is broken for
-    # SQLite. See .claude/plans/PLAN.test-ui.md "DB reset footgun".
+    # SQLite. See .claude/plans/019-PLAN-test-ui/a-PLAN.md "DB reset footgun".
     sh 'RACK_ENV=test bundle exec rake db:drop'
     sh 'RACK_ENV=test bundle exec rake db:migrate'
     sh 'RACK_ENV=test bundle exec rake db:seed'
