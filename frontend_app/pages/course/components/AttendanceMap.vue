@@ -3,6 +3,7 @@
 </template>
 
 <script>
+import { loadGoogleMaps } from '@/lib/googleMaps.js'
 
   export default {
     emits: [],
@@ -18,18 +19,8 @@
         this.initMap();
     },
     methods: {
-        async loadGoogleMapsApi() {
-            if (typeof google === "undefined" || typeof google.maps === "undefined") {
-                const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.VUE_APP_GOOGLE_MAP_KEY}`;
-                document.head.appendChild(script);
-                await new Promise((resolve) => {
-                    script.onload = resolve;
-                });
-            }
-        },
         async initMap() {
-            await this.loadGoogleMapsApi();
+            await loadGoogleMaps();
 
             const center = {
                 lat: this.event.latitude,
