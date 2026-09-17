@@ -1,9 +1,35 @@
 # frozen_string_literal: true
 
 require_relative '../../../spec_helper'
+require 'logger'
+require 'stringio'
 
 describe 'Tyto::Repository::Accounts' do
   let(:repository) { Tyto::Repository::Accounts.new }
+
+  describe '#find_all_with_roles' do
+    it 'loads every account and its roles in a constant number of queries' do
+      member = Tyto::Role.first(name: 'member')
+      5.times do |i|
+        account = Tyto::Account.create(email: "many#{i}@example.com")
+        account.add_role(member)
+      end
+      log = StringIO.new
+      logger = Logger.new(log)
+      Tyto::Api.db.loggers << logger
+
+      begin
+        accounts = repository.find_all_with_roles
+      ensure
+        Tyto::Api.db.loggers.delete(logger)
+      end
+
+      _(accounts.size).must_be :>=, 5
+      _(accounts.map { |a| a.roles.to_a }).must_include ['member']
+      role_queries = log.string.lines.count { |line| line.include?('FROM `roles`') }
+      _(role_queries).must_be :<=, 1
+    end
+  end
 
   describe 'timestamps' do
     it 'exposes created_at on rebuilt entities' do
@@ -354,6 +380,25 @@ describe 'Tyto::Repository::Accounts' do
       _(second.created).must_equal []
       _(second.found.size).must_equal 1
       _(Tyto::Account.where(email: 'unique@example.com').count).must_equal 1
+    end
+
+    it 'retries once when a concurrent request wins the insert, so no duplicate and no failure' do
+      original = Tyto::Account.method(:create)
+      calls = 0
+      losing_first = lambda do |*args, **kwargs|
+        calls += 1
+        raise Sequel::UniqueConstraintViolation, 'accounts.email is not unique' if calls == 1
+
+        original.call(*args, **kwargs)
+      end
+
+      result = Tyto::Account.stub(:create, losing_first) do
+        repository.find_or_create_many_by_email(['raced@example.com'])
+      end
+
+      _(calls).must_equal 2
+      _((result.found + result.created).map(&:email)).must_equal ['raced@example.com']
+      _(Tyto::Account.where(email: 'raced@example.com').count).must_equal 1
     end
 
     it 'creates all or nothing' do

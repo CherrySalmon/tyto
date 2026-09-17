@@ -70,8 +70,8 @@
         </el-button>
       </template>
       <template v-else>
-        <el-button @click="addMore">Add more</el-button>
-        <el-button type="primary" @click="finish">Done</el-button>
+        <el-button :disabled="saving" @click="addMore">Add more</el-button>
+        <el-button type="primary" :disabled="saving" :loading="saving" @click="finish">Done</el-button>
       </template>
     </template>
   </el-dialog>
@@ -98,10 +98,14 @@ export default {
       submitError: '',
       rows: [],
       counts: { created: 0, existing: 0, invalid: 0 },
+      pendingSaves: 0,
       roleOptions
     }
   },
   computed: {
+    saving() {
+      return this.pendingSaves > 0
+    },
     parsed() {
       return parseEmails(this.rawEmails)
     },
@@ -138,12 +142,17 @@ export default {
         this.submitting = false
       }
     },
+    // Each change saves on its own; Done and Add more wait until every save
+    // has settled so the parent's refetch cannot overtake a PUT in flight.
     async saveRoles(account) {
       this.submitError = ''
+      this.pendingSaves += 1
       try {
         await api.put(`/account/${account.id}`, { roles: account.roles })
       } catch (error) {
         this.submitError = error.response?.data?.details || `Could not save roles for ${account.email}.`
+      } finally {
+        this.pendingSaves -= 1
       }
     },
     statusType(status) {

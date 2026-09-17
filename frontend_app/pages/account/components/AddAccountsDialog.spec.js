@@ -132,6 +132,27 @@ describe('AddAccountsDialog step 2 (results and roles)', () => {
     expect(api.put).toHaveBeenCalledWith('/account/7', { roles: ['creator', 'member'] });
   });
 
+  it('keeps Done and Add more disabled while a role save is in flight, then re-enables them', async () => {
+    let settle;
+    api.put.mockReturnValue(new Promise((resolve) => { settle = resolve; }));
+    const wrapper = await mountAtResults();
+    const first = wrapper.findAllComponents({ name: 'ElSelectStub' })[0];
+    const button = (label) => wrapper.findAll('button').find((b) => b.text() === label);
+
+    first.vm.$emit('update:modelValue', ['creator', 'member']);
+    first.vm.$emit('change', ['creator', 'member']);
+    await flushPromises();
+
+    expect(button('Done').attributes('disabled')).toBeDefined();
+    expect(button('Add more').attributes('disabled')).toBeDefined();
+
+    settle({ status: 200 });
+    await flushPromises();
+
+    expect(button('Done').attributes('disabled')).toBeUndefined();
+    expect(button('Add more').attributes('disabled')).toBeUndefined();
+  });
+
   it('Done closes the dialog and tells the parent to refresh', async () => {
     const wrapper = await mountAtResults();
 

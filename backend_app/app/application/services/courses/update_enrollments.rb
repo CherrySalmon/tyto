@@ -72,7 +72,7 @@ module Tyto
         # One repository call finds or creates every account (new ones become
         # members) in a single transaction, so a failure creates nothing.
         def find_or_create_accounts(enrolled_data)
-          emails = enrolled_data.map { |enrollment| enrollment['email'] }
+          emails = enrolled_data.map { |enrollment| enrollment['email'] }.uniq
           result = @accounts_repo.find_or_create_many_by_email(emails)
           (result.found + result.created).to_h { |account| [account.email, account] }
         end

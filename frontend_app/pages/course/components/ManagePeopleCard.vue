@@ -18,7 +18,10 @@
       <div v-if="enrollStep == 2" class="input-email-item">
         <div>New enroll:</div>
         <div class="new-email-box">
-          <div v-for="enroll in newEnrolls" :key="enroll">{{ enroll.email }}</div>
+          <div v-for="enroll in newEnrolls" :key="enroll.email">{{ enroll.email }}</div>
+        </div>
+        <div v-if="skippedTokens.length" class="skipped-note">
+          Skipped (not email addresses): {{ skippedTokens.join(', ') }}
         </div>
         <el-button @click="backStep">Back</el-button>
         <el-button @click="addEnrollments" type="primary">Enroll in Course</el-button>
@@ -86,6 +89,7 @@ export default {
       localEnrollments: [],
       newEnrollmentEmails: '',
       newEnrolls: [],
+      skippedTokens: [],
       enrollStep: 1,
       editDialogVisible: false,
       selectedAccount: {}
@@ -114,6 +118,7 @@ export default {
     },
     backStep() {
       this.newEnrolls = []
+      this.skippedTokens = []
       this.enrollStep = 1
     },
     addEnrollments() {
@@ -123,7 +128,8 @@ export default {
     handleEmailCreate() {
       // Same parser as the admin Add accounts dialog: any mix of spaces,
       // commas, and new lines, de-duplicated.
-      const { emails } = parseEmails(this.newEnrollmentEmails)
+      const { emails, skipped } = parseEmails(this.newEnrollmentEmails)
+      this.skippedTokens = skipped
       emails.forEach(email => {
         if (!this.newEnrolls.some(user => user.email === email)) {
           this.newEnrolls.push({ email: email, roles: 'student' });
@@ -159,6 +165,12 @@ export default {
   margin: 10px 0;
   padding: 10px;
   border-radius: 8px;
+}
+
+.skipped-note {
+  color: var(--el-color-warning);
+  font-size: 13px;
+  margin: 0 0 10px;
 }
 
 .people-title {

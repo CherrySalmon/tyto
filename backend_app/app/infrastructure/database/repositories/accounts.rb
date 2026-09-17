@@ -67,7 +67,7 @@ module Tyto
       # Find all accounts with roles loaded
       # @return [Array<Domain::Accounts::Entities::Account>] array of domain entities with roles
       def find_all_with_roles
-        Tyto::Account.all.map { |record| rebuild_entity(record, load_roles: true) }
+        Tyto::Account.eager(:roles).all.map { |record| rebuild_entity(record, load_roles: true) }
       end
 
       # Create a new account from a domain entity
@@ -160,15 +160,23 @@ module Tyto
       # Domain rule: a new account starts with the 'member' role only.
       # Creation is one transaction, so a failure leaves nothing behind.
       # Both lists keep the input order and carry roles.
+      #
+      # Two requests can both see an email as missing; the unique index on
+      # email makes the loser's insert fail, and one retry then finds the
+      # winner's row instead of creating a duplicate.
       # @param emails [Array<String>]
       # @return [FoundOrCreated] found: existing accounts; created: new ones
-      def find_or_create_many_by_email(emails)
-        sorted = emails.each_with_object({ found: [], missing: [] }) do |email, acc|
+      def find_or_create_many_by_email(emails, retry_on_race: true)
+        sorted = emails.uniq.each_with_object({ found: [], missing: [] }) do |email, acc|
           account = find_by_email_with_roles(email)
           account ? acc[:found] << account : acc[:missing] << email
         end
         created = create_many(sorted[:missing].map { |email| new_member_entity(email) }, role_names: NEW_ACCOUNT_ROLES)
         FoundOrCreated.new(found: sorted[:found], created:)
+      rescue Sequel::UniqueConstraintViolation
+        raise unless retry_on_race
+
+        find_or_create_many_by_email(emails, retry_on_race: false)
       end
 
       private

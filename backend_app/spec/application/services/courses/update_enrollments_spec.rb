@@ -32,6 +32,19 @@ describe Tyto::Service::Courses::UpdateEnrollments do
       _(course_roles_of('already@example.com')).must_equal %w[instructor staff]
     end
 
+    it 'creates one account when the same new email appears twice and applies both rows' do
+      enrolled_data = [
+        { 'email' => 'twice@example.com', 'roles' => 'student' },
+        { 'email' => 'twice@example.com', 'roles' => 'staff' }
+      ]
+
+      result = Tyto::Service::Courses::UpdateEnrollments.new.call(requestor:, course_id: course.id, enrolled_data:)
+
+      _(result).must_be_kind_of Dry::Monads::Result::Success
+      _(Tyto::Account.where(email: 'twice@example.com').count).must_equal 1
+      _(course_roles_of('twice@example.com')).must_equal ['staff']
+    end
+
     it 'creates no accounts when creating one of them fails' do
       original = Tyto::Account.method(:create)
       calls = 0
