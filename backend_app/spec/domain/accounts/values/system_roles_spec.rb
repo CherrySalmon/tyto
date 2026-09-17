@@ -24,6 +24,20 @@ describe Tyto::Domain::Accounts::Values::SystemRoles do
     end
   end
 
+  describe '.invalid_names' do
+    it 'returns the names that are not system roles, in order' do
+      _(Tyto::Domain::Accounts::Values::SystemRoles.invalid_names(%w[admin owner member student])).must_equal %w[owner student]
+    end
+
+    it 'returns an empty array when every name is a system role' do
+      _(Tyto::Domain::Accounts::Values::SystemRoles.invalid_names(%w[creator member])).must_equal []
+    end
+
+    it 'treats nil as no names' do
+      _(Tyto::Domain::Accounts::Values::SystemRoles.invalid_names(nil)).must_equal []
+    end
+  end
+
   describe '#has?' do
     it 'returns true when role is present' do
       roles = Tyto::Domain::Accounts::Values::SystemRoles.from(['admin'])

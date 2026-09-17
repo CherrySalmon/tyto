@@ -5,7 +5,6 @@ import ManageAccount from '../pages/ManageAccount.vue';
 import Course from '../pages/course/index.vue';
 import AllCourses from '../pages/course/AllCourse.vue'
 import SingleCourse from '../pages/course/SingleCourse.vue'
-import ManageCourse from '../pages/ManageCourse.vue';
 import PageNotFound from '../pages/404.vue'
 import AttendanceTrack from '../pages/course/AttendanceTrack.vue'
 import AttendanceEventCard from '../pages/course/components/AttendanceEventCard.vue';
@@ -72,11 +71,6 @@ const routes = [
     name: 'ManageAccount',
     component: ManageAccount,
     meta: { requiresAdmin: true }
-  },
-  {
-    path: '/manage-course',
-    name: 'ManageCourse',
-    component: ManageCourse
   },
   {
     path: "/:notFound",

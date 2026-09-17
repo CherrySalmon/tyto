@@ -8,16 +8,15 @@ module Tyto
     module Accounts
       # Service: Create accounts for a pasted list of emails (admin only).
       #
-      # Every email that has no account yet is created with the 'member' role,
-      # in one transaction, so a failed insert leaves nothing behind. Emails
-      # that already have an account and strings that are not emails are
-      # reported back rather than treated as errors, so the caller can show
-      # one result list for the whole paste.
+      # Every email that has no account yet is created (as a member, the
+      # repository's rule) in one transaction, so a failed insert leaves nothing
+      # behind. Emails that already have an account and strings that are not
+      # emails are reported back rather than treated as errors, so the caller
+      # can show one result list for the whole paste.
       #
       # Returns Success(ApiResult) with an Outcome, or Failure(ApiResult).
       class BulkCreateAccounts < ApplicationOperation
         MAX_BATCH_SIZE = 200
-        DEFAULT_ROLES = ['member'].freeze
 
         Outcome = Struct.new(:created, :existing, :invalid, keyword_init: true)
 
@@ -30,10 +29,9 @@ module Tyto
           step authorize(requestor)
           candidates = step validate_shape(emails)
           valid, invalid = partition_by_format(candidates)
-          existing, missing = partition_by_presence(valid)
-          created = step persist_all(missing)
+          result = step find_or_create(valid)
 
-          created(Outcome.new(created:, existing:, invalid:))
+          created(Outcome.new(created: result.created, existing: result.found, invalid:))
         end
 
         private
@@ -61,29 +59,12 @@ module Tyto
           emails.partition { |email| Types::Email.valid?(email) }
         end
 
-        # Existing accounts come back with their roles so the caller can show them
-        def partition_by_presence(emails)
-          existing = []
-          missing = []
-          emails.each do |email|
-            account = @accounts_repo.find_by_email_with_roles(email)
-            account ? existing << account : missing << email
-          end
-          [existing, missing]
-        end
-
-        def persist_all(emails)
-          entities = emails.map { |email| build_entity(email) }
-          Success(@accounts_repo.create_many(entities, role_names: DEFAULT_ROLES))
+        # The repository owns the "new accounts start as member" rule and the
+        # transaction; this service adds admin-only access, validation, and the report.
+        def find_or_create(emails)
+          Success(@accounts_repo.find_or_create_many_by_email(emails))
         rescue StandardError => e
           Failure(internal_error(e.message))
-        end
-
-        def build_entity(email)
-          Domain::Accounts::Entities::Account.new(
-            id: nil, name: nil, email:, access_token: nil, refresh_token: nil, avatar: nil,
-            roles: Domain::Accounts::Values::NullSystemRoles.new
-          )
         end
       end
     end

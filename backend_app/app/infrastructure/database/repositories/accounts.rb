@@ -15,6 +15,9 @@ module Tyto
     #   find_by_email           - Account only (roles = nil)
     #   find_by_email_with_roles - Account + roles loaded
     class Accounts
+      NEW_ACCOUNT_ROLES = ['member'].freeze
+      FoundOrCreated = Struct.new(:found, :created, keyword_init: true)
+
       # Find an account by ID (roles not loaded)
       # @param id [Integer] the account ID
       # @return [Domain::Accounts::Entities::Account, nil] the domain entity or nil if not found
@@ -153,23 +156,29 @@ module Tyto
         end.sort_by(&:course_name)
       end
 
-      # Find an account by email, or create with 'member' role if not found
-      # Domain rule: new accounts always get 'member' role
-      # @param email [String] the email address
-      # @return [Domain::Accounts::Entities::Account] the found or created account entity
-      def find_or_create_by_email(email)
-        orm_record = Tyto::Account.first(email: email)
-
-        unless orm_record
-          orm_record = Tyto::Account.create(email: email)
-          member_role = Tyto::Role.first(name: 'member')
-          orm_record.add_role(member_role) if member_role
+      # Find accounts for a list of emails, creating the missing ones.
+      # Domain rule: a new account starts with the 'member' role only.
+      # Creation is one transaction, so a failure leaves nothing behind.
+      # Both lists keep the input order and carry roles.
+      # @param emails [Array<String>]
+      # @return [FoundOrCreated] found: existing accounts; created: new ones
+      def find_or_create_many_by_email(emails)
+        sorted = emails.each_with_object({ found: [], missing: [] }) do |email, acc|
+          account = find_by_email_with_roles(email)
+          account ? acc[:found] << account : acc[:missing] << email
         end
-
-        rebuild_entity(orm_record)
+        created = create_many(sorted[:missing].map { |email| new_member_entity(email) }, role_names: NEW_ACCOUNT_ROLES)
+        FoundOrCreated.new(found: sorted[:found], created:)
       end
 
       private
+
+      def new_member_entity(email)
+        Domain::Accounts::Entities::Account.new(
+          id: nil, name: nil, email:, access_token: nil, refresh_token: nil, avatar: nil,
+          roles: Domain::Accounts::Values::NullSystemRoles.new
+        )
+      end
 
       # Rebuild a domain entity from an ORM record
       # @param orm_record [Tyto::Account] the Sequel model instance

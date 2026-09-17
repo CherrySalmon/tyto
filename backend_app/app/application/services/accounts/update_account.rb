@@ -57,7 +57,7 @@ module Tyto
           policy = Policy::Account.new(requestor, account_id)
           return Failure(forbidden('Only admins can change system roles')) unless policy.can_change_system_roles?
 
-          invalid = Array(roles).reject { |role| Types::SystemRole.valid?(role) }
+          invalid = Domain::Accounts::Values::SystemRoles.invalid_names(roles)
           return Failure(bad_request("Not a system role: #{invalid.join(', ')}")) if invalid.any?
 
           Success(Array(roles).uniq)

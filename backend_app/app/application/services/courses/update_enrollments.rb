@@ -58,18 +58,23 @@ module Tyto
         end
 
         def process_enrollments(course_id, enrolled_data)
+          accounts_by_email = find_or_create_accounts(enrolled_data)
           enrolled_data.each do |enrollment|
-            # Find or create account by email (domain rule: new accounts get 'member' role)
-            account = @accounts_repo.find_or_create_by_email(enrollment['email'])
-
-            # Parse and set roles for this enrollment
+            account = accounts_by_email.fetch(enrollment['email'])
             role_names = enrollment['roles'].split(',').map(&:strip)
             @courses_repo.set_enrollment_roles(course_id:, account_id: account.id, roles: role_names)
           end
-
           Success(true)
         rescue StandardError => e
           Failure(internal_error(e.message))
+        end
+
+        # One repository call finds or creates every account (new ones become
+        # members) in a single transaction, so a failure creates nothing.
+        def find_or_create_accounts(enrolled_data)
+          emails = enrolled_data.map { |enrollment| enrollment['email'] }
+          result = @accounts_repo.find_or_create_many_by_email(emails)
+          (result.found + result.created).to_h { |account| [account.email, account] }
         end
       end
     end

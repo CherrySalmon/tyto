@@ -59,7 +59,7 @@ module Tyto
         def validate_roles(roles)
           return Success(['member']) if roles.nil? || roles.empty?
 
-          invalid = Array(roles).reject { |role| Types::SystemRole.valid?(role) }
+          invalid = Domain::Accounts::Values::SystemRoles.invalid_names(roles)
           return Failure(bad_request("Not a system role: #{invalid.join(', ')}")) if invalid.any?
 
           Success(Array(roles).uniq)
