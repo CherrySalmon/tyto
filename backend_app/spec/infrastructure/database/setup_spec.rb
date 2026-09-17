@@ -3,6 +3,7 @@
 require_relative '../../spec_helper'
 require 'sequel'
 require 'fileutils'
+require 'open3'
 
 describe 'Database Setup from Scratch' do
   let(:project_root) { File.expand_path(__dir__ + '/../../../..') }
@@ -82,41 +83,26 @@ describe 'Database Setup from Scratch' do
       current_version = db[:schema_info].get(:version)
       _(current_version).must_equal migration_count
 
-      # Load seed file (this requires the app to be loaded)
-      # We need to temporarily set up the environment so models use our db.
+      # Seed the scratch database in a separate process. Re-pointing the live
+      # ORM models at it (the previous approach) poisoned Sequel's cached
+      # association datasets: if this spec ran before anything else had used
+      # account.roles, that association stayed bound to the scratch file after
+      # restore, the file was deleted, and every later test failed with
+      # "no such table: roles".
       #
-      # Redirect EVERY model the seed writes to the setup DB — not just
-      # roles/accounts. The seed's E2E fixture block also creates courses,
-      # enrollments, locations and events; a partial redirect would split those
-      # across two databases and trip a cross-DB FOREIGN KEY violation.
-      seeded_models = {
-        Tyto::Role => :roles,
-        Tyto::Account => :accounts,
-        Tyto::Course => :courses,
-        Tyto::AccountCourse => :account_course_roles,
-        Tyto::Location => :locations,
-        Tyto::Event => :events
+      # Figaro leaves an already-set ENV key alone unless a `_FIGARO_<key>`
+      # marker says Figaro itself set it. This test process carries those
+      # markers (Figaro loaded secrets.yml at boot), so the child must drop
+      # them or Figaro would override DATABASE_URL with the secrets value.
+      seed_env = {
+        'RACK_ENV' => 'test',
+        'DATABASE_URL' => setup_db_url,
+        'ADMIN_EMAIL' => 'test-admin@example.com',
+        '_FIGARO_DATABASE_URL' => nil,
+        '_FIGARO_ADMIN_EMAIL' => nil
       }
-
-      original_db = Tyto::Api.instance_variable_get(:@db)
-      original_admin_email = ENV['ADMIN_EMAIL']
-      Tyto::Api.instance_variable_set(:@db, db)
-
-      # Point Sequel models at the setup database (set_dataset takes a dataset, not db)
-      seeded_models.each { |model, table| model.set_dataset(db[table]) }
-
-      # Set ADMIN_EMAIL for seed file
-      ENV['ADMIN_EMAIL'] = 'test-admin@example.com'
-
-      begin
-        # Load the seed file
-        load(seed_path) if File.exist?(seed_path)
-      ensure
-        # Restore original database connection and model datasets
-        Tyto::Api.instance_variable_set(:@db, original_db)
-        seeded_models.each { |model, table| model.set_dataset(original_db[table]) } if original_db
-        ENV['ADMIN_EMAIL'] = original_admin_email
-      end
+      output, status = Open3.capture2e(seed_env, 'bundle', 'exec', 'rake', 'db:seed', chdir: project_root)
+      _(status.success?).must_equal true, "seed subprocess failed:\n#{output}"
 
       # Verify roles were seeded
       role_names = db[:roles].select_map(:name).sort
