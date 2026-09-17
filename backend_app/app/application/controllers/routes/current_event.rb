@@ -27,14 +27,6 @@ module Tyto
               api_result.to_json
             end
           end
-        rescue AuthToken::Mapper::MappingError => e
-          response.status = 400
-          response.write({ error: 'Token error', details: e.message }.to_json)
-          r.halt
-        rescue StandardError => e
-          response.status = 500
-          response.write({ error: 'Internal server error', details: e.message }.to_json)
-          r.halt
         end
       end
     end

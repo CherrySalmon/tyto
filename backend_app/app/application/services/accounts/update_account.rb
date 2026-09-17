@@ -18,7 +18,8 @@ module Tyto
           account_id = step validate_account_id(account_id)
           account = step find_account(account_id)
           step authorize(requestor, account_id)
-          step persist_update(account, account_data)
+          role_names = step authorize_system_roles(requestor, account_id, account_data['roles'])
+          step persist_update(account, account_data, role_names)
 
           ok('Account updated')
         end
@@ -47,16 +48,28 @@ module Tyto
           Success(true)
         end
 
-        def persist_update(account, account_data)
+        # Roles are only touched when the request carries them; then only an
+        # admin may change them, and every name must be a system role.
+        # Returns nil when roles are absent so the repository leaves them alone.
+        def authorize_system_roles(requestor, account_id, roles)
+          return Success(nil) if roles.nil?
+
+          policy = Policy::Account.new(requestor, account_id)
+          return Failure(forbidden('Only admins can change system roles')) unless policy.can_change_system_roles?
+
+          invalid = Array(roles).reject { |role| Types::SystemRole.valid?(role) }
+          return Failure(bad_request("Not a system role: #{invalid.join(', ')}")) if invalid.any?
+
+          Success(Array(roles).uniq)
+        end
+
+        def persist_update(account, account_data, role_names)
           # Build updated entity with only provided fields changed
           updated_entity = account.new(
             name: account_data['name']&.strip || account.name,
             email: account_data['email']&.strip || account.email,
             avatar: account_data.key?('avatar') ? account_data['avatar'] : account.avatar
           )
-
-          # Only update roles if explicitly provided
-          role_names = account_data['roles']
 
           @accounts_repo.update(updated_entity, role_names:)
           Success(true)

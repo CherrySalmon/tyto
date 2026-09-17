@@ -44,6 +44,29 @@ describe Tyto::Service::Accounts::UpdateAccount do
       _(result.failure.status).must_equal :forbidden
     end
 
+    it 'returns Failure when a non-admin sends roles for own account' do
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
+      account_data = { 'roles' => %w[creator admin] }
+
+      result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
+
+      _(result).must_be_kind_of Dry::Monads::Result::Failure
+      _(result.failure.status).must_equal :forbidden
+      _(account.refresh.roles.map(&:name)).must_equal ['creator']
+    end
+
+    it 'returns Failure when an admin sends a non-system role' do
+      admin = Tyto::Account.create(email: 'admin2@example.com', name: 'Admin')
+      admin.add_role(Tyto::Role.first(name: 'admin'))
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: admin.id, roles: ['admin'])
+      account_data = { 'roles' => ['student'] }
+
+      result = Tyto::Service::Accounts::UpdateAccount.new.call(requestor:, account_id: account.id, account_data:)
+
+      _(result).must_be_kind_of Dry::Monads::Result::Failure
+      _(result.failure.status).must_equal :bad_request
+    end
+
     it 'returns Failure for non-existent account' do
       requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['admin'])
       account_data = { 'name' => 'Ghost' }

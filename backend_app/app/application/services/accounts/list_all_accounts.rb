@@ -32,7 +32,7 @@ module Tyto
         end
 
         def fetch_accounts
-          accounts = @accounts_repo.find_all
+          accounts = @accounts_repo.find_all_with_roles
           Success(accounts)
         rescue StandardError => e
           Failure(internal_error(e.message))

@@ -43,7 +43,7 @@ module Tyto
       end
 
       def to_array
-        @entities.map { |entity| Account.new(entity).to_hash }
+        @entities.map { |entity| AccountWithRoles.new(entity).to_hash }
       end
     end
   end

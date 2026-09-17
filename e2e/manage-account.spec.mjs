@@ -15,6 +15,9 @@ test('admin can change a user system role', async ({ loginAs, manageAccountPage 
 
   await manageAccountPage.addRole(email, 'Creator');
 
+  // Reload so the row reflects what the API returns, not the in-place mutation
+  // the Edit dialog made on the row object. GET /api/account must carry roles.
+  await manageAccountPage.goto();
   await expect(manageAccountPage.row(email)).toContainText('creator');
 });
 
