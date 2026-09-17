@@ -34,6 +34,8 @@ module Tyto
           attribute :access_token, Types::String.optional
           attribute :refresh_token, Types::String.optional
           attribute :avatar, Types::String.optional
+          attribute :created_at, Types::Time.optional.default(nil)
+          attribute :updated_at, Types::Time.optional.default(nil)
 
           # System roles - NullSystemRoles when not loaded
           attribute :roles, RolesType.default { Values::NullSystemRoles.new }

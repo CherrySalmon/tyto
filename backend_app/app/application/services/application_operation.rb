@@ -24,6 +24,7 @@ module Tyto
       def bad_request(message) = Response::ApiResult.new(status: :bad_request, message:)
       def not_found(message) = Response::ApiResult.new(status: :not_found, message:)
       def forbidden(message) = Response::ApiResult.new(status: :forbidden, message:)
+      def conflict(message) = Response::ApiResult.new(status: :conflict, message:)
       def internal_error(message) = Response::ApiResult.new(status: :internal_error, message:)
     end
   end

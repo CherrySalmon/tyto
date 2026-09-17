@@ -67,7 +67,7 @@ module Tyto
         end
 
         def generate_credential(account)
-          credential = AuthToken::Mapper.new.from_credentials(account.id, account.roles.to_a)
+          credential = AuthToken::Mapper.new.to_token(account.id)
           Success(credential)
         rescue StandardError => e
           Failure(internal_error("Failed to generate credential: #{e.message}"))

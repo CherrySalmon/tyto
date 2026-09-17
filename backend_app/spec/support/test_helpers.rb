@@ -15,12 +15,10 @@ module TestHelpers
     )
   end
 
-  # Generate auth header for a given account
+  # Generate auth header for a given account. The credential names only the
+  # account; roles are read from the DB on each request.
   def auth_header_for(account)
-    token = Tyto::AuthToken::Mapper.new.from_credentials(
-      account.id,
-      account.roles.map(&:name)
-    )
+    token = Tyto::AuthToken::Mapper.new.to_token(account.id)
     { 'HTTP_AUTHORIZATION' => "Bearer #{token}" }
   end
 

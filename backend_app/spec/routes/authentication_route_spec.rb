@@ -28,6 +28,34 @@ end
 describe 'Authentication Routes' do
   include Rack::Test::Methods
   include TestHelpers
+
+  def app
+    Tyto::Api
+  end
+
+  describe 'GET /api/auth/session' do
+    it 'returns the current account with the roles the database holds now' do
+      account, auth = authenticated_header(roles: ['member'])
+      account.add_role(Tyto::Role.first(name: 'creator'))
+
+      get '/api/auth/session', nil, auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['success']).must_equal true
+      data = json_response['data']
+      _(data['id']).must_equal account.id
+      _(data['email']).must_equal account.email
+      _(data['roles'].sort).must_equal %w[creator member]
+      _(data).wont_include 'credential'
+    end
+
+    it 'returns 400 Token error without a credential' do
+      get '/api/auth/session', nil, {}
+
+      _(last_response.status).must_equal 400
+      _(json_response['error']).must_equal 'Token error'
+    end
+  end
   include Dry::Monads[:result]
 
   def app

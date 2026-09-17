@@ -2,6 +2,7 @@
 
 require_relative '../../../domain/accounts/entities/account'
 require_relative '../../../domain/accounts/values/system_roles'
+require_relative '../../../domain/accounts/values/course_membership'
 
 module Tyto
   module Repository
@@ -14,6 +15,9 @@ module Tyto
     #   find_by_email           - Account only (roles = nil)
     #   find_by_email_with_roles - Account + roles loaded
     class Accounts
+      NEW_ACCOUNT_ROLES = ['member'].freeze
+      FoundOrCreated = Struct.new(:found, :created, keyword_init: true)
+
       # Find an account by ID (roles not loaded)
       # @param id [Integer] the account ID
       # @return [Domain::Accounts::Entities::Account, nil] the domain entity or nil if not found
@@ -63,7 +67,7 @@ module Tyto
       # Find all accounts with roles loaded
       # @return [Array<Domain::Accounts::Entities::Account>] array of domain entities with roles
       def find_all_with_roles
-        Tyto::Account.all.map { |record| rebuild_entity(record, load_roles: true) }
+        Tyto::Account.eager(:roles).all.map { |record| rebuild_entity(record, load_roles: true) }
       end
 
       # Create a new account from a domain entity
@@ -86,6 +90,16 @@ module Tyto
         end
 
         rebuild_entity(orm_record, load_roles: role_names.any?)
+      end
+
+      # Create many accounts in one transaction; all get the same roles.
+      # @param entities [Array<Domain::Accounts::Entities::Account>]
+      # @param role_names [Array<String>] role names assigned to every account
+      # @return [Array<Domain::Accounts::Entities::Account>] persisted entities with roles
+      def create_many(entities, role_names: [])
+        Tyto::Api.db.transaction do
+          entities.map { |entity| create(entity, role_names:) }
+        end
       end
 
       # Update an existing account from a domain entity
@@ -127,23 +141,52 @@ module Tyto
         true
       end
 
-      # Find an account by email, or create with 'member' role if not found
-      # Domain rule: new accounts always get 'member' role
-      # @param email [String] the email address
-      # @return [Domain::Accounts::Entities::Account] the found or created account entity
-      def find_or_create_by_email(email)
-        orm_record = Tyto::Account.first(email: email)
+      # Course memberships of an account: one entry per course with every
+      # course role held there, ordered by course name.
+      # @param account_id [Integer]
+      # @return [Array<Domain::Accounts::Values::CourseMembership>]
+      def find_enrollments(account_id)
+        records = Tyto::AccountCourse.where(account_id:).eager(:course, :role).all
+        records.group_by(&:course_id).map do |course_id, rows|
+          Domain::Accounts::Values::CourseMembership.new(
+            course_id:,
+            course_name: rows.first.course.name,
+            roles: Domain::Courses::Values::CourseRoles.from(rows.map { |row| row.role.name }.uniq)
+          )
+        end.sort_by(&:course_name)
+      end
 
-        unless orm_record
-          orm_record = Tyto::Account.create(email: email)
-          member_role = Tyto::Role.first(name: 'member')
-          orm_record.add_role(member_role) if member_role
+      # Find accounts for a list of emails, creating the missing ones.
+      # Domain rule: a new account starts with the 'member' role only.
+      # Creation is one transaction, so a failure leaves nothing behind.
+      # Both lists keep the input order and carry roles.
+      #
+      # Two requests can both see an email as missing; the unique index on
+      # email makes the loser's insert fail, and one retry then finds the
+      # winner's row instead of creating a duplicate.
+      # @param emails [Array<String>]
+      # @return [FoundOrCreated] found: existing accounts; created: new ones
+      def find_or_create_many_by_email(emails, retry_on_race: true)
+        sorted = emails.uniq.each_with_object({ found: [], missing: [] }) do |email, acc|
+          account = find_by_email_with_roles(email)
+          account ? acc[:found] << account : acc[:missing] << email
         end
+        created = create_many(sorted[:missing].map { |email| new_member_entity(email) }, role_names: NEW_ACCOUNT_ROLES)
+        FoundOrCreated.new(found: sorted[:found], created:)
+      rescue Sequel::UniqueConstraintViolation
+        raise unless retry_on_race
 
-        rebuild_entity(orm_record)
+        find_or_create_many_by_email(emails, retry_on_race: false)
       end
 
       private
+
+      def new_member_entity(email)
+        Domain::Accounts::Entities::Account.new(
+          id: nil, name: nil, email:, access_token: nil, refresh_token: nil, avatar: nil,
+          roles: Domain::Accounts::Values::NullSystemRoles.new
+        )
+      end
 
       # Rebuild a domain entity from an ORM record
       # @param orm_record [Tyto::Account] the Sequel model instance
@@ -163,6 +206,8 @@ module Tyto
           access_token: orm_record.access_token,
           refresh_token: orm_record.refresh_token,
           avatar: orm_record.avatar,
+          created_at: orm_record.created_at,
+          updated_at: orm_record.updated_at,
           roles:
         )
       end

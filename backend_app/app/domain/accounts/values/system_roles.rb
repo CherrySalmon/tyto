@@ -42,6 +42,13 @@ module Tyto
           def self.from(role_array)
             new(roles: role_array || [])
           end
+
+          # Names in the list that are not system roles (e.g. course roles or typos)
+          # @param names [Array<String>, nil]
+          # @return [Array<String>]
+          def self.invalid_names(names)
+            Array(names).reject { |name| Types::SystemRole.valid?(name) }
+          end
         end
 
         # Null object for when roles are not loaded.

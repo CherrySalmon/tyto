@@ -11,13 +11,14 @@ describe Tyto::Service::Accounts::DeleteAccount do
   end
 
   describe '#call' do
-    it 'returns Success when deleting own account' do
+    it 'returns Failure when deleting own account' do
       requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: account.id, roles: ['creator'])
 
       result = Tyto::Service::Accounts::DeleteAccount.new.call(requestor:, account_id: account.id)
 
-      _(result).must_be_kind_of Dry::Monads::Result::Success
-      _(result.value!.message).must_equal 'Account deleted'
+      _(result).must_be_kind_of Dry::Monads::Result::Failure
+      _(result.failure.status).must_equal :forbidden
+      _(Tyto::Account[account.id]).wont_be_nil
     end
 
     it 'returns Success when admin deletes any account' do
@@ -29,6 +30,18 @@ describe Tyto::Service::Accounts::DeleteAccount do
       result = Tyto::Service::Accounts::DeleteAccount.new.call(requestor:, account_id: account.id)
 
       _(result).must_be_kind_of Dry::Monads::Result::Success
+      _(result.value!.message).must_equal 'Account deleted'
+    end
+
+    it 'returns Failure when an admin deletes their own account' do
+      admin = Tyto::Account.create(email: 'admin-self@example.com', name: 'Admin')
+      admin.add_role(Tyto::Role.first(name: 'admin'))
+      requestor = Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: admin.id, roles: ['admin'])
+
+      result = Tyto::Service::Accounts::DeleteAccount.new.call(requestor:, account_id: admin.id)
+
+      _(result).must_be_kind_of Dry::Monads::Result::Failure
+      _(result.failure.status).must_equal :forbidden
     end
 
     it 'returns Failure when deleting other account without admin' do

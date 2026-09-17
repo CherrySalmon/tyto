@@ -10,6 +10,20 @@ describe 'Course Routes' do
     Tyto::Api
   end
 
+  describe 'error handling (root error_handler)' do
+    it 'returns 500 Internal Server Error when a service raises unexpectedly' do
+      _, auth = authenticated_header(roles: ['creator'])
+      boom = ->(*) { raise 'unexpected failure' }
+
+      Tyto::Service::Courses::CreateCourse.stub(:new, boom) do
+        post '/api/course', { name: 'Boom' }.to_json, json_headers(auth)
+      end
+
+      _(last_response.status).must_equal 500
+      _(json_response['error']).must_equal 'Internal Server Error'
+    end
+  end
+
   # Helper to create a course owned by a given account
   def create_test_course(owner_account, name: 'Test Course')
     course = Tyto::Course.create(

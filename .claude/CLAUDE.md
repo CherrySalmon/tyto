@@ -83,7 +83,7 @@ All runtime code lives in `app/`:
 **Cross-cutting Utilities** (`app/lib/`):
 - Currently empty (JWT handling moved to `infrastructure/auth/` and `domain/accounts/values/`)
 
-**Refactoring status**: See `CLAUDE.refactor-ddd.md` for current progress.
+**Refactoring status**: See `.claude/plans/005-PLAN-refactor-ddd/a-PLAN.md` for current progress.
 
 ### Frontend Structure (`frontend_app/`)
 - **pages/**: Full-page Vue components (Login, ManageCourse, course/, etc.)
@@ -161,6 +161,13 @@ rake run:api
 ## Project Planning
 
 - **Future work**: See `doc/future-work.md` for planned improvements (CI/CD, testing, etc.)
+- **Branch plans**: live in `.claude/plans/` (gitignored, never reaches `main`). One folder per work stream, named `NNN-PURPOSE-slug`:
+  - `NNN` is a zero-padded sequence number starting at `001`. It strictly increments and is never reused. List `.claude/plans/` and take the next unused number.
+  - `PURPOSE` is an uppercase tag for the kind of document that started the stream (`PLAN`, `BUGFIX`, `REFACTOR`, `HOTFIX`). It does not change when a second kind of document joins the folder.
+  - `slug` is a short kebab-case name derived from the branch name (`/` becomes `-`, owner prefixes such as `ray/` are dropped).
+  - Inside the folder the main document takes the name of its kind (`PLAN.md`, `BUGFIX.md`). When a folder holds two or more main documents, prefix each with a reading-order letter (`a-PLAN.md`, `b-PLAN.md`); a lone document takes no letter. Supporting files keep a kind tag and take no letter (`SKETCHES.html`, `SKETCHES-hifi.html`).
+  - A reference inside one folder uses the bare filename. A reference to another folder uses the full path from the repository root.
+  - `CLAUDE.local.md` (gitignored) holds an `@` include of the active plan.
 
 ### Plans
 

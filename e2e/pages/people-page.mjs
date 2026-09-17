@@ -7,7 +7,7 @@ import { openCourseTab } from '../helpers.mjs';
 export class PeoplePage {
   constructor(page) {
     this.page = page;
-    this.emailInput = page.getByPlaceholder('Enter email addresses (space-separated)');
+    this.emailInput = page.getByPlaceholder('Enter email addresses (spaces, commas, or new lines)');
   }
 
   async open() {

@@ -1,9 +1,74 @@
 # frozen_string_literal: true
 
 require_relative '../../../spec_helper'
+require 'logger'
+require 'stringio'
 
 describe 'Tyto::Repository::Accounts' do
   let(:repository) { Tyto::Repository::Accounts.new }
+
+  describe '#find_all_with_roles' do
+    it 'loads every account and its roles in a constant number of queries' do
+      member = Tyto::Role.first(name: 'member')
+      5.times do |i|
+        account = Tyto::Account.create(email: "many#{i}@example.com")
+        account.add_role(member)
+      end
+      log = StringIO.new
+      logger = Logger.new(log)
+      Tyto::Api.db.loggers << logger
+
+      begin
+        accounts = repository.find_all_with_roles
+      ensure
+        Tyto::Api.db.loggers.delete(logger)
+      end
+
+      _(accounts.size).must_be :>=, 5
+      _(accounts.map { |a| a.roles.to_a }).must_include ['member']
+      role_queries = log.string.lines.count { |line| line.include?('FROM `roles`') }
+      _(role_queries).must_be :<=, 1
+    end
+  end
+
+  describe 'timestamps' do
+    it 'exposes created_at on rebuilt entities' do
+      orm = Tyto::Account.create(email: 'stamped@example.com', name: 'Stamped')
+
+      entity = repository.find_id(orm.id)
+
+      _(entity.created_at).must_be_kind_of Time
+      _(entity.created_at.to_i).must_equal orm.created_at.to_i
+    end
+  end
+
+  describe '#find_enrollments' do
+    let(:account) { Tyto::Account.create(email: 'enrolled@example.com', name: 'Enrolled') }
+    let(:course_a) { Tyto::Course.create(name: 'Course A') }
+    let(:course_b) { Tyto::Course.create(name: 'Course B') }
+
+    def enroll(course, role_name)
+      role = Tyto::Role.first(name: role_name)
+      Tyto::AccountCourse.create(account_id: account.id, course_id: course.id, role_id: role.id)
+    end
+
+    it 'returns one membership per course with all course roles, ordered by course name' do
+      enroll(course_b, 'student')
+      enroll(course_a, 'instructor')
+      enroll(course_a, 'staff')
+
+      memberships = repository.find_enrollments(account.id)
+
+      _(memberships.map(&:course_id)).must_equal [course_a.id, course_b.id]
+      _(memberships.map(&:course_name)).must_equal ['Course A', 'Course B']
+      _(memberships.first.roles.to_a.sort).must_equal %w[instructor staff]
+      _(memberships.last.roles.to_a).must_equal ['student']
+    end
+
+    it 'returns an empty array for an account with no enrollments' do
+      _(repository.find_enrollments(account.id)).must_equal []
+    end
+  end
 
   describe '#create' do
     it 'persists a new account and returns entity with ID' do
@@ -293,38 +358,65 @@ describe 'Tyto::Repository::Accounts' do
     end
   end
 
-  describe '#find_or_create_by_email' do
-    let(:member_role) { Tyto::Role.first(name: 'member') }
-
-    it 'returns existing account when email exists' do
+  describe '#find_or_create_many_by_email' do
+    it 'returns existing accounts under found and creates the rest as members, in input order' do
       existing = Tyto::Account.create(email: 'existing@example.com', name: 'Existing User')
+      existing.add_role(Tyto::Role.first(name: 'creator'))
 
-      result = repository.find_or_create_by_email('existing@example.com')
+      emails = ['new-a@example.com', 'existing@example.com', 'new-b@example.com']
+      result = repository.find_or_create_many_by_email(emails)
 
-      _(result).must_be_instance_of Tyto::Domain::Accounts::Entities::Account
-      _(result.id).must_equal existing.id
-      _(result.email).must_equal 'existing@example.com'
-      _(result.name).must_equal 'Existing User'
+      _(result.found.map(&:id)).must_equal [existing.id]
+      _(result.found.first.roles.to_a).must_equal ['creator']
+      _(result.created.map(&:email)).must_equal ['new-a@example.com', 'new-b@example.com']
+      _(result.created.map { |a| a.roles.to_a }).must_equal [['member'], ['member']]
+      _(Tyto::Account[result.created.first.id].roles.map(&:name)).must_equal ['member']
     end
 
-    it 'creates new account with member role when email does not exist' do
-      result = repository.find_or_create_by_email('newuser@example.com')
+    it 'does not duplicate accounts across calls' do
+      repository.find_or_create_many_by_email(['unique@example.com'])
+      second = repository.find_or_create_many_by_email(['unique@example.com'])
 
-      _(result).must_be_instance_of Tyto::Domain::Accounts::Entities::Account
-      _(result.id).wont_be_nil
-      _(result.email).must_equal 'newuser@example.com'
-
-      # Verify member role was assigned
-      orm_account = Tyto::Account[result.id]
-      _(orm_account.roles.map(&:name)).must_include 'member'
-    end
-
-    it 'does not duplicate account on multiple calls' do
-      result1 = repository.find_or_create_by_email('unique@example.com')
-      result2 = repository.find_or_create_by_email('unique@example.com')
-
-      _(result1.id).must_equal result2.id
+      _(second.created).must_equal []
+      _(second.found.size).must_equal 1
       _(Tyto::Account.where(email: 'unique@example.com').count).must_equal 1
+    end
+
+    it 'retries once when a concurrent request wins the insert, so no duplicate and no failure' do
+      original = Tyto::Account.method(:create)
+      calls = 0
+      losing_first = lambda do |*args, **kwargs|
+        calls += 1
+        raise Sequel::UniqueConstraintViolation, 'accounts.email is not unique' if calls == 1
+
+        original.call(*args, **kwargs)
+      end
+
+      result = Tyto::Account.stub(:create, losing_first) do
+        repository.find_or_create_many_by_email(['raced@example.com'])
+      end
+
+      _(calls).must_equal 2
+      _((result.found + result.created).map(&:email)).must_equal ['raced@example.com']
+      _(Tyto::Account.where(email: 'raced@example.com').count).must_equal 1
+    end
+
+    it 'creates all or nothing' do
+      original = Tyto::Account.method(:create)
+      calls = 0
+      failing = lambda do |*args, **kwargs|
+        calls += 1
+        raise Sequel::DatabaseError, 'simulated failure' if calls == 2
+
+        original.call(*args, **kwargs)
+      end
+
+      _(proc {
+        Tyto::Account.stub(:create, failing) do
+          repository.find_or_create_many_by_email(['one@example.com', 'two@example.com'])
+        end
+      }).must_raise Sequel::DatabaseError
+      _(Tyto::Account.first(email: 'one@example.com')).must_be_nil
     end
   end
 

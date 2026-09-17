@@ -9,7 +9,27 @@ module Tyto
     class Authentication < Roda
       include Dry::Monads[:result]
 
+      plugin :request_headers
+
+      # JSON bodies arrive parsed in r.POST. A malformed body re-raises the
+      # JSON::ParserError so Tyto::Api's error_handler answers with 400.
+      plugin :json_parser, error_handler: ->(_request) { raise }
+
       route do |r|
+        # GET api/auth/session - the logged-in account as the server sees it now
+        r.get 'session' do
+          requestor = AuthToken::Mapper.new.from_auth_header(r.headers['Authorization'])
+
+          case Service::Accounts::GetOwnAccount.new.call(requestor:)
+          in Success(api_result)
+            response.status = api_result.http_status_code
+            { success: true, data: Representer::AccountWithRoles.new(api_result.message).to_hash }.to_json
+          in Failure(api_result)
+            response.status = api_result.http_status_code
+            api_result.to_json
+          end
+        end
+
         r.on 'verify_google_token' do
           # GET api/auth/verify_google_token - API info
           r.get do
@@ -18,7 +38,7 @@ module Tyto
 
           # POST api/auth/verify_google_token - Verify Google OAuth token
           r.post do
-            request_body = JSON.parse(r.body.read)
+            request_body = r.POST
             access_token = request_body['accessToken']
 
             case Service::Auth::VerifyGoogleToken.new.call(access_token:)
@@ -35,12 +55,6 @@ module Tyto
                 api_result.to_json
               end
             end
-          rescue JSON::ParserError => e
-            response.status = 400
-            { error: 'Invalid JSON', details: e.message }.to_json
-          rescue StandardError => e
-            response.status = 500
-            { error: 'Internal Server Error', details: e.message }.to_json
           end
         end
       end

@@ -21,9 +21,22 @@ module Tyto
       use Rack::SslEnforcer, hsts: true
     end
 
-    # Register the error_handler plugin
+    # One error policy for every route. Sub-apps mounted with r.run subclass
+    # Roda directly and carry no rescue of their own, so anything they raise
+    # lands here: bad JSON bodies (json_parser re-raises), bad auth headers,
+    # expired or orphaned credentials (401, which makes the SPA log out), and
+    # unexpected failures, which get logged.
     plugin :error_handler do |e|
       case e
+      when JSON::ParserError
+        response.status = 400
+        { error: 'Invalid JSON', details: e.message }.to_json
+      when AuthToken::Mapper::MappingError
+        response.status = 400
+        { error: 'Token error', details: e.message }.to_json
+      when AuthToken::Mapper::RejectedError
+        response.status = 401
+        { error: 'Unauthorized', details: e.message }.to_json
       when Sequel::NoMatchingRow
         response.status = 404
         { error: 'Not Found' }.to_json

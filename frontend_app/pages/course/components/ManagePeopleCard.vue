@@ -10,7 +10,7 @@
         </el-steps>
       </div>
       <div v-if="enrollStep == 1" class="input-email-item">
-        <el-input v-model="newEnrollmentEmails" placeholder="Enter email addresses (space-separated)"
+        <el-input v-model="newEnrollmentEmails" placeholder="Enter email addresses (spaces, commas, or new lines)"
           style="width: 100%;height: 40px;margin: 10px 0;" @keyup.enter="handleEmailCreate()">
         </el-input>
         <el-button @click="handleEmailCreate()" type="primary">Next step</el-button>
@@ -18,7 +18,10 @@
       <div v-if="enrollStep == 2" class="input-email-item">
         <div>New enroll:</div>
         <div class="new-email-box">
-          <div v-for="enroll in newEnrolls" :key="enroll">{{ enroll.email }}</div>
+          <div v-for="enroll in newEnrolls" :key="enroll.email">{{ enroll.email }}</div>
+        </div>
+        <div v-if="skippedTokens.length" class="skipped-note">
+          Skipped (not email addresses): {{ skippedTokens.join(', ') }}
         </div>
         <el-button @click="backStep">Back</el-button>
         <el-button @click="addEnrollments" type="primary">Enroll in Course</el-button>
@@ -67,6 +70,8 @@
 </template>
   
 <script>
+import { parseEmails } from '@/lib/parseEmails'
+
 export default {
   emits: ['create-event', 'edit-event', 'delete-event', 'create-location', 'update-location', 'delete-location', 'new-enrolls', 'update-enrollment', 'delete-enrollment'],
   props: {
@@ -84,6 +89,7 @@ export default {
       localEnrollments: [],
       newEnrollmentEmails: '',
       newEnrolls: [],
+      skippedTokens: [],
       enrollStep: 1,
       editDialogVisible: false,
       selectedAccount: {}
@@ -112,6 +118,7 @@ export default {
     },
     backStep() {
       this.newEnrolls = []
+      this.skippedTokens = []
       this.enrollStep = 1
     },
     addEnrollments() {
@@ -119,17 +126,12 @@ export default {
       this.newEnrolls = []
     },
     handleEmailCreate() {
-      // Split the input by commas to support comma-separated emails
-      let emails
-      if(this.newEnrollmentEmails.indexOf(' ')>=0) {
-        emails = this.newEnrollmentEmails.split(' ');
-      }
-      else {
-        emails = this.newEnrollmentEmails.split(',');
-      }
-       
+      // Same parser as the admin Add accounts dialog: any mix of spaces,
+      // commas, and new lines, de-duplicated.
+      const { emails, skipped } = parseEmails(this.newEnrollmentEmails)
+      this.skippedTokens = skipped
       emails.forEach(email => {
-        if (email && !this.newEnrolls.some(user => user.email === email)) {
+        if (!this.newEnrolls.some(user => user.email === email)) {
           this.newEnrolls.push({ email: email, roles: 'student' });
         }
       })
@@ -163,6 +165,12 @@ export default {
   margin: 10px 0;
   padding: 10px;
   border-radius: 8px;
+}
+
+.skipped-note {
+  color: var(--el-color-warning);
+  font-size: 13px;
+  margin: 0 0 10px;
 }
 
 .people-title {

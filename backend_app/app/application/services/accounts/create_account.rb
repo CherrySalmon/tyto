@@ -33,20 +33,36 @@ module Tyto
         end
 
         def validate_input(account_data)
-          email = account_data['email']
-          return Failure(bad_request('Email is required')) if email.nil? || email.to_s.strip.empty?
+          email = step validate_email(account_data['email'])
+          roles = step validate_roles(account_data['roles'])
 
-          # Check if email already exists
-          existing = Tyto::Account.first(email: email.strip)
-          return Failure(bad_request('Email already exists')) if existing
+          return Failure(conflict('Email already exists')) if @accounts_repo.find_by_email(email)
 
           Success(
             name: account_data['name']&.strip,
-            email: email.strip,
+            email:,
             access_token: account_data['access_token'],
             avatar: account_data['avatar'],
-            roles: account_data['roles'] || ['member']
+            roles:
           )
+        end
+
+        def validate_email(email)
+          email = email.to_s.strip
+          return Failure(bad_request('Email is required')) if email.empty?
+          return Failure(bad_request('Email is not valid')) unless Types::Email.valid?(email)
+
+          Success(email)
+        end
+
+        # New accounts default to 'member'; any given roles must be system roles
+        def validate_roles(roles)
+          return Success(['member']) if roles.nil? || roles.empty?
+
+          invalid = Domain::Accounts::Values::SystemRoles.invalid_names(roles)
+          return Failure(bad_request("Not a system role: #{invalid.join(', ')}")) if invalid.any?
+
+          Success(Array(roles).uniq)
         end
 
         def persist_account(validated)

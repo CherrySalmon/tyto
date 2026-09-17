@@ -2,60 +2,93 @@
 
 require_relative '../../../spec_helper'
 
+# The credential carries only the account id and an expiry. Roles are read
+# from the database on every request, so a role change (or a deleted account)
+# takes effect on the next request rather than at the next login.
 describe Tyto::AuthToken::Mapper do
   let(:mapper) { Tyto::AuthToken::Mapper.new }
-  let(:capability) { Tyto::Domain::Accounts::Values::AuthCapability.new(account_id: 42, roles: ['admin', 'creator']) }
+  let(:account) do
+    orm = Tyto::Account.create(email: 'token@example.com', name: 'Token User')
+    orm.add_role(Tyto::Role.first(name: 'member'))
+    orm
+  end
+  let(:day) { 24 * 60 * 60 }
 
-  describe '#to_token' do
-    it 'returns a string token from AuthCapability' do
-      token = mapper.to_token(capability)
-
-      _(token).must_be_kind_of String
-      _(token).wont_be_empty
-    end
-
-    it 'raises MappingError with nil capability' do
-      _(-> { mapper.to_token(nil) }).must_raise Tyto::AuthToken::Mapper::MappingError
-    end
+  def decoded(token)
+    JSON.parse(Tyto::AuthToken::Gateway.new.decrypt(token), symbolize_names: true)
   end
 
-  describe '#from_credentials' do
-    it 'returns a string token from raw credentials' do
-      token = mapper.from_credentials(1, ['creator'])
+  describe '#to_token' do
+    it 'carries the account id and an expiry, never roles' do
+      payload = decoded(mapper.to_token(account.id))
 
-      _(token).must_be_kind_of String
-      _(token).wont_be_empty
+      _(payload[:account_id]).must_equal account.id
+      _(payload[:exp]).must_be_kind_of Integer
+      _(payload).wont_include :roles
     end
 
-    it 'raises MappingError with nil account_id' do
-      _(-> { mapper.from_credentials(nil, ['creator']) }).must_raise Tyto::AuthToken::Mapper::MappingError
+    it 'expires about a semester after issue' do
+      exp = decoded(mapper.to_token(account.id))[:exp]
+
+      _(exp - Time.now.to_i).must_be :>=, 179 * day
+      _(exp - Time.now.to_i).must_be :<=, 181 * day
     end
 
-    it 'raises MappingError with empty roles' do
-      _(-> { mapper.from_credentials(1, []) }).must_raise Tyto::AuthToken::Mapper::MappingError
+    it 'raises MappingError with a blank account id' do
+      _(-> { mapper.to_token(nil) }).must_raise Tyto::AuthToken::Mapper::MappingError
+      _(-> { mapper.to_token('') }).must_raise Tyto::AuthToken::Mapper::MappingError
     end
   end
 
   describe '#from_auth_header' do
-    it 'returns AuthCapability from valid token' do
-      token = mapper.to_token(capability)
+    it 'returns an AuthCapability whose roles come from the database' do
+      token = mapper.to_token(account.id)
+
       result = mapper.from_auth_header("Bearer #{token}")
 
       _(result).must_be_kind_of Tyto::Domain::Accounts::Values::AuthCapability
-      _(result.account_id).must_equal 42
-      _(result.roles.to_a).must_equal ['admin', 'creator']
+      _(result.account_id).must_equal account.id
+      _(result.roles.to_a).must_equal ['member']
     end
 
-    it 'raises MappingError for invalid token' do
+    it 'reflects a role change made after the token was issued' do
+      token = mapper.to_token(account.id)
+      account.add_role(Tyto::Role.first(name: 'admin'))
+
+      _(mapper.from_auth_header("Bearer #{token}").admin?).must_equal true
+
+      account.remove_all_roles
+      _(mapper.from_auth_header("Bearer #{token}").roles.to_a).must_equal []
+    end
+
+    it 'rejects a token whose account no longer exists' do
+      token = mapper.to_token(account.id)
+      account.destroy
+
+      _(-> { mapper.from_auth_header("Bearer #{token}") }).must_raise Tyto::AuthToken::Mapper::RejectedError
+    end
+
+    it 'rejects an expired token' do
+      token = mapper.to_token(account.id)
+      later = Tyto::AuthToken::Mapper.new(clock: -> { Time.now + (200 * day) })
+
+      _(-> { later.from_auth_header("Bearer #{token}") }).must_raise Tyto::AuthToken::Mapper::RejectedError
+    end
+
+    it 'rejects a legacy token that has no expiry' do
+      legacy = Tyto::AuthToken::Gateway.new.encrypt({ account_id: account.id, roles: ['admin'] }.to_json)
+
+      _(-> { mapper.from_auth_header("Bearer #{legacy}") }).must_raise Tyto::AuthToken::Mapper::RejectedError
+    end
+
+    it 'raises MappingError for an unreadable token' do
       _(-> { mapper.from_auth_header('Bearer invalid_token') }).must_raise Tyto::AuthToken::Mapper::MappingError
     end
 
-    it 'raises MappingError without Bearer prefix' do
-      token = mapper.to_token(capability)
-      _(-> { mapper.from_auth_header(token) }).must_raise Tyto::AuthToken::Mapper::MappingError
-    end
+    it 'raises MappingError without the Bearer prefix or without a header' do
+      token = mapper.to_token(account.id)
 
-    it 'raises MappingError for nil auth header' do
+      _(-> { mapper.from_auth_header(token) }).must_raise Tyto::AuthToken::Mapper::MappingError
       _(-> { mapper.from_auth_header(nil) }).must_raise Tyto::AuthToken::Mapper::MappingError
     end
   end

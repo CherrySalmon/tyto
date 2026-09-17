@@ -26,12 +26,10 @@ export class RolesDialog {
     return this;
   }
 
-  // Click Confirm. Intentionally does NOT wait for the dialog to disappear:
-  // ManageAccount's account list doesn't carry roles, so its row reflects the
-  // change only transiently (via the by-reference row mutation) before its
-  // refetch clears it — a toBeHidden() wait here would lose that race. Callers
-  // assert the resulting row state directly; for durable updates (People) that
-  // assertion auto-retries past the dialog close anyway.
+  // Click Confirm. Does not wait for the dialog to disappear; callers assert
+  // the resulting row state directly, and that assertion auto-retries past the
+  // dialog close. GET /api/account now returns roles, so ManageAccount's rows
+  // are durable after a reload (manage-account.spec.mjs reloads before asserting).
   async confirm() {
     await this.dialog.getByRole('button', { name: 'Confirm' }).click();
   }
@@ -40,8 +38,7 @@ export class RolesDialog {
 // Drive the "Edit Account" dialog from a table row found by email: click that
 // row's Edit, add a role, Confirm. Shared by PeoplePage and ManageAccountPage,
 // whose tables and dialogs are identical at this level. Callers assert the
-// resulting row state themselves (durable for People, transient for ManageAccount
-// — see confirm()).
+// resulting row state themselves.
 export async function editRolesByEmail(page, email, role) {
   // Plain string => case-insensitive substring match on the row's accessible
   // name, with '.'/'+' literal (a RegExp would treat them as metacharacters).

@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Browser-based E2E for the Tyto app. Drives the real Vue SPA served by the
 // Roda backend (API + built assets from dist/) on :9292, against a dedicated
-// RACK_ENV=test database. See .claude/plans/PLAN.test-ui.md.
+// RACK_ENV=test database. See .claude/plans/019-PLAN-test-ui/a-PLAN.md.
 //
 // Auth is by cookie injection, not Google OAuth: global-setup.mjs mints a real
 // credential per seeded `@e2e.test` account and writes e2e/.auth/credentials.json;

@@ -11,6 +11,9 @@ module Tyto
 
       plugin :all_verbs
       plugin :request_headers
+      # JSON bodies arrive parsed in r.POST. A malformed body re-raises the
+      # JSON::ParserError so Tyto::Api's error_handler answers with 400.
+      plugin :json_parser, error_handler: ->(_request) { raise }
 
       # Builds the `user_options` hash threaded into Representer::Submission
       # so each nested RequirementUploadRepr can emit `download_url`. Reaches
@@ -69,7 +72,7 @@ module Tyto
               r.on String do |account_id|
                 # POST api/course/:course_id/enroll/:enroll_id
                 r.post do
-                  request_body = JSON.parse(r.body.read)
+                  request_body = r.POST
                   enrolled_data = request_body['enroll']
 
                   case Service::Courses::UpdateEnrollment.new.call(
@@ -82,9 +85,6 @@ module Tyto
                     response.status = api_result.http_status_code
                     api_result.to_json
                   end
-                rescue JSON::ParserError => e
-                  response.status = 400
-                  { error: 'Invalid JSON', details: e.message }.to_json
                 end
 
                 # DELETE api/course/:course_id/enroll/:enroll_id
@@ -113,7 +113,7 @@ module Tyto
               end
               # POST api/course/:course_id/enroll - Update or add enrollments
               r.post do
-                request_body = JSON.parse(r.body.read)
+                request_body = r.POST
                 enrolled_data = request_body['enroll'] # Expects an array of {email: "email", roles: "role1,role2"}
 
                 case Service::Courses::UpdateEnrollments.new.call(requestor:, course_id:, enrolled_data:)
@@ -124,9 +124,6 @@ module Tyto
                   response.status = api_result.http_status_code
                   api_result.to_json
                 end
-              rescue JSON::ParserError => e
-                response.status = 400
-                { error: 'Invalid JSON', details: e.message }.to_json
               end
             end
 
@@ -170,7 +167,7 @@ module Tyto
                 r.on 'participant', String do |account_id|
                   # PUT api/course/:course_id/attendance/:event_id/participant/:account_id
                   r.put do
-                    request_body = JSON.parse(r.body.read)
+                    request_body = r.POST
 
                     case Service::Attendances::UpdateParticipantAttendance.new.call(
                       requestor:, course_id:, event_id:,
@@ -184,9 +181,6 @@ module Tyto
                       response.status = api_result.http_status_code
                       api_result.to_json
                     end
-                  rescue JSON::ParserError => e
-                    response.status = 400
-                    { error: 'Invalid JSON', details: e.message }.to_json
                   end
                 end
 
@@ -217,7 +211,7 @@ module Tyto
 
               # POST api/course/:course_id/attendance/
               r.post do
-                request_body = JSON.parse(r.body.read)
+                request_body = r.POST
 
                 case Service::Attendances::RecordAttendance.new.call(
                   requestor:, course_id:, attendance_data: request_body
@@ -230,9 +224,6 @@ module Tyto
                   response.status = api_result.http_status_code
                   api_result.to_json
                 end
-              rescue JSON::ParserError => e
-                response.status = 400
-                { error: 'Invalid JSON', details: e.message }.to_json
               end
             end
 
@@ -251,7 +242,7 @@ module Tyto
 
               # POST api/course/:course_id/events — expects { events: [{...}, ...] }
               r.post do
-                request_body = JSON.parse(r.body.read)
+                request_body = r.POST
                 events_data = request_body['events']
 
                 unless events_data.is_a?(Array) && !events_data.empty?
@@ -268,15 +259,12 @@ module Tyto
                   response.status = api_result.http_status_code
                   api_result.to_json
                 end
-              rescue JSON::ParserError => e
-                response.status = 400
-                { error: 'Invalid JSON', details: e.message }.to_json
               end
 
               r.on String do |event_id|
                 # PUT api/course/:course_id/events/:event_id
                 r.put do
-                  request_body = JSON.parse(r.body.read)
+                  request_body = r.POST
 
                   case Service::Events::UpdateEvent.new.call(
                     requestor:, course_id:, event_id:, event_data: request_body
@@ -289,9 +277,6 @@ module Tyto
                     response.status = api_result.http_status_code
                     api_result.to_json
                   end
-                rescue JSON::ParserError => e
-                  response.status = 400
-                  { error: 'Invalid JSON', details: e.message }.to_json
                 end
 
                 # DELETE api/course/:course_id/events/:event_id
@@ -402,7 +387,7 @@ module Tyto
 
                   # POST api/course/:course_id/assignments/:assignment_id/submissions
                   r.post do
-                    request_body = JSON.parse(r.body.read)
+                    request_body = r.POST
 
                     case Service::Submissions::CreateSubmission.new.call(
                       requestor:, course_id:, assignment_id:, submission_data: request_body
@@ -416,9 +401,6 @@ module Tyto
                       response.status = api_result.http_status_code
                       api_result.to_json
                     end
-                  rescue JSON::ParserError => e
-                    response.status = 400
-                    { error: 'Invalid JSON', details: e.message }.to_json
                   end
                 end
 
@@ -429,7 +411,7 @@ module Tyto
                   # borrows OAuth/IAM vocabulary — the response is a credential,
                   # not just a URL.
                   r.post do
-                    request_body = JSON.parse(r.body.read)
+                    request_body = r.POST
                     uploads = request_body['uploads']
 
                     case Service::Assignments::IssueUploadGrants.new.call(
@@ -442,9 +424,6 @@ module Tyto
                       response.status = api_result.http_status_code
                       api_result.to_json
                     end
-                  rescue JSON::ParserError => e
-                    response.status = 400
-                    { error: 'Invalid JSON', details: e.message }.to_json
                   end
                 end
 
@@ -464,7 +443,7 @@ module Tyto
 
                 # PUT api/course/:course_id/assignments/:assignment_id
                 r.put do
-                  request_body = JSON.parse(r.body.read)
+                  request_body = r.POST
 
                   case Service::Assignments::UpdateAssignment.new.call(
                     requestor:, course_id:, assignment_id:, assignment_data: request_body
@@ -476,9 +455,6 @@ module Tyto
                     response.status = api_result.http_status_code
                     api_result.to_json
                   end
-                rescue JSON::ParserError => e
-                  response.status = 400
-                  { error: 'Invalid JSON', details: e.message }.to_json
                 end
 
                 # DELETE api/course/:course_id/assignments/:assignment_id
@@ -510,7 +486,7 @@ module Tyto
 
               # POST api/course/:course_id/assignments
               r.post do
-                request_body = JSON.parse(r.body.read)
+                request_body = r.POST
 
                 case Service::Assignments::CreateAssignment.new.call(
                   requestor:, course_id:, assignment_data: request_body
@@ -523,9 +499,6 @@ module Tyto
                   response.status = api_result.http_status_code
                   api_result.to_json
                 end
-              rescue JSON::ParserError => e
-                response.status = 400
-                { error: 'Invalid JSON', details: e.message }.to_json
               end
             end
 
@@ -546,7 +519,7 @@ module Tyto
 
                   # PUT api/course/:course_id/location/:id
                   r.put do
-                    request_body = JSON.parse(r.body.read)
+                    request_body = r.POST
 
                     case Service::Locations::UpdateLocation.new.call(
                       requestor:, course_id:, location_id:, location_data: request_body
@@ -559,9 +532,6 @@ module Tyto
                       response.status = api_result.http_status_code
                       api_result.to_json
                     end
-                  rescue JSON::ParserError => e
-                    response.status = 400
-                    { error: 'Invalid JSON', details: e.message }.to_json
                   end
 
                   # DELETE api/course/:course_id/location/:id
@@ -592,7 +562,7 @@ module Tyto
 
               # POST api/course/:course_id/location
               r.post do
-                request_body = JSON.parse(r.body.read)
+                request_body = r.POST
 
                 case Service::Locations::CreateLocation.new.call(
                   requestor:, course_id:, location_data: request_body
@@ -605,9 +575,6 @@ module Tyto
                   response.status = api_result.http_status_code
                   api_result.to_json
                 end
-              rescue JSON::ParserError => e
-                response.status = 400
-                { error: 'Invalid JSON', details: e.message }.to_json
               end
             end
 
@@ -626,7 +593,7 @@ module Tyto
 
               # PUT api/course/:id
               r.put do
-                request_body = JSON.parse(r.body.read)
+                request_body = r.POST
 
                 case Service::Courses::UpdateCourse.new.call(requestor:, course_id:, course_data: request_body)
                 in Success(api_result)
@@ -636,9 +603,6 @@ module Tyto
                   response.status = api_result.http_status_code
                   api_result.to_json
                 end
-              rescue JSON::ParserError => e
-                response.status = 400
-                { error: 'Invalid JSON', details: e.message }.to_json
               end
 
               # DELETE api/course/:id
@@ -669,7 +633,7 @@ module Tyto
 
           # POST api/course
           r.post do
-            request_body = JSON.parse(r.body.read)
+            request_body = r.POST
 
             case Service::Courses::CreateCourse.new.call(requestor:, course_data: request_body)
             in Success(api_result)
@@ -680,18 +644,7 @@ module Tyto
               response.status = api_result.http_status_code
               api_result.to_json
             end
-          rescue JSON::ParserError => e
-            response.status = 400
-            { error: 'Invalid JSON', details: e.message }.to_json
           end
-        rescue AuthToken::Mapper::MappingError => e
-          response.status = 400
-          response.write({ error: 'Token error', details: e.message }.to_json)
-          r.halt
-        rescue StandardError => e
-          response.status = 500
-          response.write({ error: 'Internal server error', details: e.message }.to_json)
-          r.halt
         end
       end
     end

@@ -10,7 +10,7 @@
 
 <script>
 import api from '@/lib/tytoApi'
-import Cookies from 'js-cookie'
+import session from '@/lib/session'
 import { ElNotification } from 'element-plus'
 import { googleTokenLogin } from 'vue3-google-login'
 export default {
@@ -25,7 +25,7 @@ export default {
       try {
         const { status, data } = await api.post('/auth/verify_google_token', { accessToken: accessToken });
         if (status === 200 || status === 201) {
-          this.setUserInfoCookies(data.user_info);
+          session.applyAccount(data.user_info);
           if (this.$route.query.redirect && this.$route.query.redirect!='/' ) {
             this.$router.push(this.$route.query.redirect)
           }
@@ -54,14 +54,6 @@ export default {
       } catch (error) {
           console.error('Login Failed:', error);
       }
-    },
-    setUserInfoCookies(user_info) {
-      const expDay = 180;
-      Cookies.set('account_id', user_info.id, { expires: expDay });
-      Cookies.set('account_roles', user_info.roles.join(','), { expires: expDay });
-      Cookies.set('account_credential', user_info.credential, { expires: expDay });
-      Cookies.set('account_img', user_info.avatar, { expires: expDay })
-      Cookies.set('account_name', user_info.name, { expires: expDay })
     },
   },
 };

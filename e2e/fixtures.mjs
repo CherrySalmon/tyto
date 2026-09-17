@@ -19,13 +19,15 @@ import { AppShell } from './pages/app-shell.mjs';
 // Usage:
 //   import { test, expect } from './fixtures.mjs';
 //   test('...', async ({ page, loginAs }) => {
-//     await loginAs('owner');          // owner | instructor | staff | student | creator | admin
+//     await loginAs('owner');          // owner | instructor | staff | student | creator | admin | member
 //     await page.goto('/');
 //   });
 
 let cache;
 
-function credentialFor(role) {
+// Exported so a spec can act as another role over the API (e.g. an admin
+// changing the roles of the account the browser is logged in as).
+export function credentialFor(role) {
   cache ??= JSON.parse(readFileSync(CREDENTIALS_PATH, 'utf8'));
   const entry = cache[role];
   if (!entry) {
@@ -36,7 +38,7 @@ function credentialFor(role) {
   return entry;
 }
 
-export const ROLES = ['admin', 'creator', 'owner', 'instructor', 'staff', 'student'];
+export const ROLES = ['admin', 'creator', 'owner', 'instructor', 'staff', 'student', 'member', 'deletable'];
 
 export const test = base.extend({
   // loginAs(role) sets the session cookies on the browser context. Call it
