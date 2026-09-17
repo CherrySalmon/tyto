@@ -14,10 +14,10 @@
                     <el-avatar shape="square" :size="40" :src="scope.row.avatar" />
                 </template>
             </el-table-column>
-            <el-table-column prop="name" label="Name" width="200" sortable>
+            <el-table-column prop="name" label="Name" width="200" sortable :sort-method="compareByName">
                 <template #default="scope">
                     <el-link type="primary" :underline="false" @click="openDetail(scope.row)">
-                        {{ scope.row.name || 'Not logged in yet' }}
+                        {{ displayName(scope.row) }}
                     </el-link>
                     <el-tag v-if="isSelf(scope.row)" size="small" type="success" class="role-tag">you</el-tag>
                 </template>
@@ -80,7 +80,7 @@
 import api from '@/lib/tytoApi'
 import session from '@/lib/session'
 import { roleOptions, roleLabel } from '@/lib/roles'
-import { filterAccounts, compareByRoles } from '@/lib/accountsTable'
+import { filterAccounts, compareByRoles, compareByName, displayName } from '@/lib/accountsTable'
 import AddAccountsDialog from './account/components/AddAccountsDialog.vue'
 import AccountDetailDialog from './account/components/AccountDetailDialog.vue'
 import DeleteAccountDialog from './account/components/DeleteAccountDialog.vue'
@@ -118,6 +118,8 @@ export default {
     methods: {
         roleLabel,
         compareByRoles,
+        compareByName,
+        displayName,
         roleTagType(role) {
             return ROLE_TAG_TYPES[role] || 'info'
         },

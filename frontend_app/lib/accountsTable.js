@@ -1,8 +1,21 @@
 import { roleLabel } from './roles'
 
-// Pure helpers behind the Accounts table: search and role ordering.
+// Pure helpers behind the Accounts table: search, naming, and ordering.
 
 const ROLE_RANK = { admin: 3, creator: 2, member: 1 }
+
+// Shown for an account that has never logged in (login fills the name from
+// Google). Bracketed so these rows group together in an alphabetical sort.
+export const NO_NAME = '(not logged in yet)'
+
+export function displayName(account) {
+  return account?.name || NO_NAME
+}
+
+// Sort on the label the table shows, so nameless accounts sit together.
+export function compareByName(a, b) {
+  return displayName(a).localeCompare(displayName(b))
+}
 
 // Highest system role an account holds; 0 when it has none.
 export function roleRank(roles) {
@@ -14,7 +27,7 @@ export function roleRank(roles) {
 export function compareByRoles(a, b) {
   const byRank = roleRank(b.roles) - roleRank(a.roles)
   if (byRank !== 0) return byRank
-  return displayName(a).localeCompare(displayName(b))
+  return compareByName(a, b)
 }
 
 // Matches name, email, and role (key or label), case-insensitively.
@@ -31,6 +44,3 @@ function haystack(account) {
     .map((value) => String(value).toLowerCase())
 }
 
-function displayName(account) {
-  return account.name || account.email || ''
-}

@@ -12,7 +12,7 @@
       <div class="who">
         <el-avatar shape="square" :size="44" :src="detail.avatar" />
         <div class="who-text">
-          <div class="who-name">{{ detail.name || 'Not logged in yet' }}</div>
+          <div class="who-name">{{ displayName(detail) }}</div>
           <div class="who-email">{{ detail.email }}</div>
         </div>
         <div class="who-roles">
@@ -46,6 +46,7 @@
 <script>
 import api from '@/lib/tytoApi'
 import { roleLabel } from '@/lib/roles'
+import { displayName } from '@/lib/accountsTable'
 
 // Plan Q3: read-only account detail with a scrollable list of course
 // enrollments, loaded from GET /account/:id when the dialog opens.
@@ -75,6 +76,7 @@ export default {
   },
   methods: {
     roleLabel,
+    displayName,
     async load() {
       if (!this.modelValue || !this.accountId) return
       this.detail = null

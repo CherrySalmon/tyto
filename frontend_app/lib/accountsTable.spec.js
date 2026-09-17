@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterAccounts, compareByRoles, roleRank } from './accountsTable';
+import { filterAccounts, compareByRoles, compareByName, displayName, roleRank, NO_NAME } from './accountsTable';
 
 const accounts = [
   { id: 1, name: 'Soumya Ray', email: 's.ray@example.edu', roles: ['admin', 'creator'] },
@@ -39,5 +39,19 @@ describe('role ordering', () => {
   it('compareByRoles sorts highest role first, then by name', () => {
     const sorted = [...accounts].sort(compareByRoles);
     expect(sorted.map((a) => a.id)).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe('display name', () => {
+  it('falls back to a bracketed placeholder for accounts that never logged in', () => {
+    expect(displayName({ name: 'Lin Chen' })).toBe('Lin Chen');
+    expect(displayName({ name: null })).toBe(NO_NAME);
+    expect(displayName({ name: '' })).toBe(NO_NAME);
+    expect(NO_NAME).toBe('(not logged in yet)');
+  });
+
+  it('compareByName sorts on the displayed label so nameless accounts group together', () => {
+    const sorted = [...accounts].sort(compareByName);
+    expect(sorted.map((a) => a.name ?? NO_NAME)).toEqual([NO_NAME, 'Lin Chen', 'Mei Tanaka', 'Soumya Ray']);
   });
 });
