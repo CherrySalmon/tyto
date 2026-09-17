@@ -72,6 +72,8 @@ export default {
         this.popupSerial = 0
         this.placesErrorLogged = false
         this.unmounted = false
+        // 'marker' or 'create': which kind of popup the shared InfoWindow shows.
+        this.popupKind = null
     },
 
     async mounted() {
@@ -105,7 +107,7 @@ export default {
         async centerOnCurrentPosition() {
             try {
                 const { coords } = await getCurrentPosition();
-                if (this.framed) return;
+                if (this.unmounted || this.framed) return;
                 this.applyFraming(framingFor([], { lat: coords.latitude, lng: coords.longitude }));
             } catch (error) {
                 console.error('Error getting location', error);
@@ -125,6 +127,9 @@ export default {
             this.map.addListener("click", (event) => this.onMapClick(event));
         },
         showLocations() {
+            // A marker popup may show a renamed or deleted location; a create
+            // popup stays open so a name being typed isn't lost.
+            if (this.popupKind === 'marker') this.infoWindow.close();
             this.markers.forEach((marker) => marker.setMap(null));
             this.markers = (this.locations || [])
                 .filter(hasCoordinates)
@@ -143,6 +148,7 @@ export default {
             });
             marker.addListener('click', () => {
                 this.infoWindow.close();
+                this.popupKind = 'marker';
                 this.infoWindow.setContent(buildLocationInfo({ name: location.name }));
                 this.infoWindow.open({ map: this.map, anchor: marker });
             });
@@ -159,6 +165,7 @@ export default {
             // Cap the zoom once the fit settles, so close-together locations
             // don't zoom in past street level.
             google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                if (this.unmounted) return;
                 if (this.map.getZoom() > MAX_FIT_ZOOM) this.map.setZoom(MAX_FIT_ZOOM);
             });
             this.map.fitBounds(bounds, FIT_PADDING);
@@ -177,7 +184,7 @@ export default {
             const content = this.openCreatePopup(position, { loadingPlace: true });
             const serial = this.popupSerial;
             const place = await this.lookupPlace(placeId);
-            if (serial !== this.popupSerial) return;
+            if (this.unmounted || serial !== this.popupSerial) return;
             showPlaceDetails(content, place);
         },
         async lookupPlace(placeId) {
@@ -203,6 +210,7 @@ export default {
                 onSave: ({ name }) => this.createLocation(name, latLng),
             });
             this.infoWindow.close();
+            this.popupKind = 'create';
             this.infoWindow.setContent(content);
             this.infoWindow.setPosition(position);
             google.maps.event.addListenerOnce(this.infoWindow, 'domready', () => {

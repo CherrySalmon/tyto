@@ -12,6 +12,7 @@ export function loadGoogleMaps() {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.VUE_APP_GOOGLE_MAP_KEY}`;
     script.onload = () => resolve();
     script.onerror = () => {
+      script.remove();
       loading = null;
       reject(new Error('Google Maps failed to load'));
     };

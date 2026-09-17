@@ -39,8 +39,9 @@ describe('loadGoogleMaps', () => {
     const failed = loadGoogleMaps();
     mapsScripts()[0].onerror();
     await expect(failed).rejects.toThrow('Google Maps');
+    expect(mapsScripts()).toHaveLength(0);
 
     loadGoogleMaps();
-    expect(mapsScripts()).toHaveLength(2);
+    expect(mapsScripts()).toHaveLength(1);
   });
 });

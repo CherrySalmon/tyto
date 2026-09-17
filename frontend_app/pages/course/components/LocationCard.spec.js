@@ -147,6 +147,35 @@ describe('LocationCard', () => {
     wrapper = null;
   });
 
+  describe('after unmounting', () => {
+    function unmountCard() {
+      wrapper.element.remove();
+      wrapper.unmount();
+      wrapper = null;
+    }
+
+    it('ignores a position fix that arrives late', async () => {
+      let resolvePosition;
+      navigator.geolocation.getCurrentPosition.mockImplementation((ok) => { resolvePosition = ok; });
+      await mountCard([]);
+      const theMap = map();
+      const center = theMap.center;
+      unmountCard();
+      resolvePosition({ coords: { latitude: HERE.lat, longitude: HERE.lng } });
+      await flushPromises();
+      expect(theMap.center).toBe(center);
+    });
+
+    it('does not cap the zoom when the fit settles late', async () => {
+      await mountCard();
+      const theMap = map();
+      theMap.setZoom(21);
+      unmountCard();
+      theMap.trigger('idle');
+      expect(theMap.getZoom()).toBe(21);
+    });
+  });
+
   describe('renaming in place', () => {
     function row(i) {
       return wrapper.findAll('.location-item')[i];
@@ -272,6 +301,20 @@ describe('LocationCard', () => {
       gmaps.liveMarkers()[0].trigger('click');
       expect(popup().querySelector('img')).toBeNull();
       expect(popup().textContent).toContain('<img src=x onerror=alert(1)>');
+    });
+
+    it('closes a marker popup when locations change', async () => {
+      await mountCard();
+      gmaps.liveMarkers()[1].trigger('click');
+      await wrapper.setProps({ locations: [LOCATIONS[0]] });
+      expect(gmaps.openInfoWindows()).toHaveLength(0);
+    });
+
+    it('keeps a create popup open when locations change', async () => {
+      await mountCard();
+      map().trigger('click', mapClick(25.1, 121.2));
+      await wrapper.setProps({ locations: [LOCATIONS[0]] });
+      expect(gmaps.openInfoWindows()).toHaveLength(1);
     });
 
     it('replaces markers when locations change', async () => {
@@ -435,6 +478,22 @@ describe('LocationCard', () => {
       expect(popup().textContent).toContain('25.5');
       expect(popup().textContent).not.toContain('Delta Building');
       expect(input().value).toBe('');
+    });
+
+    it('ignores details that arrive after unmounting', async () => {
+      const calls = stubPlaces({ deferred: true });
+      await mountCard();
+      map().trigger('click', mapClick(24.8, 121.0, PLACE_ID));
+      await flushPromises();
+      const content = gmaps.openInfoWindows()[0].content;
+      wrapper.element.remove();
+      wrapper.unmount();
+      wrapper = null;
+
+      calls.resolvers[0]();
+      await flushPromises();
+      expect(content.querySelector('.location-popup-title').hidden).toBe(true);
+      expect(content.querySelector('.location-popup-loading').hidden).toBe(false);
     });
 
     it('keeps a name typed while details were loading', async () => {

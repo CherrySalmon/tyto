@@ -20,7 +20,12 @@ import { loadGoogleMaps } from '@/lib/googleMaps.js'
     },
     methods: {
         async initMap() {
-            await loadGoogleMaps();
+            try {
+                await loadGoogleMaps();
+            } catch (error) {
+                console.error(error);
+                return;
+            }
 
             const center = {
                 lat: this.event.latitude,
