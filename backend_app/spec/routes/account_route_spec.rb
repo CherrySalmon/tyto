@@ -159,6 +159,58 @@ describe 'Account Routes' do
     end
   end
 
+  describe 'GET /api/account/:id' do
+    it 'returns the account with roles, created_at, and course enrollments for an admin' do
+      _, auth = authenticated_header(roles: ['admin'])
+      target = create_test_account(name: 'Detail User', email: 'detail@test.com', roles: %w[creator member])
+      course = Tyto::Course.create(name: 'Detail Course')
+      %w[instructor staff].each do |role_name|
+        role = Tyto::Role.first(name: role_name)
+        Tyto::AccountCourse.create(account_id: target.id, course_id: course.id, role_id: role.id)
+      end
+
+      get "/api/account/#{target.id}", nil, auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['success']).must_equal true
+      data = json_response['data']
+      _(data['id']).must_equal target.id
+      _(data['email']).must_equal 'detail@test.com'
+      _(data['name']).must_equal 'Detail User'
+      _(data['roles'].sort).must_equal %w[creator member]
+      _(data['created_at']).must_match(/\A\d{4}-\d{2}-\d{2}T/)
+      _(data['enrollments']).must_equal [
+        { 'course_id' => course.id, 'course_name' => 'Detail Course', 'roles' => %w[instructor staff] }
+      ]
+    end
+
+    it 'returns an empty enrollments list for an unenrolled account' do
+      _, auth = authenticated_header(roles: ['admin'])
+      target = create_test_account(name: 'Lonely', roles: ['member'])
+
+      get "/api/account/#{target.id}", nil, auth
+
+      _(last_response.status).must_equal 200
+      _(json_response['data']['enrollments']).must_equal []
+    end
+
+    it 'returns forbidden for a non-admin, even for their own account' do
+      account, auth = authenticated_header(roles: ['creator'])
+
+      get "/api/account/#{account.id}", nil, auth
+
+      _(last_response.status).must_equal 403
+    end
+
+    it 'returns not found for an unknown id' do
+      _, auth = authenticated_header(roles: ['admin'])
+
+      get '/api/account/999999', nil, auth
+
+      _(last_response.status).must_equal 404
+    end
+  end
+
   describe 'POST /api/account/bulk' do
     it 'creates the missing emails as members and reports created, existing, and invalid' do
       _, auth = authenticated_header(roles: ['admin'])

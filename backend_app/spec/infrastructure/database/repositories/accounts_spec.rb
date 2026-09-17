@@ -5,6 +5,45 @@ require_relative '../../../spec_helper'
 describe 'Tyto::Repository::Accounts' do
   let(:repository) { Tyto::Repository::Accounts.new }
 
+  describe 'timestamps' do
+    it 'exposes created_at on rebuilt entities' do
+      orm = Tyto::Account.create(email: 'stamped@example.com', name: 'Stamped')
+
+      entity = repository.find_id(orm.id)
+
+      _(entity.created_at).must_be_kind_of Time
+      _(entity.created_at.to_i).must_equal orm.created_at.to_i
+    end
+  end
+
+  describe '#find_enrollments' do
+    let(:account) { Tyto::Account.create(email: 'enrolled@example.com', name: 'Enrolled') }
+    let(:course_a) { Tyto::Course.create(name: 'Course A') }
+    let(:course_b) { Tyto::Course.create(name: 'Course B') }
+
+    def enroll(course, role_name)
+      role = Tyto::Role.first(name: role_name)
+      Tyto::AccountCourse.create(account_id: account.id, course_id: course.id, role_id: role.id)
+    end
+
+    it 'returns one membership per course with all course roles, ordered by course name' do
+      enroll(course_b, 'student')
+      enroll(course_a, 'instructor')
+      enroll(course_a, 'staff')
+
+      memberships = repository.find_enrollments(account.id)
+
+      _(memberships.map(&:course_id)).must_equal [course_a.id, course_b.id]
+      _(memberships.map(&:course_name)).must_equal ['Course A', 'Course B']
+      _(memberships.first.roles.to_a.sort).must_equal %w[instructor staff]
+      _(memberships.last.roles.to_a).must_equal ['student']
+    end
+
+    it 'returns an empty array for an account with no enrollments' do
+      _(repository.find_enrollments(account.id)).must_equal []
+    end
+  end
+
   describe '#create' do
     it 'persists a new account and returns entity with ID' do
       entity = Tyto::Domain::Accounts::Entities::Account.new(

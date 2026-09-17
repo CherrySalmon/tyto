@@ -29,6 +29,11 @@ module Tyto
         requestor_is_admin? || self_request?
       end
 
+      # The full detail (roles + course memberships) is for the admin panel only
+      def can_view_details?
+        requestor_is_admin?
+      end
+
       # Admin can update any account; account owners can update their own account
       def can_update?
         requestor_is_admin? || self_request?
@@ -46,6 +51,7 @@ module Tyto
         {
           can_view_all: can_view_all?,
           can_view_single: can_view_single?,
+          can_view_details: can_view_details?,
           can_create: can_create?,
           can_update: can_update?,
           can_change_system_roles: can_change_system_roles?,

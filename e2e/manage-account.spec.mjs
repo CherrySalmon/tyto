@@ -52,3 +52,84 @@ test('non-admin sees no Account Management menu item', async ({ loginAs, courses
   // The admin side menu / popover entry is gated on the admin role.
   await expect(appShell.accountManagementMenu()).toHaveCount(0);
 });
+
+// feat-new-members Slice 3 — search, sort, detail modal, delete confirm, guard.
+
+test('admin can search the table down to one account', async ({ loginAs, manageAccountPage }) => {
+  await loginAs('admin');
+  await manageAccountPage.goto();
+  const email = SEED.accounts.instructor.email;
+
+  await manageAccountPage.search(email);
+
+  await expect(manageAccountPage.rows()).toHaveCount(1);
+  await expect(manageAccountPage.row(email)).toBeVisible();
+});
+
+test('sorting by Roles puts the admin first', async ({ loginAs, manageAccountPage }) => {
+  await loginAs('admin');
+  await manageAccountPage.goto();
+
+  await manageAccountPage.sortBy('Roles');
+
+  await expect(manageAccountPage.rows().first()).toContainText(/admin/i);
+});
+
+test('the account detail shows the seeded course under enrollments', async ({ loginAs, manageAccountPage }) => {
+  await loginAs('admin');
+  await manageAccountPage.goto();
+  const email = SEED.accounts.instructor.email;
+
+  await manageAccountPage.openDetail(email);
+
+  await expect(manageAccountPage.detailDialog).toContainText(email);
+  await expect(manageAccountPage.detailDialog).toContainText(SEED.course.name);
+  await expect(manageAccountPage.detailDialog).toContainText('instructor');
+  await manageAccountPage.closeDetail();
+});
+
+test('admin cannot delete their own account from the table', async ({ loginAs, manageAccountPage }) => {
+  const admin = await loginAs('admin');
+  await manageAccountPage.goto();
+
+  await expect(manageAccountPage.deleteButton(admin.email)).toBeDisabled();
+});
+
+// Assumes a freshly-seeded DB: the deletable fixture is gone after this runs.
+test('delete needs the typed email, names the enrollment count, and removes the row', async ({
+  loginAs, manageAccountPage,
+}) => {
+  await loginAs('admin');
+  await manageAccountPage.goto();
+  const email = SEED.accounts.deletable.email;
+
+  await manageAccountPage.openDelete(email);
+  await expect(manageAccountPage.deleteDialog).toContainText(/1 course enrollment/);
+  await expect(manageAccountPage.confirmDeleteButton()).toBeDisabled();
+
+  await manageAccountPage.typeDeleteConfirmation('wrong@e2e.test');
+  await expect(manageAccountPage.confirmDeleteButton()).toBeDisabled();
+
+  await manageAccountPage.cancelDelete();
+  await expect(manageAccountPage.row(email)).toBeVisible();
+
+  await manageAccountPage.openDelete(email);
+  await manageAccountPage.typeDeleteConfirmation(email);
+  await expect(manageAccountPage.confirmDeleteButton()).toBeEnabled();
+  await manageAccountPage.confirmDeleteButton().click();
+
+  await expect(manageAccountPage.deleteDialog).toBeHidden();
+  await expect(manageAccountPage.row(email)).toHaveCount(0);
+  await manageAccountPage.goto();
+  await expect(manageAccountPage.row(email)).toHaveCount(0);
+});
+
+test('a non-admin navigating to /manage-account is sent home', async ({ loginAs, page, manageAccountPage, coursesPage }) => {
+  await loginAs('owner');
+
+  await page.goto('/manage-account');
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(coursesPage.welcomeHeading).toBeVisible();
+  await expect(manageAccountPage.title).toHaveCount(0);
+});

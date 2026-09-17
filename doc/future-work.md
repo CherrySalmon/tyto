@@ -4,12 +4,12 @@ Planned improvements and features to be addressed in future tasks.
 
 ## Database Migrations
 
-- [ ] **Add timestamps to accounts table** - The `accounts` table is missing `created_at` and `updated_at` columns. Create a migration to add these columns, then update the Account ORM with `plugin :timestamps`. The Account entity and representer are already prepared to handle timestamps once available. **Requires production migration.**
+- [x] **Add timestamps to accounts table** - Done on `feat-new-members` (migration 016): existing rows are backfilled from the oldest enrolled course's creation time, else the migration time. Take a Heroku backup before the first release that carries it.
 
 ## Infrastructure & DevOps
 
 - [x] **Automated migrations on deploy** — shipped 2026-04-21 (Slice 1 of `feature-multi-event`). `Procfile` declares `release: bundle exec rake db:migrate`; every Heroku deploy runs migrations in the release phase and fails atomically if any migration raises.
-- [ ] **CI/CD pipeline** - Set up continuous integration for automated testing on PRs
+- [x] **CI/CD pipeline** - Done. CI: `.github/workflows/ci.yml` runs backend (Ubuntu + macOS), frontend, and Playwright E2E jobs on every PR and on pushes to `main`. CD: Heroku's GitHub integration builds a new release from `main`, and the `Procfile` release phase migrates. Stale item struck 2026-09-17; it predated both.
 - [ ] **Heroku Review Apps** - Configure `app.json` to enable auto-provisioned review environments for PRs
 - [ ] **Remove devcontainer** — no longer used by the maintainer (2026-06-04); can be deleted soon unless other contributors rely on it. Before removing: confirm no contributor uses it, then delete `.devcontainer/` and strip devcontainer references from `CLAUDE.md` (DevContainer section) and `README.md` if present. Note `.nvmrc` (node 24) is now the source of truth for Node version (CI reads it via `node-version-file`; prod pinned to `24.x` via `engines` in package.json); the devcontainer's pinned Node/Ruby versions are redundant.
 
@@ -45,7 +45,7 @@ Deferred from `fix-new-locations` (2026-09-17), which moved location creation in
 ## Testing
 
 - [ ] **E2E must not reuse a foreign server** — `playwright.config.mjs` has `reuseExistingServer` on locally and targets 9292, the same port `rake run:api` uses. With several worktrees checked out, a dev server from another branch on 9292 gets reused silently, and the specs fail with timeouts against the wrong code and database (seen 2026-09-17). Fix: give E2E its own port (e.g. 9393) in both the `webServer.command` and the default `E2E_BASE_URL`, and have `global-setup.mjs` assert the server's `RACK_ENV` is test (a `/api/_env` probe or a response header) before minting credentials.
-- [ ] **Test suite** - Implement backend tests using Minitest/Rack::Test
+- [x] **Test suite** - Done long since: the backend suite is Minitest + Rack::Test (about 1,450 examples as of 2026-09-17). Stale item struck.
 - [ ] **Frontend tests** - Expand Vue component and integration test coverage. *Infrastructure landed on `fix-add-course-button` (2026-06-04): Vitest + @vue/test-utils + jsdom, `vitest.config.js`, `npm test` / `rake spec:frontend`, first regression spec at `frontend_app/pages/course/components/AttendanceEventCard.spec.js`. Remaining: cover SingleCourse's `redirectIfNotManager()` (needs vue-router + api mocks), then grow coverage with new features.*
 
 ## Domain Layer (Prepared for Future Use)

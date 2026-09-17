@@ -12,6 +12,8 @@ module Tyto
     many_to_many :course
     many_to_many :roles, join_table: :account_roles
 
+    plugin :timestamps, update_on_create: true
+
     def validate
       super
       validates_presence [:email]

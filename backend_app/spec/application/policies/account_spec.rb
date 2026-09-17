@@ -26,6 +26,11 @@ describe Tyto::Policy::Account do
       _(policy.can_change_system_roles?).must_equal true
     end
 
+    it 'allows viewing a single account and its full details' do
+      _(policy.can_view_single?).must_equal true
+      _(policy.can_view_details?).must_equal true
+    end
+
     it 'allows updating and deleting any other account' do
       _(policy.can_update?).must_equal true
       _(policy.can_delete?).must_equal true
@@ -58,6 +63,11 @@ describe Tyto::Policy::Account do
       _(policy.can_update?).must_equal true
     end
 
+    it 'allows viewing own account but not the full details (admin panel only)' do
+      _(policy.can_view_single?).must_equal true
+      _(policy.can_view_details?).must_equal false
+    end
+
     it 'denies deleting own account (attendance history must survive)' do
       _(policy.can_delete?).must_equal false
     end
@@ -68,6 +78,8 @@ describe Tyto::Policy::Account do
     let(:policy) { Tyto::Policy::Account.new(requestor, account.id) }
 
     it 'denies update, delete, and role changes' do
+      _(policy.can_view_single?).must_equal false
+      _(policy.can_view_details?).must_equal false
       _(policy.can_update?).must_equal false
       _(policy.can_delete?).must_equal false
       _(policy.can_change_system_roles?).must_equal false

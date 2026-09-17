@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { adminGuard } from './guards';
 import LoginPage from '../pages/Login.vue';
 import ManageAccount from '../pages/ManageAccount.vue';
 import Course from '../pages/course/index.vue';
@@ -69,7 +70,8 @@ const routes = [
   {
     path: '/manage-account',
     name: 'ManageAccount',
-    component: ManageAccount
+    component: ManageAccount,
+    meta: { requiresAdmin: true }
   },
   {
     path: '/manage-course',
@@ -86,5 +88,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+router.beforeEach(adminGuard)
 
 export default router

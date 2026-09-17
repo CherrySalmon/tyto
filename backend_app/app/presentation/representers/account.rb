@@ -24,11 +24,32 @@ module Tyto
       property :email
       property :avatar
       property :roles, exec_context: :decorator
+      property :created_at, exec_context: :decorator
 
       def roles
         return [] unless represented.respond_to?(:roles)
 
         represented.roles.respond_to?(:to_a) ? represented.roles.to_a : []
+      end
+
+      def created_at
+        represented.created_at&.utc&.iso8601
+      end
+    end
+
+    # Representer for the admin account detail: account + roles + memberships
+    class AccountDetails
+      def initialize(details)
+        @details = details
+      end
+
+      def to_hash
+        AccountWithRoles.new(@details.account).to_hash.merge(
+          'enrollments' => @details.enrollments.map do |membership|
+            { 'course_id' => membership.course_id, 'course_name' => membership.course_name,
+              'roles' => membership.roles.to_a }
+          end
+        )
       end
     end
 

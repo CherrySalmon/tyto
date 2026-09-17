@@ -27,7 +27,9 @@ DB = Tyto::Api.db
 DB.synchronize do
   DB.run('PRAGMA foreign_keys = OFF')
   begin
-    DB.tables.each { |table| DB[table].delete }
+    # Keep schema_info: wiping it makes Sequel think the DB is unmigrated, so
+    # the next `db:migrate` fails on "table already exists".
+    DB.tables.reject { |table| table == :schema_info }.each { |table| DB[table].delete }
   ensure
     # Always restore enforcement, even if a delete raises — otherwise FK checks
     # would stay OFF for the rest of the suite and mask integrity issues.

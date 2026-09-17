@@ -2,6 +2,7 @@
 
 require_relative '../../../domain/accounts/entities/account'
 require_relative '../../../domain/accounts/values/system_roles'
+require_relative '../../../domain/accounts/values/course_membership'
 
 module Tyto
   module Repository
@@ -137,6 +138,21 @@ module Tyto
         true
       end
 
+      # Course memberships of an account: one entry per course with every
+      # course role held there, ordered by course name.
+      # @param account_id [Integer]
+      # @return [Array<Domain::Accounts::Values::CourseMembership>]
+      def find_enrollments(account_id)
+        records = Tyto::AccountCourse.where(account_id:).eager(:course, :role).all
+        records.group_by(&:course_id).map do |course_id, rows|
+          Domain::Accounts::Values::CourseMembership.new(
+            course_id:,
+            course_name: rows.first.course.name,
+            roles: Domain::Courses::Values::CourseRoles.from(rows.map { |row| row.role.name }.uniq)
+          )
+        end.sort_by(&:course_name)
+      end
+
       # Find an account by email, or create with 'member' role if not found
       # Domain rule: new accounts always get 'member' role
       # @param email [String] the email address
@@ -173,6 +189,8 @@ module Tyto
           access_token: orm_record.access_token,
           refresh_token: orm_record.refresh_token,
           avatar: orm_record.avatar,
+          created_at: orm_record.created_at,
+          updated_at: orm_record.updated_at,
           roles:
         )
       end

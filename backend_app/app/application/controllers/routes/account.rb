@@ -34,6 +34,18 @@ module Tyto
           end
 
           r.on String do |account_id|
+            # GET api/account/:id
+            r.get do
+              case Service::Accounts::GetAccountDetails.new.call(requestor:, account_id:)
+              in Success(api_result)
+                response.status = api_result.http_status_code
+                { success: true, data: Representer::AccountDetails.new(api_result.message).to_hash }.to_json
+              in Failure(api_result)
+                response.status = api_result.http_status_code
+                api_result.to_json
+              end
+            end
+
             # PUT api/account/:id
             r.put do
               request_body = r.POST

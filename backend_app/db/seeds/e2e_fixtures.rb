@@ -31,7 +31,10 @@ module Tyto
       # An admin-added account as it looks before any enrollment: `member`
       # only and in no course, so specs can assert the empty course list and
       # the absence of creator/admin controls (feat-new-members, Slice 2).
-      member:     { name: 'E2E Member',     email: 'e2e-member@e2e.test',     system_roles: %w[member] }
+      member:     { name: 'E2E Member',     email: 'e2e-member@e2e.test',     system_roles: %w[member] },
+      # Exists to be deleted by the admin delete-confirm spec (Slice 3). Enrolled
+      # as a student so the confirm has one enrollment to name.
+      deletable:  { name: 'E2E Deletable',  email: 'e2e-deletable@e2e.test',  system_roles: %w[member] }
     }.freeze
 
     # Per-course enrollment: account key => course role(s). admin + creator stay
@@ -41,7 +44,8 @@ module Tyto
       instructor: %w[instructor],
       staff: %w[staff],
       student: %w[student],
-      multi: %w[instructor student]
+      multi: %w[instructor student],
+      deletable: %w[student]
     }.freeze
 
     COURSE_NAME = 'E2E Course'

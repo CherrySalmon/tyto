@@ -36,7 +36,7 @@ function credentialFor(role) {
   return entry;
 }
 
-export const ROLES = ['admin', 'creator', 'owner', 'instructor', 'staff', 'student', 'member'];
+export const ROLES = ['admin', 'creator', 'owner', 'instructor', 'staff', 'student', 'member', 'deletable'];
 
 export const test = base.extend({
   // loginAs(role) sets the session cookies on the browser context. Call it
