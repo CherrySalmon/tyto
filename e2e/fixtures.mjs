@@ -19,7 +19,7 @@ import { AppShell } from './pages/app-shell.mjs';
 // Usage:
 //   import { test, expect } from './fixtures.mjs';
 //   test('...', async ({ page, loginAs }) => {
-//     await loginAs('owner');          // owner | instructor | staff | student | creator | admin
+//     await loginAs('owner');          // owner | instructor | staff | student | creator | admin | member
 //     await page.goto('/');
 //   });
 
@@ -36,7 +36,7 @@ function credentialFor(role) {
   return entry;
 }
 
-export const ROLES = ['admin', 'creator', 'owner', 'instructor', 'staff', 'student'];
+export const ROLES = ['admin', 'creator', 'owner', 'instructor', 'staff', 'student', 'member'];
 
 export const test = base.extend({
   // loginAs(role) sets the session cookies on the browser context. Call it

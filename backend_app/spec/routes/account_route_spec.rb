@@ -159,6 +159,44 @@ describe 'Account Routes' do
     end
   end
 
+  describe 'POST /api/account/bulk' do
+    it 'creates the missing emails as members and reports created, existing, and invalid' do
+      _, auth = authenticated_header(roles: ['admin'])
+      existing = create_test_account(name: 'Already', email: 'already@bulk.test', roles: ['creator'])
+      payload = { emails: ['new-one@bulk.test', 'new-two@bulk.test', 'already@bulk.test', 'not-an-email'] }
+
+      post '/api/account/bulk', payload.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 201
+      _(json_response['success']).must_equal true
+      created = json_response['created']
+      _(created.map { |a| a['email'] }).must_equal ['new-one@bulk.test', 'new-two@bulk.test']
+      _(created.map { |a| a['roles'] }).must_equal [['member'], ['member']]
+      _(created.first['id']).must_be_kind_of Integer
+      _(json_response['existing'].map { |a| a['email'] }).must_equal ['already@bulk.test']
+      _(json_response['existing'].first['id']).must_equal existing.id
+      _(json_response['existing'].first['roles']).must_equal ['creator']
+      _(json_response['invalid']).must_equal ['not-an-email']
+    end
+
+    it 'returns forbidden for a non-admin requestor' do
+      _, auth = authenticated_header(roles: ['creator'])
+
+      post '/api/account/bulk', { emails: ['sneaky@bulk.test'] }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 403
+      _(Tyto::Account.first(email: 'sneaky@bulk.test')).must_be_nil
+    end
+
+    it 'returns bad request for an empty email list' do
+      _, auth = authenticated_header(roles: ['admin'])
+
+      post '/api/account/bulk', { emails: [] }.to_json, json_headers(auth)
+
+      _(last_response.status).must_equal 400
+    end
+  end
+
   describe 'PUT /api/account/:id' do
     it 'updates own name successfully' do
       account, auth = authenticated_header(roles: ['creator'])

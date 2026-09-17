@@ -8,6 +8,10 @@ export const roleOptions = Object.entries(SYSTEM_ROLES).map(
   ([value, { label }]) => ({ label, value })
 )
 
+export function roleLabel(role) {
+  return SYSTEM_ROLES[role]?.label ?? role
+}
+
 export function describeRoles(roles) {
   return roles
     .map((role) => SYSTEM_ROLES[role]?.description)

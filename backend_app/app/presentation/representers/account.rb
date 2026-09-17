@@ -32,6 +32,22 @@ module Tyto
       end
     end
 
+    # Representer for the outcome of a bulk add: created and existing accounts
+    # (each with roles) plus the strings that were not valid emails.
+    class BulkAccountsOutcome
+      def initialize(outcome)
+        @outcome = outcome
+      end
+
+      def to_hash
+        {
+          created: AccountsList.from_entities(@outcome.created).to_array,
+          existing: AccountsList.from_entities(@outcome.existing).to_array,
+          invalid: @outcome.invalid
+        }
+      end
+    end
+
     # Representer for collection of Account entities
     class AccountsList
       def self.from_entities(entities)

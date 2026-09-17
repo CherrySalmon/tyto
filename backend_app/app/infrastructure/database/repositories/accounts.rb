@@ -88,6 +88,16 @@ module Tyto
         rebuild_entity(orm_record, load_roles: role_names.any?)
       end
 
+      # Create many accounts in one transaction; all get the same roles.
+      # @param entities [Array<Domain::Accounts::Entities::Account>]
+      # @param role_names [Array<String>] role names assigned to every account
+      # @return [Array<Domain::Accounts::Entities::Account>] persisted entities with roles
+      def create_many(entities, role_names: [])
+        Tyto::Api.db.transaction do
+          entities.map { |entity| create(entity, role_names:) }
+        end
+      end
+
       # Update an existing account from a domain entity
       # @param entity [Domain::Accounts::Entities::Account] the domain entity with updates
       # @param role_names [Array<String>, nil] new role names (nil = don't update roles)

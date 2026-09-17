@@ -22,10 +22,12 @@ export class Select {
     return new Select(scope.page(), trigger);
   }
 
-  // Open the dropdown and click an option by its text.
+  // Open the dropdown and click an option by its text. Every el-select on the
+  // page owns a body-level dropdown (closed ones are display:none), so scope
+  // the option to the one that is actually showing.
   async #open(optionText) {
     await this.trigger.click();
-    await this.page.locator('.el-select-dropdown__item', { hasText: optionText }).click();
+    await this.page.locator('.el-select-dropdown__item:visible', { hasText: optionText }).click();
   }
 
   // Single-select: pick one option (the overlay auto-closes on click).

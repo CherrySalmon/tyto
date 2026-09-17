@@ -27,7 +27,11 @@ module Tyto
       student:    { name: 'E2E Student',    email: 'e2e-student@e2e.test',    system_roles: %w[member] },
       # Enrolled with TWO course roles so the SingleCourse "view as role" switcher
       # has more than one option to switch between (task 8a).
-      multi:      { name: 'E2E Multi-role', email: 'e2e-multi@e2e.test',      system_roles: %w[member] }
+      multi:      { name: 'E2E Multi-role', email: 'e2e-multi@e2e.test',      system_roles: %w[member] },
+      # An admin-added account as it looks before any enrollment: `member`
+      # only and in no course, so specs can assert the empty course list and
+      # the absence of creator/admin controls (feat-new-members, Slice 2).
+      member:     { name: 'E2E Member',     email: 'e2e-member@e2e.test',     system_roles: %w[member] }
     }.freeze
 
     # Per-course enrollment: account key => course role(s). admin + creator stay

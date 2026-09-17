@@ -1,6 +1,9 @@
 <template>
     <div class="page-container">
         <div class="page-title">Accounts Management</div>
+        <div class="toolbar">
+            <el-button type="primary" @click="addDialogVisible = true">Add accounts</el-button>
+        </div>
         <el-table style="width: 100%" :data="accounts">
             <el-table-column type="index" width="50" />
             <el-table-column width="70">
@@ -10,7 +13,12 @@
             </el-table-column>
             <el-table-column prop="name" label="Name" width="180" />
             <el-table-column prop="email" label="Email" />
-            <el-table-column prop="roles" label="Roles" />
+            <el-table-column label="Roles">
+                <template #default="scope">
+                    <el-tag v-for="role in scope.row.roles" :key="role" :type="roleTagType(role)" size="small"
+                        class="role-tag">{{ roleLabel(role) }}</el-tag>
+                </template>
+            </el-table-column>
             <el-table-column label="Operations" width="180">
                 <template #default="scope">
                     <el-button @click="openEditDialog(scope.row)" size="small">Edit</el-button>
@@ -18,6 +26,7 @@
                 </template>
             </el-table-column>
         </el-table>
+        <AddAccountsDialog v-model="addDialogVisible" @done="getUserRole" />
         <el-dialog title="Edit Account" v-model="editDialogVisible" width="100%" style="max-width: 600px;">
             <el-form :model="selectedAccount" label-width="80px">
                 <el-form-item label="Email">
@@ -43,14 +52,19 @@
 
 <script>
 import api from '@/lib/tytoApi'
-import { roleOptions } from '@/lib/roles'
+import { roleOptions, roleLabel } from '@/lib/roles'
+import AddAccountsDialog from './account/components/AddAccountsDialog.vue'
+
+const ROLE_TAG_TYPES = { admin: 'danger', creator: 'warning', member: 'info' }
 
 export default {
+    components: { AddAccountsDialog },
     data() {
         return {
             user_id: '',
             accounts: [],
             roleOptions,
+            addDialogVisible: false,
             editDialogVisible: false,
             selectedAccount: {}
         };
@@ -59,8 +73,14 @@ export default {
         this.getUserRole();
     },
     methods: {
+        roleLabel,
+        roleTagType(role) {
+            return ROLE_TAG_TYPES[role] || 'info'
+        },
         openEditDialog(account) {
-            this.selectedAccount = account;
+            // Copy so a cancelled edit leaves the row untouched; the table is
+            // refetched from the API after a confirmed update.
+            this.selectedAccount = JSON.parse(JSON.stringify(account));
             this.editDialogVisible = true;
         },
         confirmEdit() {
@@ -118,5 +138,15 @@ export default {
 
 .editor-input-box {
     width: 100%;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.role-tag {
+    margin-right: 4px;
 }
 </style>

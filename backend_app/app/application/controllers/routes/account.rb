@@ -20,6 +20,19 @@ module Tyto
           auth_header = r.headers['Authorization']
           requestor = AuthToken::Mapper.new.from_auth_header(auth_header)
 
+          # POST api/account/bulk — { emails: [...] }
+          r.post 'bulk' do
+            case Service::Accounts::BulkCreateAccounts.new.call(requestor:, emails: r.POST['emails'])
+            in Success(api_result)
+              response.status = api_result.http_status_code
+              { success: true, message: 'Accounts added' }
+                .merge(Representer::BulkAccountsOutcome.new(api_result.message).to_hash).to_json
+            in Failure(api_result)
+              response.status = api_result.http_status_code
+              api_result.to_json
+            end
+          end
+
           r.on String do |account_id|
             # PUT api/account/:id
             r.put do
