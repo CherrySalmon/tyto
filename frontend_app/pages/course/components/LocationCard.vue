@@ -2,156 +2,247 @@
     <div class="course-card-container">
         <div class="course-content-title">Location</div>
         <div v-for="(location, idx) in locations" :key="location.id" class="location-item">
-            {{ idx+1 }}: {{ location.name }}
-            <el-button type="primary" icon="Edit" circle class="location-icon" @click="clickModify(location)"/>
-            <el-button type="danger" icon="Delete" circle @click.stop="$emit('delete-location', location.id)" class="location-icon"/>
+            <span class="location-index">{{ idx+1 }}:</span>
+            <el-input
+                v-if="renamingId === location.id"
+                ref="renameInput"
+                v-model="renameText"
+                size="small"
+                maxlength="200"
+                aria-label="Location name"
+                class="location-rename-input"
+                @keydown.enter.prevent="commitRename(location)"
+                @keydown.esc.prevent="cancelRename"
+                @blur="commitRename(location)"
+            />
+            <template v-else>
+                <span class="location-name">{{ location.name }}</span>
+                <el-button type="primary" icon="Edit" circle class="location-icon location-rename-button"
+                    :aria-label="`Rename ${location.name}`" @click="startRename(location)"/>
+            </template>
+            <!-- mousedown.prevent keeps focus in a rename box, so its blur doesn't save a rename of a row being deleted -->
+            <el-button type="danger" icon="Delete" circle class="location-icon"
+                :aria-label="`Delete ${location.name}`" @mousedown.prevent @click.stop="deleteLocation(location)"/>
         </div>
-        <el-button type="primary" @click="clickCreate" icon="AddLocation" style="margin: 0px 20px 20px 20px;">Create New</el-button>
 
-        <div class="form-container">
-            <h1 style="margin-bottom: 10px;">{{modifiedId?'Modify Location':'Create new Location'}}</h1>
-            <el-form ref="locationForm" :model="locationForm">
-                <el-form-item label="Name">
-                    <el-input placeholder="Enter a name of the location" v-model="locationForm.name" style="width: 200px;"></el-input>
-                </el-form-item>
-                <div id="map" class="map-container"></div>
-            </el-form>
+        <div class="map-section">
+            <p class="location-help">Click a spot or a place on the map to create a new location.</p>
+            <div ref="map" class="map-container"></div>
+            <p class="map-zoom-hint">Zoom with the + / − buttons, Ctrl/⌘ + scroll, or pinch with two fingers.</p>
         </div>
-
     </div>
 </template>
-  
-<script>
-export default {
-    emits: ['create-event', 'edit-event', 'delete-event', 'create-location', 'update-location', 'delete-location', 'new-enrolls', 'update-enrollment', 'delete-enrollment'],
-    props: {
-      attendanceEvents: Object,
-      locations: Array,
-      enrollments: Object, 
-      currentRole: String
-    },
-    name: 'GoogleMapComponent',
 
-    async mounted() {
-        await this.loadGoogleMapsApi();
-        await this.getCurrentLocation();
+<script>
+import { buildLocationPopup, buildLocationInfo, showPlaceDetails } from '@/lib/locationPopup.js'
+import { getCurrentPosition } from '@/lib/geolocation.js'
+import { loadGoogleMaps } from '@/lib/googleMaps.js'
+import { framingFor, hasCoordinates, DEFAULT_CENTER, SINGLE_LOCATION_ZOOM } from '@/lib/mapFraming.js'
+
+const FIT_PADDING = 48
+const MAX_FIT_ZOOM = 17
+// Places API (New) fields shown for a clicked place; each lookup is billed.
+const PLACE_FIELDS = ['displayName', 'formattedAddress']
+
+export default {
+    // SingleCourse's RouterView passes every tab's props and listeners; keep
+    // the ones this card does not declare off the root element.
+    inheritAttrs: false,
+    emits: ['create-location', 'update-location', 'delete-location'],
+    props: {
+      locations: Array
     },
 
     data() {
         return {
-            locationForm: {
-                name: '',
-                latitude: '',
-                longitude: ''
-            },
-            currentLocationData: {},
-            modifiedId: null
+            renamingId: null,
+            renameText: ''
         }
     },
-    watch: {
 
+    created() {
+        // Google Maps objects stay non-reactive (Vue proxies break them).
+        this.map = null
+        this.infoWindow = null
+        this.markers = []
+        // The map is framed once, on the first non-empty list of locations, so
+        // later creates/renames/deletes don't move the view.
+        this.framed = false
+        // Increments per create popup, so a slow place lookup can't fill a newer one.
+        this.popupSerial = 0
+        this.placesErrorLogged = false
+        this.unmounted = false
+        // 'marker' or 'create': which kind of popup the shared InfoWindow shows.
+        this.popupKind = null
     },
+
+    async mounted() {
+        try {
+            await loadGoogleMaps();
+        } catch (error) {
+            console.error(error);
+            return;
+        }
+        // The user may have left the tab while Maps was loading.
+        if (this.unmounted) return;
+        this.initMap();
+        this.showLocations();
+        this.centerOnCurrentPosition();
+    },
+
+    beforeUnmount() {
+        this.unmounted = true
+        this.markers.forEach((marker) => marker.setMap(null))
+        this.markers = []
+        this.infoWindow?.close()
+    },
+
+    watch: {
+        locations() {
+            if (this.map) this.showLocations();
+        }
+    },
+
     methods: {
-        async loadGoogleMapsApi() {
-            if (typeof google === "undefined" || typeof google.maps === "undefined") {
-                const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.VUE_APP_GOOGLE_MAP_KEY}`;
-                document.head.appendChild(script);
-                await new Promise((resolve) => {
-                    script.onload = resolve;
-                });
+        async centerOnCurrentPosition() {
+            try {
+                const { coords } = await getCurrentPosition();
+                if (this.unmounted || this.framed) return;
+                this.applyFraming(framingFor([], { lat: coords.latitude, lng: coords.longitude }));
+            } catch (error) {
+                console.error('Error getting location', error);
             }
         },
-        async getCurrentLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                    const { latitude, longitude } = position.coords;
-                    this.currentLocationData = {
-                        latitude: latitude,
-                        longitude: longitude
-                    };
-                    this.locationForm = { ...this.currentLocationData };
-                    
-                    // Initialize the map here to ensure it's done after obtaining the location
-                    await this.initMap();
-                }, (error) => {
-                    console.error('Error getting location', error);
-                });
-            } else {
-                console.error('Geolocation is not supported by this browser.');
+        initMap() {
+            this.map = new google.maps.Map(this.$refs.map, {
+                zoom: SINGLE_LOCATION_ZOOM,
+                center: DEFAULT_CENTER,
+                zoomControl: true,
+                zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
+                // Ctrl/⌘ + scroll or two-finger gestures, so the page still scrolls
+                // past the map; the hint below the map says so.
+                gestureHandling: 'cooperative',
+            });
+            this.infoWindow = new google.maps.InfoWindow();
+            this.map.addListener("click", (event) => this.onMapClick(event));
+        },
+        showLocations() {
+            // A marker popup may show a renamed or deleted location; a create
+            // popup stays open so a name being typed isn't lost.
+            if (this.popupKind === 'marker') this.infoWindow.close();
+            this.markers.forEach((marker) => marker.setMap(null));
+            this.markers = (this.locations || [])
+                .filter(hasCoordinates)
+                .map((location) => this.addMarker(location));
+
+            if (!this.framed && this.markers.length > 0) {
+                this.framed = true;
+                this.applyFraming(framingFor(this.locations));
             }
         },
-        async initMap() {
-            if(!this.locationForm.latitude) {
-                this.locationForm = {
-                    latitude: 24.793701145,
-                    longitude: 120.9957896
+        addMarker(location) {
+            const marker = new google.maps.Marker({
+                map: this.map,
+                position: { lat: location.latitude, lng: location.longitude },
+                title: location.name,
+            });
+            marker.addListener('click', () => {
+                this.infoWindow.close();
+                this.popupKind = 'marker';
+                this.infoWindow.setContent(buildLocationInfo({ name: location.name }));
+                this.infoWindow.open({ map: this.map, anchor: marker });
+            });
+            return marker;
+        },
+        applyFraming(framing) {
+            if (framing.kind === 'center') {
+                this.map.setCenter(framing.center);
+                this.map.setZoom(framing.zoom);
+                return;
+            }
+            const bounds = new google.maps.LatLngBounds();
+            framing.points.forEach((point) => bounds.extend(point));
+            // Cap the zoom once the fit settles, so close-together locations
+            // don't zoom in past street level.
+            google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                if (this.unmounted) return;
+                if (this.map.getZoom() > MAX_FIT_ZOOM) this.map.setZoom(MAX_FIT_ZOOM);
+            });
+            this.map.fitBounds(bounds, FIT_PADDING);
+        },
+        onMapClick(event) {
+            if (!event.placeId) {
+                this.openCreatePopup(event.latLng);
+                return;
+            }
+            // A click on a Google place icon: replace Google's own place card
+            // with our popup, then fill in the place's details.
+            event.stop();
+            this.openPlacePopup(event.placeId, event.latLng);
+        },
+        async openPlacePopup(placeId, position) {
+            const content = this.openCreatePopup(position, { loadingPlace: true });
+            const serial = this.popupSerial;
+            const place = await this.lookupPlace(placeId);
+            if (this.unmounted || serial !== this.popupSerial) return;
+            showPlaceDetails(content, place);
+        },
+        async lookupPlace(placeId) {
+            try {
+                const { Place } = await google.maps.importLibrary('places');
+                const place = new Place({ id: placeId });
+                await place.fetchFields({ fields: PLACE_FIELDS });
+                return { name: place.displayName, address: place.formattedAddress };
+            } catch (error) {
+                if (!this.placesErrorLogged) {
+                    this.placesErrorLogged = true;
+                    console.error('Place details unavailable (is Places API (New) enabled for this key?)', error);
                 }
+                return null;
             }
-            const myLatlng = { lat: this.locationForm.latitude, lng: this.locationForm.longitude };
-            const map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 16,
-                center: myLatlng,
-            });
-
-            // Create the initial InfoWindow.
-            let infoWindow = new google.maps.InfoWindow({
-                content: "Click the map to get Lat/Lng!",
-                position: myLatlng,
-            });
-
-            infoWindow.open(map);
-
-            // Configure the click listener.
-            map.addListener("click", (mapsMouseEvent) => {
-                const latLng = mapsMouseEvent.latLng.toJSON();
-
-                // Close the current InfoWindow.
-                infoWindow.close();
-
-                const contentString =
-                    `<div style="text-align: center;">
-                        <p style="margin: 10px 15px 5px;">Latitude: ${latLng.lat}</p>
-                        <p style="margin-bottom: 10px;">Longitude: ${latLng.lng}</p>
-                        <button type="button" id="saveLocationBtn" class="info-button">Save Location</button>
-                    </div>`;
-
-                // Create a new InfoWindow.
-                infoWindow = new google.maps.InfoWindow({
-                    position: mapsMouseEvent.latLng,
-                    content: contentString,
-                });
-                infoWindow.addListener('domready', () => {
-                    document.getElementById("saveLocationBtn").addEventListener("click", () => {
-                        this.saveLocation(latLng);
-                    });
-                });
-                infoWindow.open(map);
-            });
         },
-        saveLocation(latLng) {
-            const locationData = {
-                name: this.locationForm.name, // Use the name from the form
-                latitude: latLng.lat,
-                longitude: latLng.lng
-            };
-            if (this.modifiedId) {
-                this.$emit('update-location', this.modifiedId, locationData);
-            }
-            else {
-                this.$emit('create-location', locationData);
-            }
-            this.locationForm = {}
+        openCreatePopup(position, { loadingPlace = false } = {}) {
+            this.popupSerial += 1;
+            const latLng = position.toJSON();
+            const content = buildLocationPopup({
+                latLng,
+                loadingPlace,
+                onSave: ({ name }) => this.createLocation(name, latLng),
+            });
+            this.infoWindow.close();
+            this.popupKind = 'create';
+            this.infoWindow.setContent(content);
+            this.infoWindow.setPosition(position);
+            google.maps.event.addListenerOnce(this.infoWindow, 'domready', () => {
+                content.querySelector('input')?.focus();
+            });
+            this.infoWindow.open(this.map);
+            return content;
         },
-        clickCreate() {
-            this.modifiedId = null
-            this.locationForm = this.currentLocationData
-            this.initMap()
+        createLocation(name, latLng) {
+            this.$emit('create-location', { name, latitude: latLng.lat, longitude: latLng.lng });
+            this.infoWindow.close();
         },
-        clickModify(location) {
-            this.modifiedId = location.id
-            this.locationForm = location
-            this.initMap()
+        deleteLocation(location) {
+            if (this.renamingId === location.id) this.cancelRename()
+            this.$emit('delete-location', location.id)
+        },
+        startRename(location) {
+            this.renamingId = location.id
+            this.renameText = location.name
+            this.$nextTick(() => this.$refs.renameInput?.[0]?.focus())
+        },
+        commitRename(location) {
+            if (this.renamingId !== location.id) return
+            const name = this.renameText.trim()
+            this.cancelRename()
+            // A blank name reverts to the original; an unchanged one is a no-op.
+            if (name === '' || name === location.name) return
+            this.$emit('update-location', location.id, { name })
+        },
+        cancelRename() {
+            this.renamingId = null
+            this.renameText = ''
         }
     }
 }
@@ -160,31 +251,48 @@ export default {
 .course-card-container {
     text-align: left;
 }
-.form-container {
-    width: 100%;
-    margin: 30px 20px;
-}
 
 .location-item {
     display: flex;
     align-items: center;
+    gap: 5px;
     margin: 20px;
+}
+
+.location-rename-input {
+    width: 240px;
 }
 
 .location-icon {
     cursor: pointer;
-    margin-left: 5px;
 }
+
+.map-section {
+    margin: 30px 20px;
+}
+
+.location-help {
+    margin-bottom: 10px;
+    color: #606266;
+}
+
 .map-container {
     width: 90%;
     height: 500px;
 }
+
+.map-zoom-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #909399;
+}
+
 @media (max-width: 640px) {
     .map-container {
         width: 100%;
         height: 300px;
     }
-    .form-container {
+    .map-section {
         margin: 0;
     }
 }

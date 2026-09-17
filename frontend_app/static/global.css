@@ -32,3 +32,52 @@ body {
     background-color: #349aff;
     transform: scale(1.05);
 }
+/* Location popup on the Locations tab map (built in lib/locationPopup.js;
+   it lives inside a Google Maps InfoWindow, so scoped styles can't reach it). */
+.location-popup {
+    min-width: 220px;
+    padding: 4px 8px;
+    text-align: center;
+}
+
+.location-popup-title {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 15px;
+}
+
+.location-popup-title[hidden] {
+    display: none;
+}
+
+.location-popup-address,
+.location-popup-loading {
+    margin-bottom: 6px;
+    color: #606266;
+    font-size: 12px;
+}
+
+.location-popup-name {
+    width: 100%;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+}
+
+.location-popup-name:focus {
+    outline: none;
+    border-color: #349aff;
+}
+
+.location-popup-error {
+    margin-bottom: 6px;
+    color: #f56c6c;
+    font-size: 12px;
+}
+
+.location-popup-coord {
+    margin: 2px 0;
+    color: #606266;
+}

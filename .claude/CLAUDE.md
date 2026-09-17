@@ -162,6 +162,15 @@ rake run:api
 
 - **Future work**: See `doc/future-work.md` for planned improvements (CI/CD, testing, etc.)
 
+### Plans
+
+Plans and their working docs live in `.claude/plans/` (gitignored, so they never reach `main`). The active plan is `@`-included from `CLAUDE.local.md`.
+
+- **One folder per work stream**, named `NNN-PURPOSE-slug`: `NNN` is a zero-padded sequence number that strictly increments and is never reused; `PURPOSE` is an uppercase tag for the kind of document that started the stream (`PLAN`, `BUGFIX`, `REFACTOR`, `HOTFIX`); `slug` is a short kebab-case name, normally from the branch name.
+- **Inside the folder**: a lone main document takes the name of its kind (`PLAN.md`, `BUGFIX.md`). When a folder holds two or more, prefix each with a letter for reading order (`a-PLAN.md`, `b-BUGFIX.md`). Supporting files keep a kind tag and take no letter (`SKETCHES.html`).
+- **References**: use the bare filename inside one folder, and the full path from the repository root across folders.
+- **Closing**: when a branch merges, add `> **CLOSED** (date): merged to <branch> as <sha>` under the plan title. Do not delete closed plans.
+
 ## IMPORTANT: First Message and AI-assisted authorship
 
 At the START of every conversation, immediately inform the user: "[Reminder: You must review, understand, and be ultimately responsible for any code you commit — even when using AI assistance]"

@@ -18,19 +18,22 @@
 
 ## Maps API
 
-The attendance map feature requires a Google Maps JavaScript API key.
+The attendance and locations maps require a Google Maps JavaScript API key.
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/apis/library).
 2. Select your project (or create one).
 3. Search for **Maps JavaScript API** and enable it.
-4. Go to [Credentials](https://console.cloud.google.com/apis/credentials) and create an **API key**.
-5. (Recommended) Restrict the key:
+4. Search for **Places API (New)** and enable it. The Locations tab uses it to show the name and address of a place (a building or business) that a user clicks on the map. Without it, clicking a place still works, but the user must type the name.
+5. Go to [Credentials](https://console.cloud.google.com/apis/credentials) and create an **API key**.
+6. (Recommended) Restrict the key:
    - Under **Application restrictions**, select **HTTP referrers**
    - Add your allowed domains:
-     - `localhost:*` (local development)
+     - `http://localhost:9292/*` (local development; a bare `localhost:*` does not match page paths)
      - `your-app.herokuapp.com/*` (production)
-6. Copy the API key into your `frontend_app/.env.local` as `VUE_APP_GOOGLE_MAP_KEY`
-7. For production, set on Heroku:
+   - If you set **API restrictions**, allow both **Maps JavaScript API** and **Places API (New)**.
+7. (Recommended) Limit Places API (New) cost: each place click makes one Place Details request. In **APIs & Services → Places API (New) → Quotas**, set a per-day request limit, and add a budget alert under **Billing → Budgets & alerts**.
+8. Copy the API key into your `frontend_app/.env.local` as `VUE_APP_GOOGLE_MAP_KEY`
+9. For production, set on Heroku:
 
    ```bash
    heroku config:set VUE_APP_GOOGLE_MAP_KEY=<your-maps-api-key>

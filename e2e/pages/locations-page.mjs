@@ -1,13 +1,13 @@
 import { openCourseTab } from '../helpers.mjs';
 
-// LocationCard.vue — the Locations management tab. Create/update happen inside
-// a Google Maps widget (out of scope for headless E2E); here we cover the list,
-// the create affordance, and delete.
+// LocationCard.vue — the Locations management tab. Creating a location happens
+// inside a Google Maps popup (out of scope for headless E2E); here we cover the
+// list, the help note, renaming in place, and delete.
 export class LocationsPage {
   constructor(page) {
     this.page = page;
-    this.createButton = page.getByRole('button', { name: 'Create New' });
-    this.nameInput = page.getByPlaceholder('Enter a name of the location');
+    this.helpNote = page.getByText('Click a spot or a place on the map to create a new location.');
+    this.renameInput = page.locator('.location-item .location-rename-input input');
   }
 
   async open() {
@@ -17,6 +17,18 @@ export class LocationsPage {
 
   card(name) {
     return this.page.locator('.location-item', { hasText: name });
+  }
+
+  async startRename(name) {
+    await this.page.getByRole('button', { name: `Rename ${name}`, exact: true }).click();
+    return this.renameInput;
+  }
+
+  // Renames in place and commits with Enter.
+  async rename(name, newName) {
+    const input = await this.startRename(name);
+    await input.fill(newName);
+    await input.press('Enter');
   }
 
   async delete(name) {
